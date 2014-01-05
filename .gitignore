@@ -1,0 +1,8 @@
+*.pyc
+*.egg-info/
+build/
+dist/
+.DS_Store
+.#*
+.ropeproject
+bcbiovm/version.py
