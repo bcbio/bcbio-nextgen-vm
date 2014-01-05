@@ -38,12 +38,13 @@ Installation
     sudo service docker restart
     newgrp docker
 
-- Install bcbio-nextgen-vm::
+- Install bcbio-nextgen-vm (will move to a pip install)::
 
-    virtualenv (or pyvenv) bcbio-nextgen-vm-py
     git clone https://github.com/chapmanb/bcbio-nextgen-vm
     cd bcbio-nextgen-vm
-    ./bcbio-nextgen-vm-py/bin/python setup.py install
+    virtualenv (or pyvenv) venv
+    ./venv/bin/pip install distribute
+    ./venv/bin/python setup.py install
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
@@ -51,8 +52,9 @@ Installation
   internal docker process as the calling user so it will only have permissions
   available to the original user::
 
-    chown :docker ./bcbio-nextgen-vm-py/bin/bcbio_nextgen_docker.py
-    chmod g+s ./bcbio-nextgen-vm-py/bin/bcbio_nextgen_docker.py
+    chown :docker ./venv/bin/bcbio_nextgen_docker.py
+    chmod g+s ./venv/bin/bcbio_nextgen_docker.py
+    ln -s `pwd`/venv/bin/bcbio_nextgen_docker.py /usr/local/bin
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup

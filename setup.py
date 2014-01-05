@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+from ez_setup import use_setuptools
+use_setuptools()
 from setuptools import setup, find_packages
 
 version = "0.1a"
@@ -25,8 +27,8 @@ setup(name="bcbio-nextgen-vm",
       url="https://github.com/chapmanb/bcbio-nextgen-vm",
       packages=find_packages(),
       scripts=["scripts/bcbio_nextgen_docker.py"],
-      dependency_links=["https://github.com/dotcloud/docker-py/tarball/master#egg=docker-py-0.2.3a"],
+      dependency_links=["https://github.com/dotcloud/docker-py/tarball/master#egg=docker-py"],
       install_requires=["future",
-                        "requests",
+                        "requests==1.2.3",
                         "PyYAML",
                         "docker-py"])
