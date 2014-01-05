@@ -4,6 +4,9 @@
 Work in progress script to explore the best ways to integrate docker isolated
 software with external data.
 """
+from __future__ import print_function
+from __future__ import unicode_literals
+from future.builtins import open, str
 import argparse
 import contextlib
 import grp
@@ -112,7 +115,7 @@ def update_config_mounts(config, input_dir):
     for i, d in enumerate(sorted(set(directories))):
         mounts[d] = os.path.join(input_dir, str(i))
     config["details"] = [_remap_directories(d, mounts) for d in absdetails]
-    return config, ["%s:%s" % (k, v) for k, v in mounts.iteritems()]
+    return config, ["%s:%s" % (k, v) for k, v in mounts.items()]
 
 def _remap_directories(xs, mounts):
     """Remap files to point to internal docker container mounts.
@@ -120,10 +123,10 @@ def _remap_directories(xs, mounts):
     if not isinstance(xs, dict):
         return xs
     out = {}
-    for k, v in xs.iteritems():
+    for k, v in xs.items():
         if isinstance(v, dict):
             out[k] = _remap_directories(v, mounts)
-        elif v and isinstance(v, basestring) and os.path.exists(v) and os.path.isabs(v):
+        elif v and isinstance(v, str) and os.path.exists(v) and os.path.isabs(v):
             dirname, basename = os.path.split(v)
             out[k] = os.path.join(mounts[dirname], basename)
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
@@ -142,10 +145,10 @@ def _get_directories(xs):
     out = []
     if not isinstance(xs, dict):
         return out
-    for k, v in xs.iteritems():
+    for k, v in xs.items():
         if isinstance(v, dict):
             out.extend(_get_directories(v))
-        elif v and isinstance(v, basestring) and os.path.exists(v) and os.path.isabs(v):
+        elif v and isinstance(v, str) and os.path.exists(v) and os.path.isabs(v):
             out.append(os.path.dirname(v))
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
             out.extend(os.path.dirname(x) for x in v)
@@ -166,8 +169,8 @@ def abs_file_paths(xs, base_dirs=None, ignore=[]):
     base_dirs.append(os.getcwd())
     ignore_keys = set(ignore if ignore else [])
     out = {}
-    for k, v in xs.iteritems():
-        if k not in ignore_keys and v and isinstance(v, basestring) and _normalize_path(v, base_dirs):
+    for k, v in xs.items():
+        if k not in ignore_keys and v and isinstance(v, str) and _normalize_path(v, base_dirs):
             out[k] = _normalize_path(v, base_dirs)
         elif k not in ignore_keys and v and isinstance(v, (list, tuple)) and _normalize_path(v[0], base_dirs):
             out[k] = [_normalize_path(x, base_dirs) for x in v]
