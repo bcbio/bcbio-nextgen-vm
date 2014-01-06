@@ -3,6 +3,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins import open, str
+import six
 import os
 
 def prepare_system(datadir, docker_biodata_dir):
@@ -68,7 +69,7 @@ def _remap_directories(xs, mounts):
     for k, v in xs.items():
         if isinstance(v, dict):
             out[k] = _remap_directories(v, mounts)
-        elif v and isinstance(v, str) and os.path.exists(v) and os.path.isabs(v):
+        elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
             dirname, basename = os.path.split(v)
             out[k] = os.path.join(mounts[dirname], basename)
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
@@ -90,7 +91,7 @@ def _get_directories(xs):
     for k, v in xs.items():
         if isinstance(v, dict):
             out.extend(_get_directories(v))
-        elif v and isinstance(v, str) and os.path.exists(v) and os.path.isabs(v):
+        elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
             out.append(os.path.dirname(v))
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
             out.extend(os.path.dirname(x) for x in v)
@@ -102,7 +103,7 @@ def _normalize_path(x, base_dirs):
             return os.path.normpath(os.path.realpath(os.path.join(base_dir, x)))
     return None
 
-def abs_file_paths(xs, base_dirs=None, ignore=[]):
+def abs_file_paths(xs, base_dirs=None, ignore=None):
     """Expand files to be absolute, non-symlinked file paths.
     """
     if not isinstance(xs, dict):
@@ -112,7 +113,7 @@ def abs_file_paths(xs, base_dirs=None, ignore=[]):
     ignore_keys = set(ignore if ignore else [])
     out = {}
     for k, v in xs.items():
-        if k not in ignore_keys and v and isinstance(v, str) and _normalize_path(v, base_dirs):
+        if k not in ignore_keys and v and isinstance(v, six.string_types) and _normalize_path(v, base_dirs):
             out[k] = _normalize_path(v, base_dirs)
         elif k not in ignore_keys and v and isinstance(v, (list, tuple)) and _normalize_path(v[0], base_dirs):
             out[k] = [_normalize_path(x, base_dirs) for x in v]

@@ -17,7 +17,7 @@ def do_analysis(args, dockerconf):
     """Run a full analysis on a local machine, utilizing multiple cores.
     """
     with open(args.sample_config) as in_handle:
-        sample_config, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"])
+        sample_config, dmounts = mounts.update_config(args, yaml.load(in_handle), dockerconf["input_dir"])
     dmounts += mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     dmounts.append("%s:%s" % (os.getcwd(), dockerconf["work_dir"]))
     system_config, system_mounts = read_system_config(args, dockerconf)

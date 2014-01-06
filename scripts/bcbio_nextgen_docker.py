@@ -53,7 +53,8 @@ if __name__ == "__main__":
     # running
     parser_r = subparsers.add_parser("run", help="Run an automated analysis.")
     parser_r.add_argument("sample_config", help="YAML file with details about samples to process.")
-    parser_r.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process")
+    parser_r.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process",
+                          type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser_r.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                           "Defaults to installed bcbio_system.yaml.")
     parser_r.add_argument("-n", "--numcores", help="Total cores to use for processing",

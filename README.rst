@@ -50,17 +50,49 @@ Installation
   to run bcbio-nextgen without needing to be in the docker group or have root
   access. To avoid security issues, ``bcbio_nextgen_docker.py`` starts the
   internal docker process as the calling user so it will only have permissions
-  available to the original user::
+  available to the that user::
 
-    chown :docker ./venv/bin/bcbio_nextgen_docker.py
-    chmod g+s ./venv/bin/bcbio_nextgen_docker.py
+    sudo chown :docker ./venv/bin/bcbio_nextgen_docker.py
+    sudo chmod g+s ./venv/bin/bcbio_nextgen_docker.py
     ln -s `pwd`/venv/bin/bcbio_nextgen_docker.py /usr/local/bin
+
+- Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
+  with software and tools, as well as downloading genome data::
+
+    bcbio_nextgen_docker.py --datadir=~/install/bcbio-nextgen-docker install --data --tools
+
+  If you have an existing bcbio-nextgen installation and want to avoid
+  reinstalling existing genome data, symlink to the current installation data::
+
+    mkdir ~/install/bcbio-nextgen-docker
+    cd ~/install/bcbio-nextgen-docker
+    ln -s /usr/local/share/bcbio_nextgen/genomes
+    ln -s /usr/local/share/gemini/data gemini_data
+
+- To avoid needing to specify the location of data directories, set the
+  data location configuration once for each new user::
+
+    bcbio_nextgen_docker.py --datadir=~/install/bcbio-nextgen-docker saveconfig
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup
 .. _Docker index: https://index.docker.io/
 .. _bcbio-nextgen docker index: https://index.docker.io/u/chapmanb/bcbio-nextgen-devel/
 .. _setgid: https://en.wikipedia.org/wiki/Setuid
+
+Running
+-------
+
+Usage of bcbio_nextgen_docker.py is similar to bcbio_nextgen.py, with some
+cleanups to make the command line more consistent. To run an analysis on a
+prepared bcbio-nextgen sample configuration file::
+
+  bcbio_nextgen_docker.py run -n 1 sample_config.yaml
+
+bcbio-nextgen also contains tests to exercise docker functionality::
+
+  cd bcbio-nextgen/tests
+  ./run_tests.sh docker
 
 Development Notes
 -----------------
