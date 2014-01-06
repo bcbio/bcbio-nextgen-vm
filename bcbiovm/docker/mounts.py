@@ -3,7 +3,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins import open, str
-import six
+from future.utils import six
 import os
 
 def prepare_system(datadir, docker_biodata_dir):

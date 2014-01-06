@@ -38,13 +38,11 @@ Installation
     sudo service docker restart
     newgrp docker
 
-- Install bcbio-nextgen-vm (will move to a pip install)::
+- Install bcbio-nextgen-vm (we plan to move to a pip install as this stabilizes)::
 
     git clone https://github.com/chapmanb/bcbio-nextgen-vm
     cd bcbio-nextgen-vm
-    virtualenv (or pyvenv) venv
-    ./venv/bin/pip install distribute
-    ./venv/bin/python setup.py install
+    python setup.py install
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
@@ -52,9 +50,8 @@ Installation
   internal docker process as the calling user so it will only have permissions
   available to the that user::
 
-    sudo chown :docker ./venv/bin/bcbio_nextgen_docker.py
-    sudo chmod g+s ./venv/bin/bcbio_nextgen_docker.py
-    ln -s `pwd`/venv/bin/bcbio_nextgen_docker.py /usr/local/bin
+    sudo chown :docker /path/to/bcbio_nextgen_docker.py
+    sudo chmod g+s /path/to/bcbio_nextgen_docker.py
 
 - Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
   with software and tools, as well as downloading genome data::
@@ -103,7 +100,6 @@ bcbio-nextgen.
 ToDo
 ====
 
-- Add full instructions for running test scripts.
 - Finalize single machine, multicore runs of bcbio-nextgen with docker
   containers. Handle hanging at the end of multicore runs.
 - Improve docker installation size: combine bcbio-nextgen and gemini anaconda

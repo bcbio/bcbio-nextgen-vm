@@ -27,8 +27,6 @@ setup(name="bcbio-nextgen-vm",
       url="https://github.com/chapmanb/bcbio-nextgen-vm",
       packages=find_packages(),
       scripts=["scripts/bcbio_nextgen_docker.py"],
-      dependency_links=["https://github.com/dotcloud/docker-py/tarball/master#egg=docker-py"],
       install_requires=["future",
-                        "requests==1.2.3",
-                        "PyYAML",
-                        "docker-py"])
+                        "requests",
+                        "PyYAML"])

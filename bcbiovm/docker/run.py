@@ -6,8 +6,9 @@ from future.builtins import open
 
 import json
 import os
+import subprocess
+import sys
 
-import docker
 import requests
 import yaml
 
@@ -21,7 +22,6 @@ def do_analysis(args, dockerconf):
     dmounts += mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     dmounts.append("%s:%s" % (os.getcwd(), dockerconf["work_dir"]))
     system_config, system_mounts = read_system_config(args, dockerconf)
-    dockerc = docker.Client()
     with manage.bcbio_docker(dockerconf, dmounts + system_mounts, args) as cid:
         print("Running analysis using docker container: %s" % cid)
         payload = {"work_dir": dockerconf["work_dir"],
@@ -30,13 +30,18 @@ def do_analysis(args, dockerconf):
                    "numcores": args.numcores}
         r = requests.get("http://localhost:{port}/run".format(port=args.port), params={"args": json.dumps(payload)})
         run_id = r.text
-        clogs = dockerc.logs(cid, stream=True)
+        p = subprocess.Popen(["docker", "logs", "-f", cid], bufsize=1,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # monitor processing status, writing logging information
-        for log_info in clogs:
+        for log_info in iter(p.stdout.readline, ""):
             print(log_info.rstrip())
             r = requests.get("http://localhost:{port}/status".format(port=args.port), params={"run_id": run_id})
             if r.text != "running":
-                break
+                if r.text == "failed":
+                    if not(log_info.rstrip()):
+                        sys.exit(1)
+                else:
+                    break
 
 def read_system_config(args, dockerconf):
     if args.systemconfig:
