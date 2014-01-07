@@ -56,7 +56,7 @@ def start_devel(image, hport, cport, mounts, docker_biodata_dir, repo):
 
 def start(image, hport, cport, mounts, docker_biodata_dir):
     mounts = " ".join("-v %s" % x for x in mounts)
-    cmd = ("docker run -d -p {hport}:{cport} {mounts} {image} "
+    cmd = ("docker run -d -i -t -p {hport}:{cport} {mounts} {image} "
            "/bin/bash -c '" + user_create_cmd() +
            "bcbio_nextgen.py server --port={cport} --biodata_dir={docker_biodata_dir}"
            "\"'")

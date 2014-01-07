@@ -37,10 +37,7 @@ def do_analysis(args, dockerconf):
             print(log_info.rstrip())
             r = requests.get("http://localhost:{port}/status".format(port=args.port), params={"run_id": run_id})
             if r.text != "running":
-                if r.text == "failed":
-                    if not(log_info.rstrip()):
-                        sys.exit(1)
-                else:
+                if log_info.rstrip().endswith(run_id):
                     break
 
 def read_system_config(args, dockerconf):

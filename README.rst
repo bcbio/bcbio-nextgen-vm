@@ -100,8 +100,6 @@ bcbio-nextgen.
 ToDo
 ====
 
-- Finalize single machine, multicore runs of bcbio-nextgen with docker
-  containers. Handle hanging at the end of multicore runs.
 - Improve docker installation size: combine bcbio-nextgen and gemini anaconda
   directories. Load snpEff databases with genome data.
 - Enable specification of external programs/jars to handle tricky non-distributable
@@ -130,9 +128,7 @@ Updates
 
 Upload local images to `Docker index`_::
 
-    DID=$(docker run -d -i -t chapmanb/bcbio-nextgen-devel /bin/bash)
     DID=$(docker run -d -i -t -p 8085:8085 -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
-          -v /usr/local/share/bcbio_nextgen:/mnt/biodata
           chapmanb/bcbio-nextgen-devel /bin/bash)
     docker attach $DID
     docker commit $DID chapmanb/bcbio-nextgen-devel
@@ -140,7 +136,9 @@ Upload local images to `Docker index`_::
 
 Update and test local code::
 
+    bcbio_nextgen_docker.py --develrepo=~/bio/bcbio-nextgen run [<args>]
     docker attach bcbio-develrepo
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     bcbio_nextgen.py server --port=8085
+    wget -O /dev/null http://localhost:8085/kill
