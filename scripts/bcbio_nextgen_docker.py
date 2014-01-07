@@ -42,9 +42,11 @@ if __name__ == "__main__":
     # installation
     parser_i = subparsers.add_parser("install", help="Install or upgrade bcbio-nextgen docker container and data.")
     parser_i.add_argument("--genomes", help="Genomes to download",
-                          action="append", default=["GRCh37"])
+                          action="append", default=["GRCh37"],
+                          choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
     parser_i.add_argument("--aligners", help="Aligner indexes to download",
-                          action="append", default=["bwa"])
+                          action="append", default=["bwa"],
+                          choices=["bowtie", "bowtie2", "bwa", "novoalign", "ucsc"])
     parser_i.add_argument("--data", help="Install or upgrade data dependencies",
                           dest="install_data", action="store_true", default=False)
     parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",
