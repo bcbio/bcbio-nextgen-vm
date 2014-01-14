@@ -17,7 +17,8 @@ DOCKER = {"port": 8085,
           "biodata_dir": "/mnt/biodata",
           "input_dir": "/mnt/inputs",
           "work_dir": "/mnt/work",
-          "image": "chapmanb/bcbio-nextgen-devel"}
+          "image": "chapmanb/bcbio-nextgen-devel",
+          "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
 def cmd_install(args):
     args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.")

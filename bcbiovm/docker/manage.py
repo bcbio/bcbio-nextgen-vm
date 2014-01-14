@@ -72,7 +72,7 @@ def user_create_cmd(chown_cmd=""):
     container_bcbio_dir = "/usr/local/share"
     homedir = "/home/{user.pw_name}".format(**locals())
     cmd = ("addgroup --gid {group.gr_gid} {group.gr_name} && "
-           "useradd -m -d {homedir} -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name} && "
+           "useradd -m -d {homedir} -s /bin/bash -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name} && "
            + chown_cmd +
            "su - -s /bin/bash {user.pw_name} -c \"cd {homedir} && ")
     return cmd.format(**locals())

@@ -100,28 +100,32 @@ bcbio-nextgen.
 ToDo
 ====
 
-- Improve docker installation size: combine bcbio-nextgen and gemini anaconda
-  directories. Load snpEff databases with genome data.
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker container.
 - Provide IPython/ZeroMQ interface that handles container creation and running
   of processes, passing actual execution to docker container.
+- Work on mechanisms for partial updates as well as full updates from latest
+  container images.
 
 Creating containers
 ===================
 
-Start up docker::
+Build from Dockerfile, providing flattened final image::
+
+    cd bcbio-nextgen
+    docker build -t chapmanb/bcbio-nextgen-devel-full .
+    DID=$(docker run -d chapmanb/bcbio-nextgen-devel-full /bin/bash)
+    docker export $DID | gzip -c > bcbio-image.tgz
+    gzip -dc bcbio-image.tgz | docker import - chapmanb/bcbio-nextgen-devel
+
+Or manually; start up docker::
 
     DID=$(docker run -d -i -t -p 8085:8085 stackbrew/ubuntu:13.10 /bin/bash)
     docker attach $DID
 
-Install bcbio-nextgen via instructions in Dockerfile. Then commit::
+install bcbio-nextgen via instructions in Dockerfile. Then commit::
 
     docker commit $DID chapmanb/bcbio-nextgen-devel
-
-or build directly::
-
-    docker build -t chapmanb/bcbio-nextgen-devel .
 
 Updates
 =======
