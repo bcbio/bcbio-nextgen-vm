@@ -47,18 +47,21 @@ def pull(dockerconf):
     #subprocess.check_call(["docker", "pull", image])
     dl_image = os.path.basename(dockerconf["image_url"])
     response = requests.get(dockerconf["image_url"], stream=True)
-    size = int(response.headers['Content-Length'].strip())
-    widgets = [dl_image, pb.Percentage(), ' ', pb.Bar(),
-               ' ', pb.ETA(), ' ', pb.FileTransferSpeed()]
-    pbar = pb.ProgressBar(widgets=widgets, maxval=size).start()
+    size = int(response.headers.get("Content-Length", "0").strip())
+    if size:
+        widgets = [dl_image, pb.Percentage(), ' ', pb.Bar(),
+                   ' ', pb.ETA(), ' ', pb.FileTransferSpeed()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=size).start()
     transferred_size = 0
     with open(dl_image, "wb") as out_handle:
         for buf in response.iter_content(1024):
             if buf:
                 out_handle.write(buf)
                 transferred_size += len(buf)
-                pbar.update(transferred_size)
-    pbar.finish()
+                if size:
+                    pbar.update(transferred_size)
+    if size:
+        pbar.finish()
     del response
     subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, dockerconf["image"]),
                           shell=True)

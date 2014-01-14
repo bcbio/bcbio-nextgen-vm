@@ -28,6 +28,6 @@ setup(name="bcbio-nextgen-vm",
       packages=find_packages(),
       scripts=["scripts/bcbio_nextgen_docker.py"],
       install_requires=["future",
-                        "requests",
+                        "requests>=2.1.0",
                         "PyYAML",
                         "progressbar2"])
