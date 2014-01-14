@@ -38,7 +38,8 @@ Installation
     sudo service docker restart
     newgrp docker
 
-- Install bcbio-nextgen-vm (we plan to move to a pip install as this stabilizes)::
+- Install bcbio-nextgen-vm using your system Python. (we plan to move to a pip
+  install as this stabilizes)::
 
     git clone https://github.com/chapmanb/bcbio-nextgen-vm
     cd bcbio-nextgen-vm
@@ -66,8 +67,8 @@ Installation
     ln -s /usr/local/share/bcbio_nextgen/genomes
     ln -s /usr/local/share/gemini/data gemini_data
 
-- To avoid needing to specify the location of data directories, set the
-  data location configuration once for each new user::
+- For individual users of bcbio-nextgen, set the data location configuration once
+  to avoid needing to specify the location of data directories on subsequent runs::
 
     bcbio_nextgen_docker.py --datadir=~/install/bcbio-nextgen-docker saveconfig
 
@@ -84,9 +85,9 @@ Usage of bcbio_nextgen_docker.py is similar to bcbio_nextgen.py, with some
 cleanups to make the command line more consistent. To run an analysis on a
 prepared bcbio-nextgen sample configuration file::
 
-  bcbio_nextgen_docker.py run -n 1 sample_config.yaml
+  bcbio_nextgen_docker.py run -n 4 sample_config.yaml
 
-bcbio-nextgen also contains tests to exercise docker functionality::
+bcbio-nextgen also contains tests that exercise docker functionality::
 
   cd bcbio-nextgen/tests
   ./run_tests.sh docker
@@ -113,10 +114,15 @@ Creating containers
 Build from Dockerfile, providing flattened final image::
 
     cd bcbio-nextgen
-    docker build -t chapmanb/bcbio-nextgen-devel-full .
-    DID=$(docker run -d chapmanb/bcbio-nextgen-devel-full /bin/bash)
-    docker export $DID | gzip -c > bcbio-image.tgz
-    gzip -dc bcbio-image.tgz | docker import - chapmanb/bcbio-nextgen-devel
+    docker build -t chapmanb/bcbio-nextgen-devel-work .
+    DID=$(docker run -d chapmanb/bcbio-nextgen-devel-work /bin/bash)
+    docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz
+    python ~/bio/cloudbiolinux/utils/s3_multipart_upload.py bcbio-nextgen-docker-image.gz \
+           bcbio_nextgen --public --cores=10
+
+Loading an image into your docker environment::
+
+    gzip -dc bcbio-nextgen-docker-image.tgz | docker import - chapmanb/bcbio-nextgen-devel
 
 Or manually; start up docker::
 
