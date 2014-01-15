@@ -10,7 +10,7 @@ import argparse
 import os
 import sys
 
-from bcbiovm.docker import defaults, install, run
+from bcbiovm.docker import defaults, install, manage, run
 
 # default information about docker container
 DOCKER = {"port": 8085,
@@ -27,6 +27,16 @@ def cmd_install(args):
 def cmd_run(args):
     args = defaults.update_check_args(args, "Could not run analysis.")
     run.do_analysis(args, DOCKER)
+
+def cmd_server(args):
+    args = defaults.update_check_args(args, "Could not run server.")
+    with manage.bcbio_docker(DOCKER, [], args):
+        print("Running server. Press ctrl-c to exit.")
+        try:
+            while 1:
+                pass
+        except KeyboardInterrupt:
+            pass
 
 def cmd_save_defaults(args):
     defaults.save(args)
@@ -63,6 +73,9 @@ if __name__ == "__main__":
     parser_r.add_argument("-n", "--numcores", help="Total cores to use for processing",
                           type=int, default=1)
     parser_r.set_defaults(func=cmd_run)
+    # server
+    parser_s = subparsers.add_parser("server", help="Persistent REST server receiving requests via the specified port.")
+    parser_s.set_defaults(func=cmd_server)
     # configuration
     parser_c = subparsers.add_parser("saveconfig", help="Save standard configuration variables for current user. "
                                      "Avoids need to specify on the command line in future runs.")

@@ -64,6 +64,14 @@ def start(image, hport, cport, mounts, docker_biodata_dir):
     cid, _ = process.communicate()
     return cid.rstrip()
 
+def proxy_cmd():
+    """Pass external proxy information inside container for retrieval.
+    """
+    out = "git config --global url.https://github.com/.insteadOf git://github.com/ && "
+    if "HTTP_PROXY" in os.environ:
+        out += "export HTTP_PROXY=%s && " % os.environ["HTTP_PROXY"]
+    return out
+
 def user_create_cmd(chown_cmd=""):
     """Create a user on the docker container with equivalent UID/GIDs to external user.
     """
@@ -74,7 +82,8 @@ def user_create_cmd(chown_cmd=""):
     cmd = ("addgroup --gid {group.gr_gid} {group.gr_name} && "
            "useradd -m -d {homedir} -s /bin/bash -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name} && "
            + chown_cmd +
-           "su - -s /bin/bash {user.pw_name} -c \"cd {homedir} && ")
+           "su - -s /bin/bash {user.pw_name} -c \"cd {homedir} && "
+           + proxy_cmd())
     return cmd.format(**locals())
 
 def wait(port):
