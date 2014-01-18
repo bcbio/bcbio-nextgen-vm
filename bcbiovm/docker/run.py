@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import os
-import subprocess
 
 import yaml
 
@@ -24,9 +23,8 @@ def do_analysis(args, dockerconf):
     with open(sample_cfile, "w") as out_handle:
         yaml.dump(sample_config, out_handle, default_flow_style=False, allow_unicode=False)
     in_files = [os.path.join(dockerconf["work_dir"], os.path.basename(x)) for x in [system_cfile, sample_cfile]]
-    cmd = manage.docker_cmd(dockerconf["image"], dmounts + system_mounts,
-                            "{} --workdir={}".format(" ".join(in_files), dockerconf["work_dir"]))
-    subprocess.call(cmd, shell=True)
+    manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
+                         "{} --workdir={}".format(" ".join(in_files), dockerconf["work_dir"]))
 
 def read_system_config(args, dockerconf):
     if args.systemconfig:

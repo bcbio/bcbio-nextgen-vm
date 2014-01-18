@@ -17,8 +17,7 @@ def full(args, dockerconf):
     if args.install_tools:
         pull(dockerconf)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
-    cmd = manage.docker_cmd(dockerconf["image"], dmounts, _get_cl(args))
-    subprocess.call(cmd, shell=True)
+    manage.run_bcbio_cmd(dockerconf["image"], dmounts, _get_cl(args))
 
 def _get_cl(args):
     clargs = ["upgrade"]

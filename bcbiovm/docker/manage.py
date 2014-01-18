@@ -1,20 +1,27 @@
 """Manage stopping and starting a docker container for running analysis.
 """
 from __future__ import print_function
-from __future__ import unicode_literals
 import grp
 import os
 import pwd
+import subprocess
 
-def docker_cmd(image, mounts, bcbio_nextgen_cl):
-    """Create command line to call docker with the supplied arguments to bcbio-nextgen.py.
+def run_bcbio_cmd(image, mounts, bcbio_nextgen_cl):
+    """Run command in docker container with the supplied arguments to bcbio-nextgen.py.
     """
     mounts = " ".join("-v %s" % x for x in mounts)
-    cmd = ("docker run -t {mounts} {image} "
+    cmd = ("docker run -d -i -t {mounts} {image} "
            "/bin/bash -c '" + user_create_cmd() +
            "bcbio_nextgen.py {bcbio_nextgen_cl}"
            "\"'")
-    return cmd.format(**locals())
+    process = subprocess.Popen(cmd.format(**locals()), shell=True, stdout=subprocess.PIPE)
+    cid = process.communicate()[0].strip()
+    try:
+        print("Running in docker container: %s" % cid)
+        subprocess.call("docker attach -nostdin %s" % cid, shell=True)
+    except:
+        print ("Stopping docker container")
+        subprocess.call("docker kill %s" % cid, shell=True)
 
 def user_create_cmd(chown_cmd=""):
     """Create a user on the docker container with equivalent UID/GIDs to external user.
