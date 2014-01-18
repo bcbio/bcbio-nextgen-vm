@@ -44,11 +44,8 @@ def cmd_save_defaults(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines, with docker.")
-    parser.add_argument("--port", default=8085, help="External port to connect to docker image.")
     parser.add_argument("--datadir", help="Directory to install genome data and associated files.",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
-    parser.add_argument("--develrepo", help=("Specify a development repository to link. "
-                                             "Used for debugging and development"))
     subparsers = parser.add_subparsers(title="[sub-commands]")
     # installation
     parser_i = subparsers.add_parser("install", help="Install or upgrade bcbio-nextgen docker container and data.")
@@ -75,6 +72,7 @@ if __name__ == "__main__":
     parser_r.set_defaults(func=cmd_run)
     # server
     parser_s = subparsers.add_parser("server", help="Persistent REST server receiving requests via the specified port.")
+    parser_s.add_argument("--port", default=8085, help="External port to connect to docker image.")
     parser_s.set_defaults(func=cmd_server)
     # configuration
     parser_c = subparsers.add_parser("saveconfig", help="Save standard configuration variables for current user. "

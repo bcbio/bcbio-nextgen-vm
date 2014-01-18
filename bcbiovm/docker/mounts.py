@@ -1,8 +1,6 @@
 """Manage external data directories mounted to a docker container.
 """
 from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins import open, str
 from future.utils import six
 import os
 
@@ -71,12 +69,12 @@ def _remap_directories(xs, mounts):
             out[k] = _remap_directories(v, mounts)
         elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
             dirname, basename = os.path.split(v)
-            out[k] = os.path.join(mounts[dirname], basename)
+            out[k] = str(os.path.join(mounts[dirname], basename))
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
             ready_vs = []
             for x in v:
                 dirname, basename = os.path.split(x)
-                ready_vs.append(os.path.join(mounts[dirname], basename))
+                ready_vs.append(str(os.path.join(mounts[dirname], basename)))
             out[k] = ready_vs
         else:
             out[k] = v

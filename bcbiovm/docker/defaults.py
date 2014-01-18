@@ -8,7 +8,7 @@ import sys
 
 import yaml
 
-TOSAVE_DEFAULTS = {"port": 8085, "datadir": None}
+TOSAVE_DEFAULTS = {"datadir": None}
 
 def update_check_args(args, command_info):
     args = add_defaults(args)
