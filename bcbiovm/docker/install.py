@@ -3,7 +3,6 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import json
 import os
 import subprocess
 
@@ -17,25 +16,19 @@ def full(args, dockerconf):
     """
     if args.install_tools:
         pull(dockerconf)
-    success = True
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
-    with manage.bcbio_docker(dockerconf, dmounts, args) as cid:
-        print("Running data installation with docker container: %s" % cid)
-        r = install_data(args, dockerconf["port"])
-        if r is None or r.status_code != 200:
-            success = False
-            print("Problem installing data. For detailed logs, run:\n"
-                  "docker logs {0}".format(cid))
-    if success:
-        print("bcbio-nextgen successfully upgraded")
+    cmd = manage.docker_cmd(dockerconf["image"], dmounts, _get_cl(args))
+    subprocess.call(cmd, shell=True)
 
-def install_data(args, port):
-    payload = json.dumps({"genomes": args.genomes, "aligners": args.aligners,
-                          "install_data": args.install_data})
-    try:
-        return requests.get("http://localhost:{port}/install".format(port=port), params={"args": payload})
-    except requests.exceptions.ConnectionError:
-        return None
+def _get_cl(args):
+    clargs = ["upgrade"]
+    if args.install_data:
+        clargs.append("--data")
+    for g in args.genomes:
+        clargs.extend(["--genomes", g])
+    for a in args.aligners:
+        clargs.extend(["--aligners", a])
+    return " ".join(clargs)
 
 def pull(dockerconf):
     """Pull down latest docker image, using export uploaded to S3 bucket.

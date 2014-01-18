@@ -126,7 +126,7 @@ Loading an image into your docker environment::
 
 Or manually; start up docker::
 
-    DID=$(docker run -d -i -t -p 8085:8085 stackbrew/ubuntu:13.10 /bin/bash)
+    DID=$(docker run -d -i -t stackbrew/ubuntu:13.10 /bin/bash)
     docker attach $DID
 
 install bcbio-nextgen via instructions in Dockerfile. Then commit::
@@ -138,9 +138,11 @@ Updates
 
 Upload local images to `Docker index`_::
 
-    DID=$(docker run -d -i -t -p 8085:8085 -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
+    DID=$(docker run -d -i -t -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
           chapmanb/bcbio-nextgen-devel /bin/bash)
     docker attach $DID
+    cd /tmp/bcbio-nextgen
+    /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     docker commit $DID chapmanb/bcbio-nextgen-devel
     docker push chapmanb/bcbio-nextgen-devel
 
