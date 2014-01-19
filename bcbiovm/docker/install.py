@@ -1,23 +1,25 @@
 """Install or upgrade a bcbio-nextgen installation.
 """
 from __future__ import print_function
-from __future__ import unicode_literals
 
 import os
 import subprocess
 
 import progressbar as pb
 import requests
+import yaml
 
 from bcbiovm.docker import manage, mounts
 
 def full(args, dockerconf):
     """Full installaction of docker image and data.
     """
+    args = add_install_defaults(args)
     if args.install_tools:
         pull(dockerconf)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     manage.run_bcbio_cmd(dockerconf["image"], dmounts, _get_cl(args))
+    save_install_defaults(args)
 
 def _get_cl(args):
     clargs = ["upgrade"]
@@ -58,3 +60,46 @@ def pull(dockerconf):
     subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, dockerconf["image"]),
                           shell=True)
     os.remove(dl_image)
+
+def save_install_defaults(args):
+    """Save arguments passed to installation to be used on subsequent upgrades.
+    Avoids needing to re-include genomes and aligners on command line.
+    """
+    install_config = _get_config_file(args)
+    if install_config is None:
+        return
+    if os.path.exists(install_config):
+        with open(install_config) as in_handle:
+            cur_config = yaml.load(in_handle)
+    else:
+        cur_config = {}
+    for attr in ["genomes", "aligners"]:
+        if not cur_config.get(attr):
+            cur_config[attr] = []
+        for x in getattr(args, attr):
+            if x not in cur_config[attr]:
+                cur_config[attr].append(str(x))
+    with open(install_config, "w") as out_handle:
+        yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
+
+def add_install_defaults(args):
+    """Add previously saved installation defaults to command line arguments.
+    """
+    install_config = _get_config_file(args)
+    if not os.path.exists(install_config):
+        return args
+    with open(install_config) as in_handle:
+        default_args = yaml.load(in_handle)
+    for attr in ["genomes", "aligners"]:
+        for x in default_args.get(attr, []):
+            new_val = getattr(args, attr)
+            if x not in getattr(args, attr):
+                new_val.append(x)
+            setattr(args, attr, new_val)
+    return args
+
+def _get_config_file(args):
+    config_dir = os.path.join(args.datadir, "config")
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    return os.path.join(config_dir, "install-params.yaml")

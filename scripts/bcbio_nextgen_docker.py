@@ -5,7 +5,6 @@ Work in progress script to explore the best ways to integrate docker isolated
 software with external data.
 """
 from __future__ import print_function
-from __future__ import unicode_literals
 import argparse
 import os
 import sys
