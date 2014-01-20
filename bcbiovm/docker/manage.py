@@ -42,7 +42,8 @@ def proxy_cmd():
     """
     out = "git config --global url.https://github.com/.insteadOf git://github.com/ && "
     for proxyenv in ["HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy",
-                     "ALL_PROXY", "all_proxy"]:
+                     "ALL_PROXY", "all_proxy", "FTP_PROXY", "ftp_proxy",
+                     "RSYNC_PROXY", "rsync_proxy"]:
         if proxyenv in os.environ:
             out += "export %s=%s && " % (proxyenv, os.environ[proxyenv])
     return out
