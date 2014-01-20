@@ -43,4 +43,14 @@ def proxy_cmd():
     out = "git config --global url.https://github.com/.insteadOf git://github.com/ && "
     if "HTTP_PROXY" in os.environ:
         out += "export HTTP_PROXY=%s && " % os.environ["HTTP_PROXY"]
+    if "http_proxy" in os.environ:
+        out += "export http_proxy=%s && " % os.environ["http_proxy"]
+    if "HTTPS_PROXY" in os.environ:
+        out += "export HTTPS_PROXY=%s && " % os.environ["HTTPS_PROXY"]
+    if "https_proxy" in os.environ:
+        out += "export https_proxy=%s && " % os.environ["https_proxy"]
+    if "ALL_PROXY" in os.environ:
+        out += "export ALL_PROXY=%s && " % os.environ["ALL_PROXY"]
+    if "all_proxy" in os.environ:
+        out += "export all_proxy=%s && " % os.environ["all_proxy"]
     return out
