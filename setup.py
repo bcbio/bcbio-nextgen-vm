@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import os
-from ez_setup import use_setuptools
-use_setuptools()
 from setuptools import setup, find_packages
 
-version = "0.1a"
+version = "0.1.0a"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), "bcbiovm", "version.py")
