@@ -38,12 +38,16 @@ Installation
     sudo service docker restart
     newgrp docker
 
-- Install bcbio-nextgen-vm using your system Python. (we plan to move to a pip
-  install as this stabilizes)::
+- Install bcbio-nextgen-vm using `conda`_ with your system Python::
 
-    git clone https://github.com/chapmanb/bcbio-nextgen-vm
-    cd bcbio-nextgen-vm
-    python setup.py install
+    pip install conda
+    conda install -c https://conda.binstar.org/public bcbio-nextgen-vm
+
+  or an isolated Python::
+
+    wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
+    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-nextgen-vm
+    ~/install/bcbio-nextgen-vm/bin/conda install -c https://conda.binstar.org/public bcbio-nextgen-vm
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
@@ -77,6 +81,7 @@ Installation
 .. _Docker index: https://index.docker.io/
 .. _bcbio-nextgen docker index: https://index.docker.io/u/chapmanb/bcbio-nextgen-devel/
 .. _setgid: https://en.wikipedia.org/wiki/Setuid
+.. _conda: http://conda.pydata.org/
 
 Running
 -------
