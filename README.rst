@@ -48,6 +48,7 @@ Installation
     wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
     bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-nextgen-vm
     ~/install/bcbio-nextgen-vm/bin/conda install -c https://conda.binstar.org/public bcbio-nextgen-vm
+    ln -s ~/install/bcbio-nextgen-vm/bin/bcbio_nextgen_docker.py /usr/local/bin/bcbio_nextgen_docker.py
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root

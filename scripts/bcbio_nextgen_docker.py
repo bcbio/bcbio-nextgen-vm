@@ -29,13 +29,10 @@ def cmd_run(args):
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
-    with manage.bcbio_docker(DOCKER, [], args):
-        print("Running server. Press ctrl-c to exit.")
-        try:
-            while 1:
-                pass
-        except KeyboardInterrupt:
-            pass
+    ports = ["%s:%s" % (args.port, DOCKER["port"])]
+    print("Running server on port %s. Press ctrl-c to exit." % args.port)
+    manage.run_bcbio_cmd(DOCKER["image"], [], "server --port %s" % DOCKER["port"],
+                         ports)
 
 def cmd_save_defaults(args):
     defaults.save(args)

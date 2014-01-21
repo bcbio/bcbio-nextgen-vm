@@ -6,11 +6,12 @@ import os
 import pwd
 import subprocess
 
-def run_bcbio_cmd(image, mounts, bcbio_nextgen_cl):
+def run_bcbio_cmd(image, mounts, bcbio_nextgen_cl, ports=None):
     """Run command in docker container with the supplied arguments to bcbio-nextgen.py.
     """
     mounts = " ".join("-v %s" % x for x in mounts)
-    cmd = ("docker run -d -i -t {mounts} {image} "
+    ports = " ".join("-p %s" % x for x in ports) if ports else ""
+    cmd = ("docker run -d -i -t {ports} {mounts} {image} "
            "/bin/bash -c '" + user_create_cmd() +
            "bcbio_nextgen.py {bcbio_nextgen_cl}"
            "\"'")

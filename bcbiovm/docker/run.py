@@ -33,6 +33,8 @@ def read_system_config(args, dockerconf):
         f = os.path.join(args.datadir, "galaxy", "bcbio_system.yaml")
     with open(f) as in_handle:
         config = yaml.load(in_handle)
+    if "galaxy_config" not in config:
+        config["galaxy_config"] = os.path.join(os.path.dirname(f), "universe_wsgi.ini")
     # Map external galaxy specifications over to docker container
     dmounts = []
     for k in ["galaxy_config"]:

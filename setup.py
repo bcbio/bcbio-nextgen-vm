@@ -28,4 +28,4 @@ setup(name="bcbio-nextgen-vm",
       install_requires=["future",
                         "requests>=2.1.0",
                         "PyYAML",
-                        "progressbar2"])
+                        "progressbar"])
