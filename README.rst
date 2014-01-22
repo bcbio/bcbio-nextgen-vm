@@ -41,13 +41,13 @@ Installation
 - Install bcbio-nextgen-vm using `conda`_ with your system Python::
 
     pip install conda
-    conda install -c https://conda.binstar.org/public bcbio-nextgen-vm
+    conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
 
   or an isolated Python::
 
     wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
     bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-nextgen-vm
-    ~/install/bcbio-nextgen-vm/bin/conda install -c https://conda.binstar.org/public bcbio-nextgen-vm
+    ~/install/bcbio-nextgen-vm/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
     ln -s ~/install/bcbio-nextgen-vm/bin/bcbio_nextgen_docker.py /usr/local/bin/bcbio_nextgen_docker.py
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users

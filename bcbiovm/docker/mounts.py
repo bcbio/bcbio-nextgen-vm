@@ -1,8 +1,9 @@
 """Manage external data directories mounted to a docker container.
 """
 from __future__ import print_function
-from future.utils import six
 import os
+
+import six
 
 def prepare_system(datadir, docker_biodata_dir):
     """Create set of system mountpoints to link into Docker container.
