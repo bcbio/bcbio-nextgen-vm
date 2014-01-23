@@ -46,23 +46,23 @@ Installation
   or an isolated Python::
 
     wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
-    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-nextgen-vm
-    ~/install/bcbio-nextgen-vm/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
-    ln -s ~/install/bcbio-nextgen-vm/bin/bcbio_nextgen_docker.py /usr/local/bin/bcbio_nextgen_docker.py
+    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-vm
+    ~/install/bcbio-vm/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
+    ln -s ~/install/bcbio-vm/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
-  access. To avoid security issues, ``bcbio_nextgen_docker.py`` starts the
+  access. To avoid security issues, ``bcbio_vm.py`` starts the
   internal docker process as the calling user so it will only have permissions
   available to the that user::
 
-    sudo chown :docker /path/to/bcbio_nextgen_docker.py
-    sudo chmod g+s /path/to/bcbio_nextgen_docker.py
+    sudo chown :docker /usr/local/bin/bcbio_vm.py
+    sudo chmod g+s /usr/local/bin/bcbio_vm.py
 
 - Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
   with software and tools, as well as downloading genome data::
 
-    bcbio_nextgen_docker.py --datadir=~/install/bcbio-nextgen-docker install --data --tools
+    bcbio_vm.py --datadir=~/install/bcbio-nextgen-docker install --data --tools
 
   If you have an existing bcbio-nextgen installation and want to avoid
   reinstalling existing genome data, symlink to the current installation data::
@@ -75,7 +75,7 @@ Installation
 - For individual users of bcbio-nextgen, set the data location configuration once
   to avoid needing to specify the location of data directories on subsequent runs::
 
-    bcbio_nextgen_docker.py --datadir=~/install/bcbio-nextgen-docker saveconfig
+    bcbio_vm.py --datadir=~/install/bcbio-nextgen-docker saveconfig
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup
@@ -87,16 +87,34 @@ Installation
 Running
 -------
 
-Usage of bcbio_nextgen_docker.py is similar to bcbio_nextgen.py, with some
+Usage of bcbio_vm.py is similar to bcbio_nextgen.py, with some
 cleanups to make the command line more consistent. To run an analysis on a
 prepared bcbio-nextgen sample configuration file::
 
-  bcbio_nextgen_docker.py run -n 4 sample_config.yaml
+  bcbio_vm.py run -n 4 sample_config.yaml
 
 bcbio-nextgen also contains tests that exercise docker functionality::
 
   cd bcbio-nextgen/tests
   ./run_tests.sh docker
+
+Upgrading
+---------
+
+bcbio-nextgen-vm enables easy updates of the wrapper code, tools and data. To
+update the wrapper code::
+
+    bcbio_vm.py install --wrapper
+
+To update tools, with a download of the latest docker image::
+
+    bcbio_vm.py install --tools
+
+To update the associated data files::
+
+    bcbio_vm.py install --data
+
+Combine all commands to update everything concurrently.
 
 Development Notes
 -----------------
@@ -154,7 +172,7 @@ Upload local images to `Docker index`_::
 
 Update and test local code::
 
-    bcbio_nextgen_docker.py --develrepo=~/bio/bcbio-nextgen run [<args>]
+    bcbio_vm.py --develrepo=~/bio/bcbio-nextgen run [<args>]
     docker attach bcbio-develrepo
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install

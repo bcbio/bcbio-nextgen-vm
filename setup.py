@@ -33,5 +33,5 @@ setup(name="bcbio-nextgen-vm",
       license="MIT",
       url="https://github.com/chapmanb/bcbio-nextgen-vm",
       packages=find_packages(),
-      scripts=["scripts/bcbio_nextgen_docker.py"],
+      scripts=["scripts/bcbio_vm.py"],
       install_requires=install_requires)

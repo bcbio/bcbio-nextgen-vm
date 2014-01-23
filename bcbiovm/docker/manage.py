@@ -21,8 +21,9 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_cl, ports=None):
         print("Running in docker container: %s" % cid)
         subprocess.call("docker attach -nostdin %s" % cid, shell=True)
     except:
-        print ("Stopping docker container")
+        print("Stopping docker container")
         subprocess.call("docker kill %s" % cid, shell=True)
+    return cid
 
 def user_create_cmd(chown_cmd=""):
     """Create a user on the docker container with equivalent UID/GIDs to external user.
@@ -31,8 +32,8 @@ def user_create_cmd(chown_cmd=""):
     group = grp.getgrgid(os.getgid())
     container_bcbio_dir = "/usr/local/share"
     homedir = "/home/{user.pw_name}".format(**locals())
-    cmd = ("addgroup --quiet --gid {group.gr_gid} {group.gr_name} && "
-           "useradd -m -d {homedir} -s /bin/bash -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name} && "
+    cmd = ("addgroup --quiet --gid {group.gr_gid} {group.gr_name}; "
+           "useradd -m -d {homedir} -s /bin/bash -g {group.gr_gid} -o -u {user.pw_uid} {user.pw_name}; "
            + chown_cmd +
            "su - -s /bin/bash {user.pw_name} -c \"cd {homedir} && "
            + proxy_cmd())

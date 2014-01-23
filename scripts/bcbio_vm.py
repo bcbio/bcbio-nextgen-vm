@@ -55,6 +55,10 @@ if __name__ == "__main__":
                           dest="install_data", action="store_true", default=False)
     parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",
                           dest="install_tools", action="store_true", default=False)
+    parser_i.add_argument("--inplace", help="Perform an in-place update of code and tools.",
+                          action="store_true", default=False)
+    parser_i.add_argument("--wrapper", help="Update wrapper bcbio-nextgen-vm code",
+                          action="store_true", default=False)
     parser_i.set_defaults(func=cmd_install)
     # running
     parser_r = subparsers.add_parser("run", help="Run an automated analysis.")

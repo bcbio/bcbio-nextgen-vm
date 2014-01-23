@@ -31,9 +31,16 @@ def update_config(args, config, input_dir):
                                                 "phasing", "svcaller"])
         absdetails.append(d)
         directories.extend(_get_directories(d))
+    if config.get("upload", {}).get("dir"):
+        config["upload"]["dir"] = os.path.normpath(os.path.realpath(
+            os.path.join(os.getcwd(), config["upload"]["dir"])))
+        if not os.path.exists(config["upload"]["dir"]):
+            os.makedirs(config["upload"]["dir"])
+        directories.append(config["upload"]["dir"])
     mounts = {}
     for i, d in enumerate(sorted(set(directories))):
         mounts[d] = os.path.join(input_dir, str(i))
+    config["upload"] = _remap_directories(config["upload"], mounts)
     config["details"] = [_remap_directories(d, mounts) for d in absdetails]
     return config, ["%s:%s" % (k, v) for k, v in mounts.items()]
 
@@ -69,7 +76,10 @@ def _remap_directories(xs, mounts):
         if isinstance(v, dict):
             out[k] = _remap_directories(v, mounts)
         elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
-            dirname, basename = os.path.split(v)
+            if os.path.isdir(v):
+                dirname, basename = v, ""
+            else:
+                dirname, basename = os.path.split(v)
             out[k] = str(os.path.join(mounts[dirname], basename))
         elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
             ready_vs = []

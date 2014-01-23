@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import os
 import subprocess
+import sys
 
 import progressbar as pb
 import requests
@@ -15,8 +16,13 @@ def full(args, dockerconf):
     """Full installaction of docker image and data.
     """
     args = add_install_defaults(args)
+    if args.wrapper:
+        upgrade_bcbio_vm()
     if args.install_tools:
-        pull(dockerconf)
+        if args.inplace:
+            upgrade(dockerconf, args)
+        else:
+            pull(dockerconf)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     manage.run_bcbio_cmd(dockerconf["image"], dmounts, _get_cl(args))
     save_install_defaults(args)
@@ -30,6 +36,22 @@ def _get_cl(args):
     for a in args.aligners:
         clargs.extend(["--aligners", a])
     return " ".join(clargs)
+
+def upgrade_bcbio_vm():
+    """Upgrade bcbio-nextgen-vm wrapper code.
+    """
+    conda_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "conda")
+    if not os.path.exists(conda_bin):
+        print("Cannot update bcbio-nextgen-vm; not installed with conda")
+    else:
+        subprocess.check_call([conda_bin, "install", "bcbio-nextgen-vm"])
+
+def upgrade(dockerconf, args):
+    """Perform an in-place upgrade of tools and code inside a container.
+    """
+    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
+    cid = manage.run_bcbio_cmd(dockerconf["image"], dmounts, "upgrade -u development --tools")
+    subprocess.check_call(["docker", "commit", cid, dockerconf["image"]])
 
 def pull(dockerconf):
     """Pull down latest docker image, using export uploaded to S3 bucket.
