@@ -44,7 +44,9 @@ def upgrade_bcbio_vm():
     if not os.path.exists(conda_bin):
         print("Cannot update bcbio-nextgen-vm; not installed with conda")
     else:
-        subprocess.check_call([conda_bin, "install", "bcbio-nextgen-vm"])
+        subprocess.check_call([conda_bin, "install",
+                               "-c", "https://conda.binstar.org/collections/chapmanb/bcbio",
+                               "bcbio-nextgen-vm"])
 
 def upgrade(dockerconf, args):
     """Perform an in-place upgrade of tools and code inside a container.
