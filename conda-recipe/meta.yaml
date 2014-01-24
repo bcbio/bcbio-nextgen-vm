@@ -3,7 +3,7 @@ package:
   version: '0.1.0a'
 
 build:
-  number: 4
+  number: 5
 
 source:
   git_url: https://github.com/chapmanb/bcbio-nextgen-vm.git
