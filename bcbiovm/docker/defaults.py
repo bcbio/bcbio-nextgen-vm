@@ -11,9 +11,24 @@ TOSAVE_DEFAULTS = {"datadir": None}
 def update_check_args(args, command_info):
     args = add_defaults(args)
     if not args.datadir:
-        print("Must specify a `--datadir` or save the default location with `saveconfig`.\n" + command_info)
-        sys.exit(1)
+        default_datadir = _find_default_datadir()
+        if default_datadir:
+            args.datadir = default_datadir
+        else:
+            print("Must specify a `--datadir` or save the default location with `saveconfig`.\n" + command_info)
+            sys.exit(1)
     return args
+
+def _find_default_datadir():
+    """Check if the default data directory/standard setup is present
+    """
+    datadir = os.path.realpath(os.path.normpath(os.path.join(
+        os.path.dirname(sys.executable), os.pardir, os.pardir, "data")))
+    if (os.path.exists(os.path.join(datadir, "config", "install-params.yaml")) and
+          os.path.exists(os.path.join(datadir, "galaxy", "bcbio_system.yaml"))):
+        return datadir
+    else:
+        return None
 
 def save(args):
     """Save user specific defaults to a yaml configuration file.
@@ -37,6 +52,14 @@ def add_defaults(args):
             if k in config_defaults:
                 setattr(args, k, config_defaults[k])
     return args
+
+def get_datadir():
+    """Retrieve the default data directory for this installation
+    """
+    datadir = get_defaults().get("datadir")
+    if datadir is None:
+        datadir = _find_default_datadir()
+    return datadir
 
 def get_defaults():
     """Retrieve saved default configurations.

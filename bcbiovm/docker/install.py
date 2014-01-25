@@ -15,17 +15,24 @@ from bcbiovm.docker import manage, mounts
 def full(args, dockerconf):
     """Full installaction of docker image and data.
     """
+    updates = []
     args = add_install_defaults(args)
     if args.wrapper:
+        updates.append("wrapper scripts")
         upgrade_bcbio_vm()
     if args.install_tools:
+        updates.append("bcbio-nextgen code and third party tools")
         if args.inplace:
             upgrade(dockerconf, args)
         else:
             pull(dockerconf)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
+    if args.install_data:
+        updates.append("biological data")
     manage.run_bcbio_cmd(dockerconf["image"], dmounts, _get_cl(args))
     save_install_defaults(args)
+    if updates:
+        print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
 
 def _get_cl(args):
     clargs = ["upgrade"]

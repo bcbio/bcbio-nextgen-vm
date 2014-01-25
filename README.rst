@@ -38,17 +38,17 @@ Installation
     sudo service docker restart
     newgrp docker
 
-- Install bcbio-nextgen-vm using `conda`_ with your system Python::
+- Install bcbio-nextgen-vm using `conda`_ with an isolated Python::
+
+    wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
+    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+    ~/install/bcbio-vm/anaconda/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
+    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+
+  or with your system Python::
 
     pip install conda
     conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
-
-  or an isolated Python::
-
-    wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
-    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-vm
-    ~/install/bcbio-vm/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
-    ln -s ~/install/bcbio-vm/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
@@ -62,20 +62,23 @@ Installation
 - Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
   with software and tools, as well as downloading genome data::
 
-    bcbio_vm.py --datadir=~/install/bcbio-nextgen-docker install --data --tools
+    bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools
 
   If you have an existing bcbio-nextgen installation and want to avoid
-  reinstalling existing genome data, symlink to the current installation data::
+  re-installing existing genome data, first symlink to the current installation
+  data::
 
-    mkdir ~/install/bcbio-nextgen-docker
-    cd ~/install/bcbio-nextgen-docker
+    mkdir ~/install/bcbio-vm/data
+    cd ~/install/bcbio-vm/data
     ln -s /usr/local/share/bcbio_nextgen/genomes
     ln -s /usr/local/share/gemini/data gemini_data
 
-- For individual users of bcbio-nextgen, set the data location configuration once
-  to avoid needing to specify the location of data directories on subsequent runs::
+- If you didn't use the recommended installation organization (a shared
+  directory with code under ``anaconda`` and data under ``data``) set the data
+  location configuration once for each individual user of bcbio-nextgen to avoid
+  needing to specify the location of data directories on subsequent runs::
 
-    bcbio_vm.py --datadir=~/install/bcbio-nextgen-docker saveconfig
+    bcbio_vm.py --datadir=~/install/bcbio-vm/data saveconfig
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup
