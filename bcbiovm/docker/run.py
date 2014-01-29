@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import os
+import uuid
 
 import yaml
 
@@ -11,13 +12,14 @@ from bcbiovm.docker import manage, mounts
 def do_analysis(args, dockerconf):
     """Run a full analysis on a local machine, utilizing multiple cores.
     """
+    work_dir = os.getcwd()
     with open(args.sample_config) as in_handle:
-        sample_config, dmounts = mounts.update_config(args, yaml.load(in_handle), dockerconf["input_dir"])
+        sample_config, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"], args.fcdir)
     dmounts += mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
-    dmounts.append("%s:%s" % (os.getcwd(), dockerconf["work_dir"]))
-    system_config, system_mounts = read_system_config(args, dockerconf)
-    system_cfile = os.path.join(os.getcwd(), "bcbio_system-forvm.yaml")
-    sample_cfile = os.path.join(os.getcwd(), "bcbio_sample-forvm.yaml")
+    dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
+    system_config, system_mounts = _read_system_config(dockerconf, args.systemconfig, args.datadir)
+    system_cfile = os.path.join(work_dir, "bcbio_system-forvm.yaml")
+    sample_cfile = os.path.join(work_dir, "bcbio_sample-forvm.yaml")
     with open(system_cfile, "w") as out_handle:
         yaml.dump(system_config, out_handle, default_flow_style=False, allow_unicode=False)
     with open(sample_cfile, "w") as out_handle:
@@ -26,11 +28,38 @@ def do_analysis(args, dockerconf):
     manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
                          "{} --workdir={}".format(" ".join(in_files), dockerconf["work_dir"]))
 
-def read_system_config(args, dockerconf):
-    if args.systemconfig:
-        f = args.systemconfig
+def do_runfn(fn_name, fn_args, cmd_args, dockerconf):
+    """"Run a single defined function inside a docker container, returning results.
+    """
+    work_dir = os.getcwd()
+    with open(cmd_args["sample_config"]) as in_handle:
+        _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
+                                          cmd_args["fcdir"])
+    dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
+    dmounts += mounts.prepare_system(cmd_args["datadir"], dockerconf["biodata_dir"])
+    _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], cmd_args["datadir"])
+    argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" % (fn_name, uuid.uuid4()))
+    with open(argfile, "w") as out_handle:
+        yaml.safe_dump(fn_args, out_handle, default_flow_style=False, allow_unicode=False)
+    docker_argfile = os.path.join(dockerconf["work_dir"], os.path.basename(argfile))
+    outfile = "%s-out%s" % os.path.splitext(argfile)
+    try:
+        manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
+                             "runfn {fn_name} {argfile}".format(
+                                 fn_name=fn_name, argfile=docker_argfile))
+        with open(outfile) as in_handle:
+            out = yaml.safe_load(in_handle)
+    finally:
+        for f in [argfile, outfile]:
+            if os.path.exists(f):
+                os.remove(f)
+    return out
+
+def _read_system_config(dockerconf, systemconfig, datadir):
+    if systemconfig:
+        f = systemconfig
     else:
-        f = os.path.join(args.datadir, "galaxy", "bcbio_system.yaml")
+        f = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
     with open(f) as in_handle:
         config = yaml.load(in_handle)
     if "galaxy_config" not in config:

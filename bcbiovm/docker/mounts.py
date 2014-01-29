@@ -16,17 +16,17 @@ def prepare_system(datadir, docker_biodata_dir):
         mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(**locals()))
     return mounts
 
-def update_config(args, config, input_dir):
+def update_config(config, input_dir, fcdir=None):
     """Update input configuration with local docker container mounts.
     Maps input files into docker mounts and resolved relative and symlinked paths.
     """
     absdetails = []
     directories = []
     for d in config["details"]:
-        d = abs_file_paths(d, base_dirs=[args.fcdir] if args.fcdir else None,
+        d = abs_file_paths(d, base_dirs=[fcdir] if fcdir else None,
                            ignore=["description", "analysis", "resources",
                                    "genome_build", "lane"])
-        d["algorithm"] = abs_file_paths(d["algorithm"], base_dirs=[args.fcdir] if args.fcdir else None,
+        d["algorithm"] = abs_file_paths(d["algorithm"], base_dirs=[fcdir] if fcdir else None,
                                         ignore=["variantcaller", "realign", "recalibrate",
                                                 "phasing", "svcaller"])
         absdetails.append(d)

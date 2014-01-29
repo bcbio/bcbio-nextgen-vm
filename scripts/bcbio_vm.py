@@ -9,6 +9,8 @@ import argparse
 import os
 import sys
 
+from bcbio.distributed import clargs
+from bcbio.pipeline import main
 from bcbiovm.docker import defaults, install, manage, run
 
 # default information about docker container
@@ -29,6 +31,17 @@ def cmd_run(args):
 
 def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
+    parallel = clargs.to_parallel(args, "bcbiovm.docker")
+    parallel["wrapper"] = "runfn"
+    parallel["wrapper_args"] = [DOCKER, {"sample_config": args.sample_config,
+                                         "fcdir": args.fcdir,
+                                         "datadir": args.datadir,
+                                         "systemconfig": args.systemconfig}]
+    parallel["run_local"] = True
+    work_dir = os.getcwd()
+    main.run_main(work_dir, run_info_yaml=args.sample_config,
+                  config_file=args.systemconfig, fc_dir=args.fcdir,
+                  parallel=parallel)
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
@@ -76,9 +89,8 @@ def _run_cmd(subparsers):
 def _run_ipython_cmd(subparsers):
     parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
     parser = _std_run_args(parser)
-    parser.add_argument("-s", "--scheduler", help="Scheduler to use.",
-                        choices=["lsf", "sge", "torque", "slurm"])
-    parser.add_argument("-q", "--queue", help="Scheduler queue to run jobs on.")
+    parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm"])
+    parser.add_argument("queue", help="Scheduler queue to run jobs on.")
     parser.add_argument("-r", "--resources",
                         help=("Cluster specific resources specifications. Can be specified multiple times.\n"
                               "Supports SGE and SLURM parameters."),
