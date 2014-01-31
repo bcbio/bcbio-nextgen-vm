@@ -7,7 +7,7 @@ import uuid
 
 import yaml
 
-from bcbiovm.docker import manage, mounts
+from bcbiovm.docker import manage, mounts, remap
 
 def do_analysis(args, dockerconf):
     """Run a full analysis on a local machine, utilizing multiple cores.
@@ -39,16 +39,18 @@ def do_runfn(fn_name, fn_args, cmd_args, dockerconf):
     dmounts += mounts.prepare_system(cmd_args["datadir"], dockerconf["biodata_dir"])
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], cmd_args["datadir"])
     argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" % (fn_name, uuid.uuid4()))
+    all_mounts = dmounts + system_mounts
     with open(argfile, "w") as out_handle:
-        yaml.safe_dump(fn_args, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.safe_dump(remap.external_to_docker(fn_args, all_mounts),
+                       out_handle, default_flow_style=False, allow_unicode=False)
     docker_argfile = os.path.join(dockerconf["work_dir"], os.path.basename(argfile))
     outfile = "%s-out%s" % os.path.splitext(argfile)
     try:
-        manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
+        manage.run_bcbio_cmd(dockerconf["image"], all_mounts,
                              "runfn {fn_name} {argfile}".format(
                                  fn_name=fn_name, argfile=docker_argfile))
         with open(outfile) as in_handle:
-            out = yaml.safe_load(in_handle)
+            out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
     finally:
         for f in [argfile, outfile]:
             if os.path.exists(f):
