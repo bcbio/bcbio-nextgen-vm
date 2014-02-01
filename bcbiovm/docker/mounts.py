@@ -5,6 +5,8 @@ import os
 
 import six
 
+from bcbiovm.docker import remap
+
 def prepare_system(datadir, docker_biodata_dir):
     """Create set of system mountpoints to link into Docker container.
     """
@@ -20,6 +22,25 @@ def update_config(config, input_dir, fcdir=None):
     """Update input configuration with local docker container mounts.
     Maps input files into docker mounts and resolved relative and symlinked paths.
     """
+    config, directories = normalize_config(config, fcdir)
+    if config.get("upload", {}).get("dir"):
+        config["upload"]["dir"] = os.path.normpath(os.path.realpath(
+            os.path.join(os.getcwd(), config["upload"]["dir"])))
+        if not os.path.exists(config["upload"]["dir"]):
+            os.makedirs(config["upload"]["dir"])
+        directories.append(config["upload"]["dir"])
+    mounts = {}
+    for i, d in enumerate(sorted(set(directories))):
+        mounts[d] = os.path.join(input_dir, str(i))
+    mounts = ["%s:%s" % (k, v) for k, v in mounts.items()]
+    config = remap.external_to_docker(config, mounts)
+    return config, mounts
+
+def normalize_config(config, fcdir=None):
+    """Normalize sample configuration file to have absolute paths and collect directories.
+
+    Prepares configuration for remapping directories into docker containers.
+    """
     absdetails = []
     directories = []
     for d in config["details"]:
@@ -31,18 +52,8 @@ def update_config(config, input_dir, fcdir=None):
                                                 "phasing", "svcaller"])
         absdetails.append(d)
         directories.extend(_get_directories(d))
-    if config.get("upload", {}).get("dir"):
-        config["upload"]["dir"] = os.path.normpath(os.path.realpath(
-            os.path.join(os.getcwd(), config["upload"]["dir"])))
-        if not os.path.exists(config["upload"]["dir"]):
-            os.makedirs(config["upload"]["dir"])
-        directories.append(config["upload"]["dir"])
-    mounts = {}
-    for i, d in enumerate(sorted(set(directories))):
-        mounts[d] = os.path.join(input_dir, str(i))
-    config["upload"] = _remap_directories(config["upload"], mounts)
-    config["details"] = [_remap_directories(d, mounts) for d in absdetails]
-    return config, ["%s:%s" % (k, v) for k, v in mounts.items()]
+    config["details"] = absdetails
+    return config, directories
 
 def find_genome_directory(dirname, container_dir):
     """Handle external non-docker installed biodata located relative to config directory.
@@ -65,31 +76,6 @@ def find_genome_directory(dirname, container_dir):
                                  os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
                                                                rel_genome_dir))))
     return mounts
-
-def _remap_directories(xs, mounts):
-    """Remap files to point to internal docker container mounts.
-    """
-    if not isinstance(xs, dict):
-        return xs
-    out = {}
-    for k, v in xs.items():
-        if isinstance(v, dict):
-            out[k] = _remap_directories(v, mounts)
-        elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
-            if os.path.isdir(v):
-                dirname, basename = v, ""
-            else:
-                dirname, basename = os.path.split(v)
-            out[k] = str(os.path.join(mounts[dirname], basename))
-        elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
-            ready_vs = []
-            for x in v:
-                dirname, basename = os.path.split(x)
-                ready_vs.append(str(os.path.join(mounts[dirname], basename)))
-            out[k] = ready_vs
-        else:
-            out[k] = v
-    return out
 
 def _get_directories(xs):
     """Retrieve all directories specified in an input file.

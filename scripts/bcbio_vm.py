@@ -9,9 +9,11 @@ import argparse
 import os
 import sys
 
+import yaml
+
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
-from bcbiovm.docker import defaults, install, manage, run
+from bcbiovm.docker import defaults, install, manage, mounts, run
 
 # default information about docker container
 DOCKER = {"port": 8085,
@@ -33,13 +35,19 @@ def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
     parallel = clargs.to_parallel(args, "bcbiovm.docker")
     parallel["wrapper"] = "runfn"
-    parallel["wrapper_args"] = [DOCKER, {"sample_config": args.sample_config,
+    with open(args.sample_config) as in_handle:
+        ready_config, _ = mounts.normalize_config(yaml.load(in_handle), args.fcdir)
+    work_dir = os.getcwd()
+    ready_config_file = os.path.join(work_dir, "%s-ready%s" %
+                                     (os.path.splitext(os.path.basename(args.sample_config))))
+    with open(ready_config_file, "w") as out_handle:
+        yaml.safe_dump(ready_config, out_handle, default_flow_style=False, allow_unicode=False)
+    parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
                                          "fcdir": args.fcdir,
                                          "datadir": args.datadir,
                                          "systemconfig": args.systemconfig}]
     parallel["run_local"] = True
-    work_dir = os.getcwd()
-    main.run_main(work_dir, run_info_yaml=args.sample_config,
+    main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)
 
