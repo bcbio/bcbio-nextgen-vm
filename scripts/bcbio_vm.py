@@ -46,7 +46,11 @@ def cmd_ipython(args):
                                          "fcdir": args.fcdir,
                                          "datadir": args.datadir,
                                          "systemconfig": args.systemconfig}]
-    parallel["run_local"] = True
+    # For testing, run on a local ipython cluster
+    parallel["run_local"] = parallel.get("queue") == "localrun"
+    workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
+    manage.run_bcbio_cmd(DOCKER["image"], [workdir_mount],
+                         "version --workdir={}".format(DOCKER["work_dir"]))
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)
