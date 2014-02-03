@@ -7,6 +7,7 @@ import uuid
 
 import yaml
 
+from bcbio import log
 from bcbiovm.docker import manage, mounts, remap
 
 def do_analysis(args, dockerconf):
@@ -25,10 +26,11 @@ def do_analysis(args, dockerconf):
     with open(sample_cfile, "w") as out_handle:
         yaml.dump(sample_config, out_handle, default_flow_style=False, allow_unicode=False)
     in_files = [os.path.join(dockerconf["work_dir"], os.path.basename(x)) for x in [system_cfile, sample_cfile]]
+    log.setup_local_logging({"include_time": False})
     manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
                          "{} --workdir={}".format(" ".join(in_files), dockerconf["work_dir"]))
 
-def do_runfn(fn_name, fn_args, cmd_args, dockerconf):
+def do_runfn(fn_name, fn_args, cmd_args, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
     work_dir = os.getcwd()
@@ -48,7 +50,8 @@ def do_runfn(fn_name, fn_args, cmd_args, dockerconf):
     try:
         manage.run_bcbio_cmd(dockerconf["image"], all_mounts,
                              "runfn {fn_name} {argfile}".format(
-                                 fn_name=fn_name, argfile=docker_argfile))
+                                 fn_name=fn_name, argfile=docker_argfile),
+                             ports=ports)
         with open(outfile) as in_handle:
             out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
     finally:

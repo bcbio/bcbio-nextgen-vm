@@ -4,25 +4,32 @@ from __future__ import print_function
 import grp
 import os
 import pwd
+import socket
 import subprocess
+
+from bcbio.provenance import do
 
 def run_bcbio_cmd(image, mounts, bcbio_nextgen_cl, ports=None):
     """Run command in docker container with the supplied arguments to bcbio-nextgen.py.
     """
     mounts = " ".join("-v %s" % x for x in mounts)
     ports = " ".join("-p %s" % x for x in ports) if ports else ""
-    cmd = ("docker run -d -i -t {ports} {mounts} {image} "
+    hostname = "-h %s" % socket.gethostname() if socket.gethostname() else ""
+    cmd = ("docker run -d -i -t {hostname} {ports} {mounts} {image} "
            "/bin/bash -c '" + user_create_cmd() +
            "bcbio_nextgen.py {bcbio_nextgen_cl}"
            "\"'")
     process = subprocess.Popen(cmd.format(**locals()), shell=True, stdout=subprocess.PIPE)
     cid = process.communicate()[0].strip()
     try:
-        print("Running in docker container: %s" % cid)
-        subprocess.call("docker attach -nostdin %s" % cid, shell=True)
+        do.run("docker attach -nostdin %s" % cid, "Running in docker container: %s" % cid,
+               log_stdout=True)
     except:
         print("Stopping docker container")
-        subprocess.call("docker kill %s" % cid, shell=True)
+        subprocess.call("docker kill %s" % cid, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    finally:
+        subprocess.call("docker kill %s" % cid, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.call("docker rm %s" % cid, shell=True, stdout=subprocess.PIPE)
     return cid
 
 def user_create_cmd(chown_cmd=""):

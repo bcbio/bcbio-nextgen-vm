@@ -96,10 +96,15 @@ prepared bcbio-nextgen sample configuration file::
 
   bcbio_vm.py run -n 4 sample_config.yaml
 
+To run distributed on a cluster using IPython parallel::
+
+  bcbio_vm.py ipython sample_config.yaml torque your_queue -n 64
+
 bcbio-nextgen also contains tests that exercise docker functionality::
 
   cd bcbio-nextgen/tests
   ./run_tests.sh docker
+  ./run_tests.sh docker_ipython
 
 Upgrading
 ---------
@@ -131,9 +136,6 @@ ToDo
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker
   container.
-- Export logging information from running inside IPython created containers.
-- Provide IPython/ZeroMQ interface that handles container creation and running
-  of processes, passing actual execution to docker container.
 - Work on mechanisms for partial updates as well as full updates from latest
   container images.
 
