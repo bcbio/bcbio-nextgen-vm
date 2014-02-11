@@ -14,6 +14,7 @@ import yaml
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 from bcbiovm.docker import defaults, install, manage, mounts, run
+from bcbiovm.ship import pack
 
 # default information about docker container
 DOCKER = {"port": 8085,
@@ -45,6 +46,7 @@ def cmd_ipython(args):
     parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
                                          "fcdir": args.fcdir,
                                          "datadir": args.datadir,
+                                         "pack": pack.shared_filesystem(work_dir, args.tmpdir),
                                          "systemconfig": args.systemconfig}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
@@ -115,6 +117,7 @@ def _run_ipython_cmd(subparsers):
                         default=0, type=int)
     parser.add_argument("-t", "--tag", help="Tag name to label jobs on the cluster",
                         default="")
+    parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
     parser.set_defaults(func=cmd_ipython)
 
 def _server_cmd(subparsers):

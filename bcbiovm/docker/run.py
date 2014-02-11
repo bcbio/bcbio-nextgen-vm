@@ -9,6 +9,7 @@ import yaml
 
 from bcbio import log
 from bcbiovm.docker import manage, mounts, remap
+from bcbiovm.ship import reconstitute
 
 def do_analysis(args, dockerconf):
     """Run a full analysis on a local machine, utilizing multiple cores.
@@ -33,28 +34,35 @@ def do_analysis(args, dockerconf):
 def do_runfn(fn_name, fn_args, cmd_args, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
-    work_dir = os.getcwd()
     with open(cmd_args["sample_config"]) as in_handle:
         _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
                                           cmd_args["fcdir"])
-    dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     dmounts += mounts.prepare_system(cmd_args["datadir"], dockerconf["biodata_dir"])
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], cmd_args["datadir"])
-    argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" % (fn_name, uuid.uuid4()))
+
+    work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], fn_args)
+    dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     all_mounts = dmounts + system_mounts
+
+    argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" % (fn_name, uuid.uuid4()))
     with open(argfile, "w") as out_handle:
         yaml.safe_dump(remap.external_to_docker(fn_args, all_mounts),
                        out_handle, default_flow_style=False, allow_unicode=False)
     docker_argfile = os.path.join(dockerconf["work_dir"], os.path.basename(argfile))
     outfile = "%s-out%s" % os.path.splitext(argfile)
     try:
+        out = None
         manage.run_bcbio_cmd(dockerconf["image"], all_mounts,
                              "runfn {fn_name} {argfile}".format(
                                  fn_name=fn_name, argfile=docker_argfile),
                              ports=ports)
-        with open(outfile) as in_handle:
-            out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
+        if os.path.exists(outfile):
+            with open(outfile) as in_handle:
+                out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
+        else:
+            raise ValueError("Subprocess in docker container failed")
     finally:
+        out = finalizer(out)
         for f in [argfile, outfile]:
             if os.path.exists(f):
                 os.remove(f)

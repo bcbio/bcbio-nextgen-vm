@@ -51,7 +51,7 @@ def upgrade_bcbio_vm():
     if not os.path.exists(conda_bin):
         print("Cannot update bcbio-nextgen-vm; not installed with conda")
     else:
-        subprocess.check_call([conda_bin, "install",
+        subprocess.check_call([conda_bin, "install", "--yes",
                                "-c", "https://conda.binstar.org/collections/chapmanb/bcbio",
                                "bcbio-nextgen-vm"])
 
