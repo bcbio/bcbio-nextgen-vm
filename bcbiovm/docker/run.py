@@ -31,7 +31,7 @@ def do_analysis(args, dockerconf):
     manage.run_bcbio_cmd(dockerconf["image"], dmounts + system_mounts,
                          "{} --workdir={}".format(" ".join(in_files), dockerconf["work_dir"]))
 
-def do_runfn(fn_name, fn_args, cmd_args, dockerconf, ports=None):
+def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
     with open(cmd_args["sample_config"]) as in_handle:
@@ -40,7 +40,7 @@ def do_runfn(fn_name, fn_args, cmd_args, dockerconf, ports=None):
     dmounts += mounts.prepare_system(cmd_args["datadir"], dockerconf["biodata_dir"])
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], cmd_args["datadir"])
 
-    work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], fn_args)
+    work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], parallel, fn_args)
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     all_mounts = dmounts + system_mounts
 

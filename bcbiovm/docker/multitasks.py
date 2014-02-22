@@ -13,5 +13,6 @@ def runfn(*args):
     fn_name = args[0]
     dockerconf = args[1]
     cmd_args = args[2]
-    fn_args = args[3:]
-    return run.do_runfn(fn_name, fn_args, cmd_args, dockerconf)
+    parallel = args[3]
+    fn_args = args[4:]
+    return run.do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf)
