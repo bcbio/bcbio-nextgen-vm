@@ -52,7 +52,7 @@ def cmd_ipython(args):
     parallel["run_local"] = parallel.get("queue") == "localrun"
     workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
     manage.run_bcbio_cmd(DOCKER["image"], [workdir_mount],
-                         "version --workdir={}".format(DOCKER["work_dir"]))
+                         ["version", "--workdir=%s" % DOCKER["work_dir"]])
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)
@@ -61,7 +61,7 @@ def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
     ports = ["%s:%s" % (args.port, DOCKER["port"])]
     print("Running server on port %s. Press ctrl-c to exit." % args.port)
-    manage.run_bcbio_cmd(DOCKER["image"], [], "server --port %s" % DOCKER["port"],
+    manage.run_bcbio_cmd(DOCKER["image"], [], ["server", "--port", str(DOCKER["port"])],
                          ports)
 
 def cmd_save_defaults(args):

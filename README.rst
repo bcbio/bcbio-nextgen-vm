@@ -40,8 +40,8 @@ Installation
 
 - Install bcbio-nextgen-vm using `conda`_ with an isolated Python::
 
-    wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh
-    bash Miniconda-2.2.2-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+    wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
+    bash Miniconda-3.0.5-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
     ~/install/bcbio-vm/anaconda/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
@@ -52,9 +52,10 @@ Installation
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
-  access. To avoid security issues, ``bcbio_vm.py`` starts the
-  internal docker process as the calling user so it will only have permissions
-  available to the that user::
+  access. To avoid security issues, ``bcbio_vm.py`` `sanitizes input arguments`_
+  and runs the internal docker process as the calling user using a
+  `small wrapper script`_ so it will only have permissions available to the
+  that user::
 
     sudo chown :docker /usr/local/bin/bcbio_vm.py
     sudo chmod g+s /usr/local/bin/bcbio_vm.py
@@ -86,6 +87,8 @@ Installation
 .. _bcbio-nextgen docker index: https://index.docker.io/u/chapmanb/bcbio-nextgen-devel/
 .. _setgid: https://en.wikipedia.org/wiki/Setuid
 .. _conda: http://conda.pydata.org/
+.. _sanitizes input arguments: https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/bcbiovm/docker/manage.py
+.. _small wrapper script: https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/scripts/createsetuser
 
 Running
 -------

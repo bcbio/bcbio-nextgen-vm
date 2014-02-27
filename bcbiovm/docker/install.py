@@ -42,7 +42,7 @@ def _get_cl(args):
         clargs.extend(["--genomes", g])
     for a in args.aligners:
         clargs.extend(["--aligners", a])
-    return " ".join(clargs)
+    return clargs
 
 def upgrade_bcbio_vm():
     """Upgrade bcbio-nextgen-vm wrapper code.
@@ -59,7 +59,7 @@ def upgrade(dockerconf, args):
     """Perform an in-place upgrade of tools and code inside a container.
     """
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
-    cid = manage.run_bcbio_cmd(dockerconf["image"], dmounts, "upgrade -u development --tools")
+    cid = manage.run_bcbio_cmd(dockerconf["image"], dmounts, ["upgrade", "-u", "development", "--tools"])
     subprocess.check_call(["docker", "commit", cid, dockerconf["image"]])
 
 def pull(dockerconf):

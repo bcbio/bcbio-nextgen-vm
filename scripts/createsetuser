@@ -1,6 +1,11 @@
 #!/usr/bin/python2
 """Set user from baseimage-docker with creation of external user mirrored inside container.
+Needs to be included inside docker container for external usage.
+    
 Original: https://github.com/phusion/baseimage-docker/blob/master/image/setuser
+Additions:
+ - Create user inside container with a specific group mirroring external user
+ - Set local environmental variables specified in bash /etc/profile.
 """
 import sys, os, pwd
 import subprocess
