@@ -52,6 +52,15 @@ def _create_workdir_shared(workdir, args, parallel, tmpdir=None):
         new_args = remap.walk_files(args, _remap_copy_file(parallel), remap_dict)
         return new_workdir, remap_dict, new_args
 
+def is_required_resource(context, parallel):
+    fresources = parallel.get("fresources")
+    if not fresources:
+        return True
+    for fresource in fresources:
+        if context[:len(fresource)] == fresource:
+            return True
+    return False
+
 def _remap_copy_file(parallel):
     """Remap file names and copy into temporary directory as needed.
 
@@ -60,13 +69,15 @@ def _remap_copy_file(parallel):
     def _do(fname, context, orig_to_temp):
         new_fname = remap.remap_fname(fname, context, orig_to_temp)
         if os.path.isfile(fname):
-            logger.info("* %s" % parallel)
-            logger.info("** %s: %s" % (context, fname))
-            utils.safe_makedir(os.path.dirname(new_fname))
-            for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
-                if os.path.exists(fname + ext):
-                    if not os.path.exists(new_fname + ext):
-                        shutil.copyfile(fname + ext, new_fname + ext)
+            if is_required_resource(context, parallel):
+                logger.info("YES: %s: %s" % (context, fname))
+                utils.safe_makedir(os.path.dirname(new_fname))
+                for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+                    if os.path.exists(fname + ext):
+                        if not os.path.exists(new_fname + ext):
+                            shutil.copyfile(fname + ext, new_fname + ext)
+            else:
+                logger.info("NO: %s: %s" % (context, fname))
         elif os.path.isdir(fname):
             utils.safe_makedir(new_fname)
         return new_fname
@@ -83,4 +94,6 @@ def _shared_finalizer(args, workdir, remap_dict, parallel):
             if os.path.exists(workdir):
                 shutil.rmtree(workdir)
             return new_out
+        else:
+            return out
     return _do
