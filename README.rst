@@ -54,7 +54,7 @@ Installation
   to run bcbio-nextgen without needing to be in the docker group or have root
   access. To avoid security issues, ``bcbio_vm.py`` `sanitizes input arguments`_
   and runs the internal docker process as the calling user using a
-  `small wrapper script`_ so it will only have permissions available to the
+  `small wrapper script`_ so it will only have permissions available to
   that user::
 
     sudo chown :docker /usr/local/bin/bcbio_vm.py
