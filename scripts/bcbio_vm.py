@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -E
 """Run and install bcbio-nextgen, using code and tools isolated in a docker container.
 
 Work in progress script to explore the best ways to integrate docker isolated
@@ -14,6 +14,7 @@ import yaml
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 from bcbiovm.docker import defaults, install, manage, mounts, run
+from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.ship import pack
 
 # default information about docker container
@@ -56,6 +57,10 @@ def cmd_ipython(args):
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)
+
+def cmd_clusterk(args):
+    args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
+    clusterk_main.run(args, DOCKER)
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
@@ -120,6 +125,12 @@ def _run_ipython_cmd(subparsers):
     parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
     parser.set_defaults(func=cmd_ipython)
 
+def _run_clusterk_cmd(subparsers):
+    parser = subparsers.add_parser("clusterk", help="Run on Amazon web services using Clusterk.")
+    parser = _std_run_args(parser)
+    parser.add_argument("-q", "--queue", help="Clusterk queue to run jobs on.", default="default")
+    parser.set_defaults(func=cmd_clusterk)
+
 def _server_cmd(subparsers):
     parser_s = subparsers.add_parser("server", help="Persistent REST server receiving requests via the specified port.")
     parser_s.add_argument("--port", default=8085, help="External port to connect to docker image.")
@@ -139,6 +150,7 @@ if __name__ == "__main__":
     _install_cmd(subparsers)
     _run_cmd(subparsers)
     _run_ipython_cmd(subparsers)
+    _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:

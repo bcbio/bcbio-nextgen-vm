@@ -8,3 +8,8 @@ def shared_filesystem(workdir, tmpdir=None):
     require any work to prepare.
     """
     return {"type": "shared", "workdir": workdir, "tmpdir": tmpdir}
+
+def to_s3(workdir, config):
+    """Ship required processing files to S3 for running on non-shared filesystem Amazon instances.
+    """
+    return config

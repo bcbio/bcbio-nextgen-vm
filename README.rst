@@ -40,9 +40,9 @@ Installation
 
 - Install bcbio-nextgen-vm using `conda`_ with an isolated Python::
 
-    wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
-    bash Miniconda-3.0.5-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
+    wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+    bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
   or with your system Python::

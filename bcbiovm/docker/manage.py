@@ -25,7 +25,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     cid = process.communicate()[0].strip()
     try:
-        do.run(["docker", "attach", "-nostdin", cid], "Running in docker container: %s" % cid,
+        do.run(["docker", "attach", "--no-stdin", cid], "Running in docker container: %s" % cid,
                log_stdout=True)
     except:
         print("Stopping docker container")
