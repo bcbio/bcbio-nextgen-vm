@@ -8,10 +8,10 @@ import yaml
 
 TOSAVE_DEFAULTS = {"datadir": None}
 
-def update_check_args(args, command_info):
+def update_check_args(args, command_info, need_datadir=True):
     args = add_defaults(args)
     if not args.datadir:
-        default_datadir = _find_default_datadir()
+        default_datadir = _find_default_datadir(need_datadir)
         if default_datadir:
             args.datadir = default_datadir
         else:
@@ -19,13 +19,15 @@ def update_check_args(args, command_info):
             sys.exit(1)
     return args
 
-def _find_default_datadir():
+def _find_default_datadir(must_exist=True):
     """Check if the default data directory/standard setup is present
     """
     datadir = os.path.realpath(os.path.normpath(os.path.join(
         os.path.dirname(sys.executable), os.pardir, os.pardir, "data")))
     if (os.path.exists(os.path.join(datadir, "config", "install-params.yaml")) and
           os.path.exists(os.path.join(datadir, "galaxy", "bcbio_system.yaml"))):
+        return datadir
+    elif not must_exist:
         return datadir
     else:
         return None

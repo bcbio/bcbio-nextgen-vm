@@ -26,7 +26,8 @@ DOCKER = {"port": 8085,
           "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
 def cmd_install(args):
-    args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.")
+    args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.",
+                                      need_datadir=args.install_data)
     install.full(args, DOCKER)
 
 def cmd_run(args):
