@@ -34,13 +34,16 @@ def do_analysis(args, dockerconf):
 def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
-    with open(cmd_args["sample_config"]) as in_handle:
-        _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
-                                          cmd_args["fcdir"])
-    dmounts += mounts.prepare_system(cmd_args["datadir"], dockerconf["biodata_dir"])
-    _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], cmd_args["datadir"])
-
+    dmounts = []
+    if cmd_args.get("sample_config"):
+        with open(cmd_args["sample_config"]) as in_handle:
+            _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
+                                              cmd_args["fcdir"])
+    datadir = reconstitute.prep_datadir(cmd_args["pack"])
     work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], parallel, fn_args)
+    dmounts += mounts.prepare_system(datadir, dockerconf["biodata_dir"])
+    _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], datadir)
+
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     all_mounts = dmounts + system_mounts
 

@@ -46,8 +46,7 @@ def cmd_ipython(args):
         yaml.safe_dump(ready_config, out_handle, default_flow_style=False, allow_unicode=False)
     parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
                                          "fcdir": args.fcdir,
-                                         "datadir": args.datadir,
-                                         "pack": pack.shared_filesystem(work_dir, args.tmpdir),
+                                         "pack": pack.shared_filesystem(work_dir, args.datadir, args.tmpdir),
                                          "systemconfig": args.systemconfig}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
@@ -61,6 +60,18 @@ def cmd_ipython(args):
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
     clusterk_main.run(args, DOCKER)
+
+def cmd_runfn(args):
+    args = defaults.update_check_args(args, "Could not run bcbio-nextgen function.")
+    with open(args.parallel) as in_handle:
+        parallel = yaml.safe_load(in_handle)
+    with open(args.runargs) as in_handle:
+        runargs = yaml.safe_load(in_handle)
+    cmd_args = {"systemconfig": args.systemconfig, "pack": parallel["pack"]}
+    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, DOCKER)
+    out_file = "%s-out" % os.path.splitext(args.runargs)
+    with open(out_file, "w") as out_handle:
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
@@ -90,14 +101,18 @@ def _install_cmd(subparsers):
                           action="store_true", default=False)
     parser_i.set_defaults(func=cmd_install)
 
-def _std_run_args(parser):
-    parser.add_argument("sample_config", help="YAML file with details about samples to process.")
-    parser.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process",
-                        type=lambda x: (os.path.abspath(os.path.expanduser(x))))
+def _std_config_args(parser):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("-n", "--numcores", help="Total cores to use for processing",
                         type=int, default=1)
+    return parser
+
+def _std_run_args(parser):
+    parser.add_argument("sample_config", help="YAML file with details about samples to process.")
+    parser.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process",
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))))
+    parser = _std_config_args(parser)
     return parser
 
 def _run_cmd(subparsers):
@@ -125,6 +140,14 @@ def _run_ipython_cmd(subparsers):
     parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
     parser.set_defaults(func=cmd_ipython)
 
+def _runfn_cmd(subparsers):
+    parser = subparsers.add_parser("runfn", help="Run a specific bcbio-nextgen function with provided arguments")
+    parser = _std_config_args(parser)
+    parser.add_argument("fn_name", help="Name of the function to run")
+    parser.add_argument("parallel", help="JSON/YAML file describing the parallel environment")
+    parser.add_argument("runargs", help="JSON/YAML file with arguments to the function")
+    parser.set_defaults(func=cmd_runfn)
+
 def _run_clusterk_cmd(subparsers):
     parser = subparsers.add_parser("clusterk", help="Run on Amazon web services using Clusterk.")
     parser = _std_run_args(parser)
@@ -147,11 +170,12 @@ if __name__ == "__main__":
     parser.add_argument("--datadir", help="Directory with genome data and associated files.",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     subparsers = parser.add_subparsers(title="[sub-commands]")
-    _install_cmd(subparsers)
     _run_cmd(subparsers)
+    _install_cmd(subparsers)
     _run_ipython_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)
+    _runfn_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
         parser.print_help()

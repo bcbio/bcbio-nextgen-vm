@@ -20,6 +20,12 @@ def prep_workdir(pack, parallel, args):
     else:
         raise ValueError("Currently only handle shared filesystems")
 
+def prep_datadir(pack):
+    if "datadir" in pack:
+        return pack["datadir"]
+    else:
+        raise ValueError("Need to handle unpacking biodata directory")
+
 # ## Shared filesystem
 
 def _remap_dict_shared(workdir, new_workdir, args):

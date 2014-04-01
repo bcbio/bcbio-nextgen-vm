@@ -14,14 +14,19 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args):
     run_id = uuid.uuid4()
     work_dir = os.getcwd()
     script_file = "bcbio-%s-run.sh" % run_id
-    arg_file = "bcbio-%s-args.sh" % run_id
+    arg_file = "bcbio-%s-args.json" % run_id
+    parallel_file = "bcbio-%s-parallel.json" % run_id
     tarball = "bcbio-%s.tar.gz" % run_id
+    parallel["pack"] = {"type": "s3"}
     with utils.chdir(work_dir):
         with open(arg_file, "w") as out_handle:
             yaml.safe_dump(run_args, out_handle, default_flow_style=False, allow_unicode=False)
+        with open(parallel_file, "w") as out_handle:
+            yaml.safe_dump(parallel, out_handle, default_flow_style=False, allow_unicode=False)
         with open(script_file, "w") as out_handle:
-            out_handle.write(_bootstrap_sh.format(fn_name=fn_name, arg_file=os.path.basename(arg_file)))
-        do.run(["tar", "-czvpf", tarball, script_file, arg_file],
+            out_handle.write(_bootstrap_sh.format(fn_name=fn_name, arg_file=os.path.basename(arg_file),
+                                                  parallel_file=os.path.basename(parallel_file)))
+        do.run(["tar", "-czvpf", tarball, script_file, arg_file, parallel_file],
                "Prepare submission tarball")
         do.run(["ksub.py", "-q", queue["queue"], "-e", str(int(float(queue["mem"]) * 1024)),
                 "-c", str(100 * int(queue["cores_per_job"])), "-u", os.path.abspath(tarball),
@@ -52,5 +57,5 @@ sudo ln -s /usr/local/share/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcb
 sudo bcbio_vm.py install --tools
 
 # Run bcbio-vm
-bcbio_vm.py runfn {fn_name} {arg_file}
+bcbio_vm.py runfn {fn_name} {parallel_file} {arg_file}
 """
