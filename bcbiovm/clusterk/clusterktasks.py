@@ -7,6 +7,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.provenance import do
+from bcbiovm.ship import pack
 
 def runfn(fn_name, queue, wrap_args, parallel, run_args):
     """Run external function submitting to existing queue.
@@ -17,7 +18,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args):
     arg_file = "bcbio-%s-args.json" % run_id
     parallel_file = "bcbio-%s-parallel.json" % run_id
     tarball = "bcbio-%s.tar.gz" % run_id
-    parallel["pack"] = {"type": "s3"}
+    run_args = pack.send_run(run_args, parallel["pack"])
     with utils.chdir(work_dir):
         with open(arg_file, "w") as out_handle:
             yaml.safe_dump(run_args, out_handle, default_flow_style=False, allow_unicode=False)

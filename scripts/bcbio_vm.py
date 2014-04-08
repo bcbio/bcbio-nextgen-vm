@@ -152,6 +152,8 @@ def _runfn_cmd(subparsers):
 def _run_clusterk_cmd(subparsers):
     parser = subparsers.add_parser("clusterk", help="Run on Amazon web services using Clusterk.")
     parser = _std_run_args(parser)
+    parser.add_argument("run_bucket", help="Name of the S3 bucket to use for storing run information")
+    parser.add_argument("biodata_bucket", help="Name of the S3 bucket to use for storing biodata like genomes")
     parser.add_argument("-q", "--queue", help="Clusterk queue to run jobs on.", default="default")
     parser.set_defaults(func=cmd_clusterk)
 
