@@ -148,15 +148,16 @@ Creating containers
 Build from Dockerfile, providing flattened final image::
 
     cd bcbio-nextgen
+    mkdir builddocker && cd builddocker && cp ../Dockerfile .
     docker build -t chapmanb/bcbio-nextgen-devel-work .
     DID=$(docker run -d chapmanb/bcbio-nextgen-devel-work /bin/bash)
     docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz
-    python ~/bio/cloudbiolinux/utils/s3_multipart_upload.py bcbio-nextgen-docker-image.gz \
-           bcbio_nextgen --public --cores=10
+    gof3r put -p bcbio-nextgen-docker-image.gz -k bcbio-nextgen-docker-image.gz \
+      -b bcbio_nextgen  -m x-amz-storage-class:REDUCED_REDUNDANCY -m x-amz-acl:public-read
 
 Loading an image into your docker environment::
 
-    gzip -dc bcbio-nextgen-docker-image.tgz | docker import - chapmanb/bcbio-nextgen-devel
+    gzip -dc bcbio-nextgen-docker-image.gz | docker import - chapmanb/bcbio-nextgen-devel
 
 Or manually; start up docker::
 

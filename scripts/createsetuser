@@ -20,8 +20,10 @@ def abort(message):
 
 username, uid, groupname, gid = sys.argv[1:5]
 subprocess.call(["addgroup", "--quiet", "--gid", gid, groupname])
-subprocess.call(["useradd", "-m", "-d", "/home/%s" % username,
-                 "-s", "/bin/bash", "-g", gid, "-o", "-u", uid, username])
+homedir = os.path.join("/home", username)
+homedir_args = ["-m", "-d", homedir] if not os.path.exists(homedir) else ["-M"]
+subprocess.call(["useradd"] + homedir_args + 
+                ["-s", "/bin/bash", "-g", gid, "-o", "-u", uid, username])
 try:
     user = pwd.getpwnam(username)
 except KeyError:
