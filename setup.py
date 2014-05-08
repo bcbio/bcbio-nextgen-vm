@@ -24,7 +24,7 @@ write_version_py()
 if "--record=/dev/null" in sys.argv:
     install_requires = []
 else:
-    install_requires = ["six", "requests>=2.1.0", "PyYAML", "progressbar"]
+    install_requires = ["six", "requests>=2.1.0", "PyYAML", "progressbar", "bcbio-nextgen"]
 
 setup(name="bcbio-nextgen-vm",
       version=version,
