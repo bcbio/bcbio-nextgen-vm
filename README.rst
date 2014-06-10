@@ -65,6 +65,11 @@ Installation
 
     bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools
 
+  By default, this will download and import the default docker image as
+  ``chapmanb/bcbio-nextgen-devel``. You can specify an alternative image
+  location with ``--image your_image_name``, and skip the ``--tools`` argument
+  if this image is already present and configured.
+
   If you have an existing bcbio-nextgen installation and want to avoid
   re-installing existing genome data, first symlink to the current installation
   data::

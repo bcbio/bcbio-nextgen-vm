@@ -25,7 +25,7 @@ def run(args, docker_config):
                                  "datadir": args.datadir,
                                  "systemconfig": args.systemconfig}]
     workdir_mount = "%s:%s" % (work_dir, docker_config["work_dir"])
-    manage.run_bcbio_cmd(docker_config["image"], [workdir_mount],
+    manage.run_bcbio_cmd(args.image, [workdir_mount],
                          ["version", "--workdir=%s" % docker_config["work_dir"]])
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,

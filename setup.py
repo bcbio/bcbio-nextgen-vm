@@ -20,8 +20,7 @@ def write_version_py():
 
 write_version_py()
 
-# conda build
-if "--record=/dev/null" in sys.argv:
+if "--record=/dev/null" in sys.argv:  # conda build
     install_requires = []
 else:
     install_requires = ["six", "requests>=2.1.0", "PyYAML", "progressbar", "bcbio-nextgen"]
@@ -29,7 +28,7 @@ else:
 setup(name="bcbio-nextgen-vm",
       version=version,
       author="Brad Chapman and bcbio-nextgen contributors",
-      description="Run bcbio-nextgen genomic sequencing pipelines using isolated containers and virtual machines",
+      description="Run bcbio-nextgen genomic sequencing analyses using isolated containers and virtual machines",
       license="MIT",
       url="https://github.com/chapmanb/bcbio-nextgen-vm",
       packages=find_packages(),

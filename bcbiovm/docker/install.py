@@ -12,6 +12,8 @@ import yaml
 
 from bcbiovm.docker import manage, mounts
 
+DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
+
 def full(args, dockerconf):
     """Full installaction of docker image and data.
     """
@@ -22,14 +24,12 @@ def full(args, dockerconf):
         upgrade_bcbio_vm()
     if args.install_tools:
         updates.append("bcbio-nextgen code and third party tools")
-        if args.inplace:
-            upgrade(dockerconf, args)
-        else:
-            pull(dockerconf)
+        pull(args, dockerconf)
+    _check_docker_image(args)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     if args.install_data:
         updates.append("biological data")
-    manage.run_bcbio_cmd(dockerconf["image"], dmounts, _get_cl(args))
+    manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     save_install_defaults(args)
     if updates:
         print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
@@ -55,14 +55,7 @@ def upgrade_bcbio_vm():
                                "-c", "https://conda.binstar.org/collections/chapmanb/bcbio",
                                "bcbio-nextgen-vm"])
 
-def upgrade(dockerconf, args):
-    """Perform an in-place upgrade of tools and code inside a container.
-    """
-    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
-    cid = manage.run_bcbio_cmd(dockerconf["image"], dmounts, ["upgrade", "-u", "development", "--tools"])
-    subprocess.check_call(["docker", "commit", cid, dockerconf["image"]])
-
-def pull(dockerconf):
+def pull(args, dockerconf):
     """Pull down latest docker image, using export uploaded to S3 bucket.
 
     Long term plan is to use the docker index server but upload size is
@@ -88,7 +81,7 @@ def pull(dockerconf):
     if size:
         pbar.finish()
     del response
-    subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, dockerconf["image"]),
+    subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, args.image),
                           shell=True)
     os.remove(dl_image)
 
@@ -110,23 +103,55 @@ def save_install_defaults(args):
         for x in getattr(args, attr):
             if x not in cur_config[attr]:
                 cur_config[attr].append(str(x))
+    if args.image != DEFAULT_IMAGE:
+        cur_config["image"] = args.image
     with open(install_config, "w") as out_handle:
         yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _get_install_defaults(args):
+    install_config = _get_config_file(args)
+    if install_config and os.path.exists(install_config):
+        with open(install_config) as in_handle:
+            return yaml.load(in_handle)
+
+def _add_docker_defaults(args, default_args):
+    if not hasattr(args, "image") or not args.image:
+        if default_args.get("image"):
+            args.image = default_args["image"]
+        else:
+            args.image = DEFAULT_IMAGE
+    return args
 
 def add_install_defaults(args):
     """Add previously saved installation defaults to command line arguments.
     """
-    install_config = _get_config_file(args)
-    if not os.path.exists(install_config):
+    default_args = _get_install_defaults(args)
+    if not default_args:
         return args
-    with open(install_config) as in_handle:
-        default_args = yaml.load(in_handle)
     for attr in ["genomes", "aligners"]:
         for x in default_args.get(attr, []):
             new_val = getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
+    args = _add_docker_defaults(args, default_args)
+    return args
+
+def _check_docker_image(args):
+    """Ensure docker image exists.
+    """
+    for image in subprocess.check_output(["docker", "images"]).split("\n"):
+        parts = image.split()
+        if len(parts) > 1 and parts[0] == args.image:
+            return
+    raise ValueError("Could not find docker image %s in local repository" % args.image)
+
+def docker_image_arg(args):
+    if not hasattr(args, "image") or not args.image:
+        default_args = _get_install_defaults(args)
+        if default_args:
+            args = _add_docker_defaults(args, default_args)
+    _check_docker_image(args)
     return args
 
 def _get_config_file(args):

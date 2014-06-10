@@ -22,7 +22,6 @@ DOCKER = {"port": 8085,
           "biodata_dir": "/mnt/biodata",
           "input_dir": "/mnt/inputs",
           "work_dir": "/mnt/work",
-          "image": "chapmanb/bcbio-nextgen-devel",
           "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
 def cmd_install(args):
@@ -32,10 +31,12 @@ def cmd_install(args):
 
 def cmd_run(args):
     args = defaults.update_check_args(args, "Could not run analysis.")
+    args = install.docker_image_arg(args)
     run.do_analysis(args, DOCKER)
 
 def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
+    args = install.docker_image_arg(args)
     parallel = clargs.to_parallel(args, "bcbiovm.docker")
     parallel["wrapper"] = "runfn"
     with open(args.sample_config) as in_handle:
@@ -48,11 +49,12 @@ def cmd_ipython(args):
     parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
                                          "fcdir": args.fcdir,
                                          "pack": pack.shared_filesystem(work_dir, args.datadir, args.tmpdir),
-                                         "systemconfig": args.systemconfig}]
+                                         "systemconfig": args.systemconfig,
+                                         "image": args.image}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
     workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
-    manage.run_bcbio_cmd(DOCKER["image"], [workdir_mount],
+    manage.run_bcbio_cmd(args.image, [workdir_mount],
                          ["version", "--workdir=%s" % DOCKER["work_dir"]])
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
@@ -60,15 +62,17 @@ def cmd_ipython(args):
 
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
+    args = install.docker_image_arg(args)
     clusterk_main.run(args, DOCKER)
 
 def cmd_runfn(args):
     args = defaults.update_check_args(args, "Could not run bcbio-nextgen function.")
+    args = install.docker_image_arg(args)
     with open(args.parallel) as in_handle:
         parallel = yaml.safe_load(in_handle)
     with open(args.runargs) as in_handle:
         runargs = yaml.safe_load(in_handle)
-    cmd_args = {"systemconfig": args.systemconfig, "pack": parallel["pack"]}
+    cmd_args = {"systemconfig": args.systemconfig, "image": args.image, "pack": parallel["pack"]}
     out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, DOCKER)
     out_file = "%s-out" % os.path.splitext(args.runargs)
     with open(out_file, "w") as out_handle:
@@ -76,9 +80,10 @@ def cmd_runfn(args):
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
+    args = install.docker_image_arg(args)
     ports = ["%s:%s" % (args.port, DOCKER["port"])]
     print("Running server on port %s. Press ctrl-c to exit." % args.port)
-    manage.run_bcbio_cmd(DOCKER["image"], [], ["server", "--port", str(DOCKER["port"])],
+    manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(DOCKER["port"])],
                          ports)
 
 def cmd_save_defaults(args):
@@ -96,10 +101,10 @@ def _install_cmd(subparsers):
                           dest="install_data", action="store_true", default=False)
     parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",
                           dest="install_tools", action="store_true", default=False)
-    parser_i.add_argument("--inplace", help="Perform an in-place update of code and tools.",
-                          action="store_true", default=False)
     parser_i.add_argument("--wrapper", help="Update wrapper bcbio-nextgen-vm code",
                           action="store_true", default=False)
+    parser_i.add_argument("--image", help="Docker image name to use, could point to compatible pre-installed image.",
+                          default=None)
     parser_i.set_defaults(func=cmd_install)
 
 def _std_config_args(parser):
