@@ -30,7 +30,7 @@ def full(args, dockerconf):
     if args.install_data:
         updates.append("biological data")
     manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
-    save_install_defaults(args)
+    _save_install_defaults(args)
     if updates:
         print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
 
@@ -81,11 +81,12 @@ def pull(args, dockerconf):
     if size:
         pbar.finish()
     del response
+    assert args.image, "Unspecified image name for docker import"
     subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, args.image),
                           shell=True)
     os.remove(dl_image)
 
-def save_install_defaults(args):
+def _save_install_defaults(args):
     """Save arguments passed to installation to be used on subsequent upgrades.
     Avoids needing to re-include genomes and aligners on command line.
     """
@@ -103,7 +104,7 @@ def save_install_defaults(args):
         for x in getattr(args, attr):
             if x not in cur_config[attr]:
                 cur_config[attr].append(str(x))
-    if args.image != DEFAULT_IMAGE:
+    if args.image != DEFAULT_IMAGE and args.image:
         cur_config["image"] = args.image
     with open(install_config, "w") as out_handle:
         yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
@@ -113,10 +114,11 @@ def _get_install_defaults(args):
     if install_config and os.path.exists(install_config):
         with open(install_config) as in_handle:
             return yaml.load(in_handle)
+    return {}
 
 def _add_docker_defaults(args, default_args):
     if not hasattr(args, "image") or not args.image:
-        if default_args.get("image"):
+        if default_args.get("image") and not default_args.get("images") == "None":
             args.image = default_args["image"]
         else:
             args.image = DEFAULT_IMAGE
@@ -126,8 +128,6 @@ def add_install_defaults(args):
     """Add previously saved installation defaults to command line arguments.
     """
     default_args = _get_install_defaults(args)
-    if not default_args:
-        return args
     for attr in ["genomes", "aligners"]:
         for x in default_args.get(attr, []):
             new_val = getattr(args, attr)
@@ -149,8 +149,7 @@ def _check_docker_image(args):
 def docker_image_arg(args):
     if not hasattr(args, "image") or not args.image:
         default_args = _get_install_defaults(args)
-        if default_args:
-            args = _add_docker_defaults(args, default_args)
+        args = _add_docker_defaults(args, default_args)
     _check_docker_image(args)
     return args
 
