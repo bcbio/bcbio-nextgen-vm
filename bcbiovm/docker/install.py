@@ -6,8 +6,6 @@ import os
 import subprocess
 import sys
 
-import progressbar as pb
-import requests
 import yaml
 
 from bcbiovm.docker import manage, mounts
@@ -63,28 +61,8 @@ def pull(args, dockerconf):
     """
     print("Retrieving bcbio-nextgen docker image with code and tools")
     #subprocess.check_call(["docker", "pull", image])
-    dl_image = os.path.basename(dockerconf["image_url"])
-    response = requests.get(dockerconf["image_url"], stream=True)
-    size = int(response.headers.get("Content-Length", "0").strip())
-    if size:
-        widgets = [dl_image, pb.Percentage(), ' ', pb.Bar(),
-                   ' ', pb.ETA(), ' ', pb.FileTransferSpeed()]
-        pbar = pb.ProgressBar(widgets=widgets, maxval=size).start()
-    transferred_size = 0
-    with open(dl_image, "wb") as out_handle:
-        for buf in response.iter_content(1024):
-            if buf:
-                out_handle.write(buf)
-                transferred_size += len(buf)
-                if size:
-                    pbar.update(transferred_size)
-    if size:
-        pbar.finish()
-    del response
     assert args.image, "Unspecified image name for docker import"
-    subprocess.check_call("gzip -dc %s | docker import - %s" % (dl_image, args.image),
-                          shell=True)
-    os.remove(dl_image)
+    subprocess.check_call(["docker", "import", dockerconf["image_url"], args.image])
 
 def _save_install_defaults(args):
     """Save arguments passed to installation to be used on subsequent upgrades.
