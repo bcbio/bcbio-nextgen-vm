@@ -1,0 +1,8 @@
+---
+- name: Rebuild and update bcbio_vm docker instance on S3
+  hosts: localhost
+  gather_facts: True
+  vars:
+    bcbio_dir: /tmp/bcbio-nextgen
+  roles:
+    - bcbio_vm_build

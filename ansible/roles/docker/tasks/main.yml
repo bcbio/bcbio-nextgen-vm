@@ -1,0 +1,32 @@
+---
+- name: Add docker apt key
+  apt_key:
+    url: https://get.docker.io/gpg
+    state: present
+  sudo: True
+
+- name: Add docker apt repo
+  shell: echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list
+  sudo: True
+
+- name: Install Docker
+  apt:
+    name: "{{ item }}"
+    update_cache: True
+  with_items:
+    - lxc-docker
+    - git
+  sudo: True
+
+- name: Add user ubuntu to the docker group 
+  user:
+    name: "{{ docker_user }}"
+    groups: docker,
+    append: True
+  sudo: True
+
+- name: Ensure Docker server is running
+  service:
+    name: docker
+    state: started
+  sudo: True
