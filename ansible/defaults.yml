@@ -1,0 +1,13 @@
+---
+# type and location for booting
+instance_type: t1.micro
+region: us-east-1
+# connectivity and security
+keypair: kunkel-keypair
+ansible_ssh_private_key_file: ~/.ec2/id-kunkel.pem
+security_group: cloudman
+# AMI details
+ansible_ssh_user: ubuntu
+image: ami-018c9568
+# S3 details
+bcbio_bucket: bcbio_nextgen

@@ -10,6 +10,7 @@
   sudo: True
 
 - name: Install Docker
+  register: docker_install
   apt:
     name: "{{ item }}"
     update_cache: True
@@ -18,15 +19,17 @@
     - git
   sudo: True
 
+- debug: var=docker_install.stdout_lines
+
 - name: Add user ubuntu to the docker group 
   user:
     name: "{{ docker_user }}"
-    groups: docker,
+    groups: docker
     append: True
   sudo: True
 
-- name: Ensure Docker server is running
+- name: Restart Docker server
   service:
     name: docker
-    state: started
+    state: restarted
   sudo: True
