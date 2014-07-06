@@ -6,4 +6,4 @@
     bcbio_dir: /tmp/bcbio-nextgen
   roles:
     - gof3r
-    #- bcbio_vm_build
+    - bcbio_vm_build

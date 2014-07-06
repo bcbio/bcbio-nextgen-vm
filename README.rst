@@ -2,12 +2,12 @@ bcbio-nextgen-vm
 ----------------
 
 Run `bcbio-nextgen`_ genomic sequencing analysis pipelines using code and tools
-isolated inside of lightweight containers and virtual machines. This enables:
+isolated inside of lightweight containers. This enables:
 
 - Improved installation: Pre-installing all required biological code, tools and
   system libraries inside a container removes the difficulties associated with
-  supporting multiple platforms. Installation only requires setting up the
-  virtual environment and download of the latest container.
+  supporting multiple platforms. Installation only requires setting up
+  `docker`_ and download of the latest container.
 
 - Pipeline isolation: Third party software used in processing is fully isolated
   and will not impact existing tools or software. This eliminates the need for
@@ -144,39 +144,37 @@ ToDo
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker
   container.
-- Work on mechanisms for partial updates as well as full updates from latest
-  container images.
+- Improve ability to develop and test on locally installed images.
 
-Creating containers
-===================
+Creating docker image
+=====================
 
-Build from Dockerfile, providing flattened final image::
+An `ansible <http://www.ansible.com>`_ playbook automates the process of
+creating the bcbio-nextgen docker images. To build on AWS and upload the latest
+image to S3::
 
-    cd bcbio-nextgen
-    mkdir builddocker && cd builddocker && cp ../Dockerfile .
-    docker build -t chapmanb/bcbio-nextgen-devel-work .
-    DID=$(docker run -d chapmanb/bcbio-nextgen-devel-work /bin/bash)
-    docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz
-    gof3r put -p bcbio-nextgen-docker-image.gz -k bcbio-nextgen-docker-image.gz \
-      -b bcbio_nextgen  -m x-amz-storage-class:REDUCED_REDUNDANCY -m x-amz-acl:public-read
+    cd ansible
+    vim defaults.yml
+    ansible-playbook bcbio_vm_aws.yml --extra-vars "@defaults.yml"
 
-Loading an image into your docker environment::
+or locally, with Docker pre-installed::
 
-    gzip -dc bcbio-nextgen-docker-image.gz | docker import - chapmanb/bcbio-nextgen-devel
+    ansible-playbook -c local bcbio_vm_local.yml --extra-vars "@defaults.yml"
 
-Or manually; start up docker::
+Docker image installation
+=========================
 
-    DID=$(docker run -d -i -t stackbrew/ubuntu:13.10 /bin/bash)
-    docker attach $DID
+Install the current bcbio docker image into your local repository by hand with::
 
-install bcbio-nextgen via instructions in Dockerfile. Then commit::
+    docker import https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz chapmanb/bcbio-nextgen-devel
 
-    docker commit $DID chapmanb/bcbio-nextgen-devel
+The installer does this automatically, but this is useful if you want to work
+with the bcbio-nextgen docker image independently from the wrapper.
 
 Updates
 =======
 
-Upload local images to `Docker index`_::
+Update local images during development::
 
     DID=$(docker run -d -i -t -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
           chapmanb/bcbio-nextgen-devel /bin/bash)
@@ -184,13 +182,3 @@ Upload local images to `Docker index`_::
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     docker commit $DID chapmanb/bcbio-nextgen-devel
-    docker push chapmanb/bcbio-nextgen-devel
-
-Update and test local code::
-
-    bcbio_vm.py --develrepo=~/bio/bcbio-nextgen run [<args>]
-    docker attach bcbio-develrepo
-    cd /tmp/bcbio-nextgen
-    /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
-    bcbio_nextgen.py server --port=8085
-    wget -O /dev/null http://localhost:8085/kill

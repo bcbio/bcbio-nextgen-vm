@@ -17,6 +17,6 @@
     creates: '{{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r'
 
 - name: Install gof3r binary
-  command: cp '{{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r ~/bin
+  command: 'cp {{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r ~/bin'
   args:
     creates: ~/bin/gof3r

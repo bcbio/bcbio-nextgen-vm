@@ -4,7 +4,17 @@
   gather_facts: False
   tasks:
     - name: Launch instance
-      local_action: ec2 key_name={{ keypair }} group={{ security_group }} instance_type={{ instance_type }} image={{ image }} wait=true region={{ region }}
+      local_action:
+        module: ec2
+        key_name: "{{ keypair }}"
+        group: "{{ security_group }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ image }}"
+        region: "{{ region }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 15
+        wait: true
       register: ec2
     - name: Add new instance to host group
       local_action: add_host hostname={{ item.public_ip }} groupname=launched
@@ -25,6 +35,7 @@
     bcbio_dir: /tmp/bcbio-nextgen
   roles:
     - docker
+    - gof3r
     - bcbio_vm_build
 
 - name: Terminate EC2 instance
