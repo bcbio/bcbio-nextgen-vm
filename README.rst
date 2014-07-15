@@ -42,13 +42,13 @@ Installation
 
     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
   or with your system Python::
 
     pip install conda
-    conda install -c https://conda.binstar.org/collections/chapmanb/bcbio bcbio-nextgen-vm
+    conda install -c https://conda.binstar.org/bcbio bcbio-nextgen-vm
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root

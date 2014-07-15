@@ -50,7 +50,7 @@ def upgrade_bcbio_vm():
         print("Cannot update bcbio-nextgen-vm; not installed with conda")
     else:
         subprocess.check_call([conda_bin, "install", "--yes",
-                               "-c", "https://conda.binstar.org/collections/chapmanb/bcbio",
+                               "-c", "https://conda.binstar.org/bcbio",
                                "bcbio-nextgen-vm"])
 
 def pull(args, dockerconf):
