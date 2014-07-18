@@ -89,8 +89,8 @@ def cmd_server(args):
 def cmd_save_defaults(args):
     defaults.save(args)
 
-def _install_cmd(subparsers):
-    parser_i = subparsers.add_parser("install", help="Install or upgrade bcbio-nextgen docker container and data.")
+def _install_cmd(subparsers, name):
+    parser_i = subparsers.add_parser(name, help="Install or upgrade bcbio-nextgen docker container and data.")
     parser_i.add_argument("--genomes", help="Genomes to download",
                           action="append", default=["GRCh37"],
                           choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3"])
@@ -179,7 +179,8 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     subparsers = parser.add_subparsers(title="[sub-commands]")
     _run_cmd(subparsers)
-    _install_cmd(subparsers)
+    _install_cmd(subparsers, name="install")
+    _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)

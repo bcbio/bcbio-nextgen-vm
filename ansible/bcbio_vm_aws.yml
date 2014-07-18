@@ -14,6 +14,7 @@
         volumes:
           - device_name: /dev/sda1
             volume_size: 15
+            delete_on_termination: true
         wait: true
       register: ec2
     - name: Add new instance to host group

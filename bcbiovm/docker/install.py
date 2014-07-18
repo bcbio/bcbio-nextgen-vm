@@ -31,6 +31,9 @@ def full(args, dockerconf):
     _save_install_defaults(args)
     if updates:
         print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
+    else:
+        print("\nNo update targets specified, need '--wrapper', '--tools' or '--data'\n"
+              "See 'bcbio_vm.py upgrade -h' for more details.")
 
 def _get_cl(args):
     clargs = ["upgrade"]
