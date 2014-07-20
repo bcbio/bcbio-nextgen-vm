@@ -1,7 +1,10 @@
 """Prepare a running process to execute remotely, moving files as necessary to shared infrastructure.
 """
 import os
+import subprocess
 
+import boto
+from boto.exception import S3ResponseError
 import toolz as tz
 
 from bcbiovm.docker import remap
@@ -28,27 +31,40 @@ def send_run(args, config):
 def to_s3(args, config):
     """Ship required processing files to S3 for running on non-shared filesystem Amazon instances.
     """
-    import pprint
     dir_to_s3 = _prep_s3_directories(args, config["buckets"])
-    pprint.pprint(dir_to_s3)
-    args = remap.walk_files(args, _remap_and_ship, dir_to_s3)
-    pprint.pprint(args)
-    raise NotImplementedError
+    conn = boto.connect_s3()
+    args = remap.walk_files(args, _remap_and_ship(conn), dir_to_s3)
     return config
 
-def _remap_and_ship(fname, context, remap_dict):
+def _remap_and_ship(conn):
     """Remap a file into an S3 bucket and key, shipping if not present.
+
+    Uploads files if not present in the specified bucket, using server side encryption.
+    Uses gof3r for parallel multipart upload.
     """
-    if os.path.isfile(fname):
-        dirname = os.path.normpath(os.path.dirname(os.path.abspath(fname)))
-        store = remap_dict[dirname]
-        # XXX Push to S3
-        s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"], os.path.basename(fname))
-    else:
-        print fname
-        s3_name = fname
-        #raise ValueError("Directory name not found in remap: %s" % fname)
-    return s3_name
+    def _work(fname, context, remap_dict):
+        if os.path.isfile(fname):
+            dirname = os.path.normpath(os.path.dirname(os.path.abspath(fname)))
+            store = remap_dict[dirname]
+            try:
+                bucket = conn.get_bucket(store["bucket"])
+            except S3ResponseError, e:
+                if e.status == 404:
+                    bucket = conn.create_bucket(store["bucket"])
+                else:
+                    raise
+            keyname = "%s/%s" % (store["folder"], os.path.basename(fname))
+            key = bucket.get_key(keyname)
+            if not key:
+                subprocess.check_call(["gof3r", "put", "-p", fname, "-k", keyname,
+                                       "-b", store["bucket"], "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
+                                       "-m", "x-amz-server-side-encryption:AES256"])
+            s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"], os.path.basename(fname))
+        else:
+            s3_name = fname
+            #raise ValueError("Directory name not found in remap: %s" % fname)
+        return s3_name
+    return _work
 
 def _prep_s3_directories(args, buckets):
     """Map input directories into stable S3 buckets and folders for storing files.

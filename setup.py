@@ -23,7 +23,7 @@ write_version_py()
 if "--record=/dev/null" in sys.argv:  # conda build
     install_requires = []
 else:
-    install_requires = ["six", "PyYAML", "bcbio-nextgen"]
+    install_requires = ["six", "PyYAML", "bcbio-nextgen", "boto"]
 
 setup(name="bcbio-nextgen-vm",
       version=version,
