@@ -20,11 +20,23 @@ def prep_workdir(pack, parallel, args):
     else:
         raise ValueError("Currently only handle shared filesystems")
 
-def prep_datadir(pack):
+def prep_datadir(pack, args):
     if "datadir" in pack:
-        return pack["datadir"]
+        return pack["datadir"], args
+    elif pack["type"] == "S3":
+        return _unpack_s3_biodata(pack["buckets"]["biodata"], args)
     else:
         raise ValueError("Need to handle unpacking biodata directory")
+
+# ## S3
+
+def _unpack_s3_biodata(biodata_bucket, args):
+    """Create biodata directory in current directory
+    """
+    biodata_dir = utils.safe_makedir(os.path.join(os.getcwd(), biodata_bucket))
+    import pprint
+    pprint.pprint(args)
+    return biodata_dir, args
 
 # ## Shared filesystem
 

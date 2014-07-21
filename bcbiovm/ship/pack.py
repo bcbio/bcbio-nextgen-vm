@@ -33,8 +33,23 @@ def to_s3(args, config):
     """
     dir_to_s3 = _prep_s3_directories(args, config["buckets"])
     conn = boto.connect_s3()
-    args = remap.walk_files(args, _remap_and_ship(conn), dir_to_s3)
-    return config
+    args = _remove_empty(remap.walk_files(args, _remap_and_ship(conn), dir_to_s3, pass_dirs=True))
+    return args
+
+def _remove_empty(xs):
+    """Remove null values in a nested set of arguments, eliminates unpassed values in S3.
+    """
+    if isinstance(xs, (list, tuple)):
+        return filter(lambda x: x is not None, [_remove_empty(x) for x in xs])
+    elif isinstance(xs, dict):
+        out = {}
+        for k, v in xs.items():
+            v = _remove_empty(v)
+            if v is not None:
+                out[k] = v
+        return out if out else None
+    else:
+        return xs
 
 def _remap_and_ship(conn):
     """Remap a file into an S3 bucket and key, shipping if not present.
@@ -60,9 +75,9 @@ def _remap_and_ship(conn):
                                        "-b", store["bucket"], "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
                                        "-m", "x-amz-server-side-encryption:AES256"])
             s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"], os.path.basename(fname))
+        # Drop directory information since we only deal with files in S3
         else:
-            s3_name = fname
-            #raise ValueError("Directory name not found in remap: %s" % fname)
+            s3_name = None
         return s3_name
     return _work
 
@@ -72,7 +87,7 @@ def _prep_s3_directories(args, buckets):
     dirs = set([])
     def _get_dirs(fname, context, remap_dict):
         dirs.add(os.path.normpath(os.path.dirname(os.path.abspath(fname))))
-    remap.walk_files(args, _get_dirs, {})
+    remap.walk_files(args, _get_dirs, {}, pass_dirs=True)
     work_dir, biodata_dir = _get_known_dirs(args)
     out = {}
     external_count = 0

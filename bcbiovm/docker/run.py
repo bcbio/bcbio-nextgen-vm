@@ -39,7 +39,7 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
         with open(cmd_args["sample_config"]) as in_handle:
             _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
                                               cmd_args["fcdir"])
-    datadir = reconstitute.prep_datadir(cmd_args["pack"])
+    datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
     work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], parallel, fn_args)
     dmounts += mounts.prepare_system(datadir, dockerconf["biodata_dir"])
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], datadir)
