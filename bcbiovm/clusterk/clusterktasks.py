@@ -45,7 +45,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args):
 def _test_clusterk(fn_name, parallel_file, arg_file):
     """Do local runs of equivalent
     """
-    test_dir = utils.safe_makedir("/tmp/bcbiotest")
+    test_dir = utils.safe_makedir(os.path.expanduser("~/tmp/bcbiotest"))
     shutil.copy(parallel_file, test_dir)
     shutil.copy(arg_file, test_dir)
     with utils.chdir(test_dir):

@@ -6,8 +6,10 @@ then handing off outputs to ship back to subsequent processing steps.
 import os
 import uuid
 import shutil
+import subprocess
 
 from bcbio import utils
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbiovm.docker import remap
 
@@ -17,26 +19,49 @@ def prep_workdir(pack, parallel, args):
     if pack["type"] == "shared":
         workdir, remap_dict, new_args = _create_workdir_shared(pack["workdir"], args, parallel, pack["tmpdir"])
         return workdir, new_args, _shared_finalizer(new_args, workdir, remap_dict, parallel)
+    elif pack["type"] == "S3":
+        workdir, new_args = _unpack_s3(pack["buckets"]["run"], args)
+        return workdir, new_args, _ship_s3(pack)
     else:
-        raise ValueError("Currently only handle shared filesystems")
+        raise ValueError("Cannot handle work directory preparation type: %s" % pack)
 
 def prep_datadir(pack, args):
     if "datadir" in pack:
         return pack["datadir"], args
     elif pack["type"] == "S3":
-        return _unpack_s3_biodata(pack["buckets"]["biodata"], args)
+        return _unpack_s3(pack["buckets"]["biodata"], args)
     else:
-        raise ValueError("Need to handle unpacking biodata directory")
+        raise ValueError("Cannot handle biodata directory preparation type: %s" % pack)
 
 # ## S3
 
-def _unpack_s3_biodata(biodata_bucket, args):
-    """Create biodata directory in current directory
+def _ship_s3(pack):
+    def _do(out):
+        import pprint
+        pprint.pprint(out)
+        raise NotImplementedError
+    return _do
+
+def _unpack_s3(bucket, args):
+    """Create local directory in current directory with pulldowns from S3.
     """
-    biodata_dir = utils.safe_makedir(os.path.join(os.getcwd(), biodata_bucket))
-    import pprint
-    pprint.pprint(args)
-    return biodata_dir, args
+    local_dir = utils.safe_makedir(os.path.join(os.getcwd(), bucket))
+    remote_key = "s3://%s" % bucket
+    def _get_s3(fname, context, remap_dict):
+        """Pull down s3 published data locally for processing.
+        """
+        if fname.startswith(remote_key):
+            out_fname = fname.replace(remote_key, local_dir)
+            if not os.path.exists(out_fname):
+                utils.safe_makedir(os.path.dirname(out_fname))
+                with file_transaction(out_fname) as tx_out_fname:
+                    subprocess.check_call(["gof3r", "get", "-p", tx_out_fname,
+                                           "-k", fname.replace(remote_key + "/", ""), "-b", bucket])
+            return out_fname
+        else:
+            return fname
+    new_args = remap.walk_files(args, _get_s3, {remote_key: local_dir})
+    return local_dir, new_args
 
 # ## Shared filesystem
 
