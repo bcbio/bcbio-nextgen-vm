@@ -40,7 +40,8 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args):
                     os.path.basename(script_file)],
                    "Submit to clusterk")
         for f in [script_file, arg_file, tarball]:
-            os.remove(f)
+            if os.path.exists(f):
+                os.remove(f)
 
 def _test_clusterk(fn_name, parallel_file, arg_file):
     """Do local runs of equivalent

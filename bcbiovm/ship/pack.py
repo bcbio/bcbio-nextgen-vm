@@ -28,6 +28,17 @@ def send_run(args, config):
     else:
         raise NotImplementedError("Do not yet support pack type: %s", config)
 
+def send_run_integrated(config):
+    """Integrated implementation sending run results back to central store.
+    """
+    def _do(args):
+        out = []
+        for arg_set in args:
+            new_args = send_run(arg_set, config)
+            out.append(new_args)
+        return out
+    return _do
+
 def to_s3(args, config):
     """Ship required processing files to S3 for running on non-shared filesystem Amazon instances.
     """

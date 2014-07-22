@@ -42,6 +42,7 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
     work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], parallel, fn_args)
     dmounts += mounts.prepare_system(datadir, dockerconf["biodata_dir"])
+    reconstitute.prep_systemconfig(datadir, fn_args)
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], datadir)
 
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))

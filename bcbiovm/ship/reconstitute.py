@@ -8,10 +8,15 @@ import uuid
 import shutil
 import subprocess
 
+import toolz as tz
+import yaml
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.pipeline import config_utils
 from bcbiovm.docker import remap
+from bcbiovm.ship import pack as ship_n_pack
 
 def prep_workdir(pack, parallel, args):
     """Unpack necessary files and directories into a temporary structure for processing
@@ -21,7 +26,12 @@ def prep_workdir(pack, parallel, args):
         return workdir, new_args, _shared_finalizer(new_args, workdir, remap_dict, parallel)
     elif pack["type"] == "S3":
         workdir, new_args = _unpack_s3(pack["buckets"]["run"], args)
-        return workdir, new_args, _ship_s3(pack)
+        datai, data = config_utils.get_dataarg(new_args)
+        if "dirs" not in data:
+            data["dirs"] = {}
+        data["dirs"]["work"] = workdir
+        new_args[datai] = data
+        return workdir, new_args, ship_n_pack.send_run_integrated(pack)
     else:
         raise ValueError("Cannot handle work directory preparation type: %s" % pack)
 
@@ -33,14 +43,16 @@ def prep_datadir(pack, args):
     else:
         raise ValueError("Cannot handle biodata directory preparation type: %s" % pack)
 
+def prep_systemconfig(datadir, args):
+    """Prepare system configuration files on bare systems if not present.
+    """
+    default_system = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+    if not utils.file_exists(default_system):
+        with open(default_system, "w") as out_handle:
+            _, data = config_utils.get_dataarg(args)
+            out = {"resources": tz.get_in(["config", "resources"], data, {})}
+            yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 # ## S3
-
-def _ship_s3(pack):
-    def _do(out):
-        import pprint
-        pprint.pprint(out)
-        raise NotImplementedError
-    return _do
 
 def _unpack_s3(bucket, args):
     """Create local directory in current directory with pulldowns from S3.

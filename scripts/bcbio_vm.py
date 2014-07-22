@@ -74,7 +74,7 @@ def cmd_runfn(args):
         runargs = yaml.safe_load(in_handle)
     cmd_args = {"systemconfig": args.systemconfig, "image": args.image, "pack": parallel["pack"]}
     out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, DOCKER)
-    out_file = "%s-out" % os.path.splitext(args.runargs)
+    out_file = "%s-out%s" % os.path.splitext(args.runargs)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
