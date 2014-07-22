@@ -52,26 +52,42 @@ def prep_systemconfig(datadir, args):
             _, data = config_utils.get_dataarg(args)
             out = {"resources": tz.get_in(["config", "resources"], data, {})}
             yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+
+def get_output(target_file, pconfig):
+    """Retrieve an output file from pack configuration.
+    """
+    if pconfig["type"] == "S3":
+        keyname = "%s/%s" % (tz.get_in(["folders", "output"], pconfig), os.path.basename(target_file))
+        _get_s3(target_file, keyname, tz.get_in(["buckets", "run"], pconfig))
+        return target_file
+    else:
+        raise NotImplementedError("Unexpected pack information for fetchign output: %s" % pconfig)
+
 # ## S3
+
+def _get_s3(out_fname, keyname, bucket):
+    if not os.path.exists(out_fname):
+        utils.safe_makedir(os.path.dirname(out_fname))
+        with file_transaction(out_fname) as tx_out_fname:
+            subprocess.check_call(["gof3r", "get", "-p", tx_out_fname,
+                                   "-k", keyname, "-b", bucket])
 
 def _unpack_s3(bucket, args):
     """Create local directory in current directory with pulldowns from S3.
     """
     local_dir = utils.safe_makedir(os.path.join(os.getcwd(), bucket))
     remote_key = "s3://%s" % bucket
-    def _get_s3(fname, context, remap_dict):
+    def _get_s3(orig_fname, context, remap_dict):
         """Pull down s3 published data locally for processing.
         """
-        if fname.startswith(remote_key):
-            out_fname = fname.replace(remote_key, local_dir)
-            if not os.path.exists(out_fname):
-                utils.safe_makedir(os.path.dirname(out_fname))
-                with file_transaction(out_fname) as tx_out_fname:
-                    subprocess.check_call(["gof3r", "get", "-p", tx_out_fname,
-                                           "-k", fname.replace(remote_key + "/", ""), "-b", bucket])
-            return out_fname
+        if orig_fname.startswith(remote_key):
+            for fname in utils.file_plus_index(orig_fname):
+                out_fname = fname.replace(remote_key, local_dir)
+                keyname = fname.replace(remote_key + "/", "")
+                _get_s3(out_fname, keyname, bucket)
+            return orig_fname.replace(remote_key, local_dir)
         else:
-            return fname
+            return orig_fname
     new_args = remap.walk_files(args, _get_s3, {remote_key: local_dir})
     return local_dir, new_args
 

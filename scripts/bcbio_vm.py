@@ -77,6 +77,7 @@ def cmd_runfn(args):
     out_file = "%s-out%s" % os.path.splitext(args.runargs)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+    pack.send_output(parallel["pack"], out_file)
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")

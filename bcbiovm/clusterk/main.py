@@ -18,7 +18,7 @@ def run(args, docker_config):
                                      (os.path.splitext(os.path.basename(args.sample_config))))
     with open(ready_config_file, "w") as out_handle:
         yaml.safe_dump(ready_config, out_handle, default_flow_style=False, allow_unicode=False)
-    parallel["pack"] = pack.prep_s3(args.biodata_bucket, args.run_bucket)
+    parallel["pack"] = pack.prep_s3(args.biodata_bucket, args.run_bucket, "runfn_output")
     parallel["wrapper_args"] = [{"sample_config": ready_config_file,
                                  "docker_config": docker_config,
                                  "fcdir": args.fcdir,
