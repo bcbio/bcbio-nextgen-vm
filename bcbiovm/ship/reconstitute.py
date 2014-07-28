@@ -58,14 +58,14 @@ def get_output(target_file, pconfig):
     """
     if pconfig["type"] == "S3":
         keyname = "%s/%s" % (tz.get_in(["folders", "output"], pconfig), os.path.basename(target_file))
-        _get_s3(target_file, keyname, tz.get_in(["buckets", "run"], pconfig))
+        _transfer_s3(target_file, keyname, tz.get_in(["buckets", "run"], pconfig))
         return target_file
     else:
         raise NotImplementedError("Unexpected pack information for fetchign output: %s" % pconfig)
 
 # ## S3
 
-def _get_s3(out_fname, keyname, bucket):
+def _transfer_s3(out_fname, keyname, bucket):
     if not os.path.exists(out_fname):
         utils.safe_makedir(os.path.dirname(out_fname))
         with file_transaction(out_fname) as tx_out_fname:
@@ -81,11 +81,15 @@ def _unpack_s3(bucket, args):
         """Pull down s3 published data locally for processing.
         """
         if orig_fname.startswith(remote_key):
+            if context[0] in ["reference", "genome_resources", "sam_ref"]:
+                cur_dir = os.path.join(local_dir, "genomes")
+            else:
+                cur_dir = local_dir
             for fname in utils.file_plus_index(orig_fname):
-                out_fname = fname.replace(remote_key, local_dir)
+                out_fname = fname.replace(remote_key, cur_dir)
                 keyname = fname.replace(remote_key + "/", "")
-                _get_s3(out_fname, keyname, bucket)
-            return orig_fname.replace(remote_key, local_dir)
+                _transfer_s3(out_fname, keyname, bucket)
+            return orig_fname.replace(remote_key, cur_dir)
         else:
             return orig_fname
     new_args = remap.walk_files(args, _get_s3, {remote_key: local_dir})

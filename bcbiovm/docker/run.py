@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import os
 import uuid
+import sys
 
 import yaml
 
@@ -54,21 +55,20 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
                        out_handle, default_flow_style=False, allow_unicode=False)
     docker_argfile = os.path.join(dockerconf["work_dir"], os.path.basename(argfile))
     outfile = "%s-out%s" % os.path.splitext(argfile)
-    try:
-        out = None
-        manage.run_bcbio_cmd(cmd_args["image"], all_mounts,
-                             ["runfn", fn_name, docker_argfile],
-                             ports=ports)
-        if os.path.exists(outfile):
-            with open(outfile) as in_handle:
-                out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
-        else:
-            raise ValueError("Subprocess in docker container failed")
-    finally:
-        out = finalizer(out)
-        for f in [argfile, outfile]:
-            if os.path.exists(f):
-                os.remove(f)
+    out = None
+    manage.run_bcbio_cmd(cmd_args["image"], all_mounts,
+                         ["runfn", fn_name, docker_argfile],
+                         ports=ports)
+    if os.path.exists(outfile):
+        with open(outfile) as in_handle:
+            out = remap.docker_to_external(yaml.safe_load(in_handle), all_mounts)
+    else:
+        print("Subprocess in docker container failed")
+        sys.exit(1)
+    out = finalizer(out)
+    for f in [argfile, outfile]:
+        if os.path.exists(f):
+            os.remove(f)
     return out
 
 def _read_system_config(dockerconf, systemconfig, datadir):
