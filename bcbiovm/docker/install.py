@@ -26,7 +26,14 @@ def full(args, dockerconf):
     _check_docker_image(args)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     if args.install_data:
-        updates.append("biological data")
+        if len(args.genomes) == 0:
+            print("Data not installed, no genomes provided with `--genomes` flag")
+            sys.exit(1)
+        elif len(args.aligners) == 0:
+            print("Data not installed, no aligners provided with `--aligners` flag")
+            sys.exit(1)
+        else:
+            updates.append("biological data")
     manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     _save_install_defaults(args)
     if updates:
