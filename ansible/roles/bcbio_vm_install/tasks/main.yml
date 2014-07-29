@@ -1,23 +1,45 @@
 # Install bcbio_vm on a machine
 ---
 - name: Get Miniconda install script
-  get_url: url=http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+  get_url:
+    url: http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+    dest: /tmp/Miniconda-latest-Linux-x86_64.sh
 
 - name: Install Miniconda
-  shell: "bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda"
+  shell: "bash /tmp/Miniconda-latest-Linux-x86_64.sh -b -p {{anaconda_dir}}"
 
 - name: Install bcbio_vm
-  shell: "~/install/bcbio-vm/anaconda/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
+  shell: "{{anaconda_dir}}/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
 
-- name: Add bcbio_vm to PATH and setgid docker
+- name: bcbio_vm.py -- setgid docker
   file:
-    src: ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py
+    path: "{{anaconda_dir}}/bin/bcbio_vm.py"
+    owner: "{{ansible_user_id}}"
+    group: docker
+    mode: '2775'
+
+- name: Add bcbio_vm.py to PATH
+  file:
+    src: "{{anaconda_dir}}/bin/bcbio_vm.py"
     dest: /usr/local/bin/bcbio_vm.py
-    owner: '{{ansible_user_id}}'
+    owner: "{{ansible_user_id}}"
     group: docker
     state: link
-    mode: 2750
   sudo: true
 
 - name: Install bcbio-vm docker image and data
-  shell: "bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools --genomes GRCh37 --aligners bwa"
+  shell: >
+    bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools {{bcbio_vm_install['opts']}}
+    >/tmp/bcbio.log 2>&1
+  args:
+    executable: /bin/bash
+  register: bcbio_docker_install
+  ignore_errors: true
+  async: 18000
+  poll: 30
+
+- command: "tail -100 /tmp/bcbio.log"
+  register: bcbio_docker_debug
+  ignore_errors: true
+
+- debug: var=bcbio_docker_debug.stdout_lines

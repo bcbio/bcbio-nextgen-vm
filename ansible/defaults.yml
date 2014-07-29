@@ -6,7 +6,12 @@ security_group: cloudman
 # type and location for booting
 instance_type: m3.large
 region: us-east-1
-# AMI details
+# starting AMI details
+ansible_ssh_user: ubuntu
 image: ami-018c9568
 # S3 details
 bcbio_bucket: bcbio_nextgen
+# Creating a bcbio-vm AMI
+bcbio_vm_install:
+  opts: '--genomes GRCh37 --aligners bwa'
+  volume_size: 55

@@ -10,12 +10,13 @@
         module: ec2
         key_name: "{{ keypair }}"
         group: "{{ security_group }}"
-        instance_type: "{{ instance_type }}"
+        #instance_type: "{{ instance_type }}"
+        instance_type: m3.medium
         image: "{{ image }}"
         region: "{{ region }}"
         volumes:
           - device_name: /dev/sda1
-            volume_size: 15
+            volume_size: '{{ bcbio_vm_install["volume_size"] }}'
             delete_on_termination: true
         wait: true
       register: ec2
@@ -34,7 +35,7 @@
   connection: paramiko
   gather_facts: True
   vars:
-    bcbio_dir: /tmp/bcbio-nextgen
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
   roles:
     - docker
     - gof3r
@@ -44,22 +45,23 @@
   hosts: localhost
   connection: local
   gather_facts: False
-  - tasks:
-      name: Create AMI AMI
-      localaction:
+  tasks:
+    - name: Create bcbio-vm AMI
+      when: bcbio_docker_install|success
+      local_action:
         module: ec2_ami
         instance_id: ec2.instances[0]
         wait: yes
         name: "bcbio-vm ({{ ansible_date_time['iso8601'] }})"
 
-- name: Terminate EC2 instance
-  hosts: localhost
-  connection: local
-  gather_facts: False
-  tasks:
-    - name: Terminate instances that were previously launched
-      local_action:
-        module: ec2
-        state: 'absent'
-        region: '{{ region }}'
-        instance_ids: '{{ ec2.instance_ids }}'
+# - name: Terminate EC2 instance
+#   hosts: localhost
+#   connection: local
+#   gather_facts: False
+#   tasks:
+#     - name: Terminate instances that were previously launched
+#       local_action:
+#         module: ec2
+#         state: 'absent'
+#         region: '{{ region }}'
+#         instance_ids: '{{ ec2.instance_ids }}'

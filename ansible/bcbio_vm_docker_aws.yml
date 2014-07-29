@@ -34,7 +34,6 @@
   connection: paramiko
   gather_facts: True
   vars:
-    docker_user: ubuntu
     bcbio_dir: /tmp/bcbio-nextgen
   roles:
     - docker

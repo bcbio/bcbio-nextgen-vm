@@ -21,7 +21,7 @@
 
 - debug: var=docker_install.stdout_lines
 
-- name: Add user ubuntu to the docker group 
+- name: Add current user to the docker group 
   user:
     name: "{{ ansible_user_id }}"
     groups: docker
