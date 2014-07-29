@@ -1,5 +1,6 @@
+# Create the bcbio_vm docker image locally, pushing to S3
 ---
-- name: Rebuild and update bcbio_vm docker instance on S3
+- name: Rebuild and update bcbio_vm docker image on S3
   hosts: localhost
   gather_facts: True
   vars:

@@ -30,12 +30,13 @@ Installation
 - `Install docker`_ on your system. You will need root permissions.
 
 - `Setup a docker group`_ to provide the ability to run Docker without being
-  root. You'll likely want to add the trusted user who will be managing and
+  root. Some installations, like Debian/Ubuntu packages do this automatically.
+  You'll also want to add the trusted user who will be managing and
   testing docker images to this group::
 
     sudo groupadd docker
-    sudo gpasswd -a ${USERNAME} docker
     sudo service docker restart
+    sudo gpasswd -a ${USERNAME} docker
     newgrp docker
 
 - Install bcbio-nextgen-vm using `conda`_ with an isolated Python::
@@ -57,13 +58,14 @@ Installation
   `small wrapper script`_ so it will only have permissions available to
   that user::
 
-    sudo chown :docker /usr/local/bin/bcbio_vm.py
+    sudo chgrp docker /usr/local/bin/bcbio_vm.py
     sudo chmod g+s /usr/local/bin/bcbio_vm.py
 
 - Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
   with software and tools, as well as downloading genome data::
 
-    bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools
+    bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools \
+      --genomes GRCh37 --aligners bwa
 
   For more details on expected download sizes, see the `bcbio system
   requirements`_ documentation. By default, the installation will download and
@@ -157,11 +159,11 @@ image to S3::
 
     cd ansible
     vim defaults.yml
-    ansible-playbook bcbio_vm_aws.yml --extra-vars "@defaults.yml"
+    ansible-playbook bcbio_vm_docker_aws.yml --extra-vars "@defaults.yml"
 
 or locally, with Docker pre-installed::
 
-    ansible-playbook -c local bcbio_vm_local.yml --extra-vars "@defaults.yml"
+    ansible-playbook -c local bcbio_vm_docker_local.yml --extra-vars "@defaults.yml"
 
 Docker image installation
 =========================

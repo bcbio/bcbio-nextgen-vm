@@ -23,7 +23,7 @@
 
 - name: Add user ubuntu to the docker group 
   user:
-    name: "{{ docker_user }}"
+    name: "{{ ansible_user_id }}"
     groups: docker
     append: True
   sudo: True

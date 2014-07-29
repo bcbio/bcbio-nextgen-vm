@@ -7,7 +7,6 @@ security_group: cloudman
 instance_type: m3.large
 region: us-east-1
 # AMI details
-ansible_ssh_user: ubuntu
 image: ami-018c9568
 # S3 details
 bcbio_bucket: bcbio_nextgen

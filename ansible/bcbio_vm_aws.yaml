@@ -1,3 +1,5 @@
+# Create an AWS AMI with bcbio_vm and data pre-loaded
+---
 - name: Create EC2 instance
   hosts: localhost
   connection: local
@@ -27,17 +29,28 @@
       local_action: command sh -c "ssh-keyscan {{ item.public_ip }} >> $HOME/.ssh/known_hosts"
       with_items: ec2.instances
 
-- name: Rebuild and update bcbio_vm docker instance on S3
+- name: Install bcbio_vm and data on AWS instance
   hosts: launched
   connection: paramiko
   gather_facts: True
   vars:
-    docker_user: ubuntu
     bcbio_dir: /tmp/bcbio-nextgen
   roles:
     - docker
     - gof3r
-    - bcbio_vm_build
+    - bcbio_vm_install
+
+- name: Create AWS AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  - tasks:
+      name: Create AMI AMI
+      localaction:
+        module: ec2_ami
+        instance_id: ec2.instances[0]
+        wait: yes
+        name: "bcbio-vm ({{ ansible_date_time['iso8601'] }})"
 
 - name: Terminate EC2 instance
   hosts: localhost
