@@ -186,3 +186,18 @@ Update local images during development::
     cd /tmp/bcbio-nextgen
     /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
     docker commit $DID chapmanb/bcbio-nextgen-devel
+
+Amazon Web Services
+===================
+
+We're actively working on updating bcbio-vm to work cleanly on
+`Amazon Web Services <http://aws.amazon.com/>`_. This is still a work in
+progress but if you have interest in development the latest pre-built AMI with
+human indices is ami-3013c658. An ansible script automates preparation of AMIs::
+
+    cd ansible
+    vim defaults.yml
+    ansible-playbook bcbio_vm_docker_aws.yml --extra-vars "@defaults.yml"
+
+This script doesn't yet terminate EC2 instances, so please manually ensure
+instances get cleaned up when developing with it.
