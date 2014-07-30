@@ -33,13 +33,13 @@
     >/tmp/bcbio.log 2>&1
   args:
     executable: /bin/bash
-  register: bcbio_docker_install
+  register: bcbio_vm_doinstall
   ignore_errors: true
   async: 18000
   poll: 30
 
 - command: "tail -100 /tmp/bcbio.log"
-  register: bcbio_docker_debug
+  register: bcbio_vm_debug
   ignore_errors: true
 
-- debug: var=bcbio_docker_debug.stdout_lines
+- debug: var=bcbio_vm_debug.stdout_lines

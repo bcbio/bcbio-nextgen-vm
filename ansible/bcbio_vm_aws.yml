@@ -10,8 +10,7 @@
         module: ec2
         key_name: "{{ keypair }}"
         group: "{{ security_group }}"
-        #instance_type: "{{ instance_type }}"
-        instance_type: m3.medium
+        instance_type: "{{ instance_type }}"
         image: "{{ image }}"
         region: "{{ region }}"
         volumes:
@@ -47,7 +46,7 @@
   gather_facts: False
   tasks:
     - name: Create bcbio-vm AMI
-      when: bcbio_docker_install|success
+      when: bcbio_vm_doinstall|success
       local_action:
         module: ec2_ami
         instance_id: ec2.instances[0]

@@ -14,4 +14,4 @@ bcbio_bucket: bcbio_nextgen
 # Creating a bcbio-vm AMI
 bcbio_vm_install:
   opts: '--genomes GRCh37 --aligners bwa'
-  volume_size: 55
+  volume_size: 45
