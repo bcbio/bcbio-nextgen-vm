@@ -29,14 +29,19 @@
       shell: ssh-keyscan {{ item.public_ip }} >> $HOME/.ssh/known_hosts
       with_items: ec2.instances
 
-- name: Rebuild and update bcbio_vm docker instance on S3
+- name: Setup docker
   hosts: launched
   connection: paramiko
+  gather_facts: True
+  roles:
+    - docker
+
+- name: Rebuild and update bcbio_vm docker instance on S3
+  hosts: launched
   gather_facts: True
   vars:
     bcbio_dir: /tmp/bcbio-nextgen
   roles:
-    - docker
     - gof3r
     - bcbio_vm_build
 
