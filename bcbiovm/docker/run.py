@@ -30,7 +30,7 @@ def do_analysis(args, dockerconf):
     in_files = [os.path.join(dockerconf["work_dir"], os.path.basename(x)) for x in [system_cfile, sample_cfile]]
     log.setup_local_logging({"include_time": False})
     manage.run_bcbio_cmd(args.image, dmounts + system_mounts,
-                         in_files + ["--workdir=%s" % dockerconf["work_dir"]])
+                         in_files + ["--numcores", str(args.numcores), "--workdir=%s" % dockerconf["work_dir"]])
 
 def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
