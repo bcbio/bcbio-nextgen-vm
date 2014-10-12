@@ -1,0 +1,45 @@
+---
+- name: install Lustre client support
+  hosts: all
+  sudo: true
+  tasks:
+    - name: download latest available lustre-utils
+      get_url:
+        url=http://archive.ubuntu.com/ubuntu/pool/universe/l/lustre/lustre-utils_1.8.5+dfsg-3.1ubuntu2_amd64.deb
+        dest=/root/lustre-utils_1.8.5+dfsg-3.1ubuntu2_amd64.deb
+        sha256sum=260a5eaec75a0af53dbb54d70c7d2478b8c4106f8971baa7167ccf98ee9e72db
+
+    - name: install lustre-utils so we have mount.lustre
+      apt: deb=/root/lustre-utils_1.8.5+dfsg-3.1ubuntu2_amd64.deb
+
+    - name: remove downloaded lustre-utils package
+      file: path=/root/lustre-utils_1.8.5+dfsg-3.1ubuntu2_amd64.deb state=absent
+
+    - name: install lustre client kernel modules
+      apt: name=linux-image-extra-virtual state=present
+
+    - name: disable CPT; it triggers the 'hrp->hrp_nthrs > 0' assertion in ptlrpc_hr_init()
+      lineinfile:
+        dest: /etc/modprobe.d/lustre.conf
+        create: true
+        line: options libcfs cpu_npartitions=1
+
+    - name: create Lustre mount point
+      file: path=/scratch state=directory
+
+    - name: add Lustre volume to fstab
+      mount: name=/scratch src={{ lustre_fs_spec }} fstype=lustre
+             opts=defaults,_netdev state=present
+
+    - name: upgrade to latest OS packages
+      apt: update_cache=yes cache_valid_time=3600 upgrade=dist
+
+    - name: restart instance
+      command: shutdown -r now 'applying bcbio cluster OS updates'
+      async: 0
+      poll: 0
+      ignore_errors: true
+
+    - name: waiting for instance to come back
+      local_action: wait_for host={{ ansible_ssh_host }} port=22 state=started
+      sudo: false

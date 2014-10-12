@@ -16,7 +16,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
-from bcbiovm.aws import iam
+from bcbiovm.aws import iam, icel, vpc
 from bcbiovm.docker import defaults, install, manage, mounts, run
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.ship import pack
@@ -190,10 +190,91 @@ def _config_cmd(subparsers):
 def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
-    parser_iam = awssub.add_parser("iam", help="Create IAM user and policies")
-    parser_iam.add_argument("--recreate", help="Recreate current IAM user access keys",
-                            action="store_true", default=False)
-    parser_iam.set_defaults(func=iam.bootstrap)
+
+    _aws_iam_cmd(awssub)
+    _aws_icel_cmd(awssub)
+    _aws_vpc_cmd(awssub)
+
+def _aws_iam_cmd(awsparser):
+    parser = awsparser.add_parser("iam", help="Create IAM user and policies")
+    parser.add_argument("--recreate", action="store_true", default=False,
+                        help="Recreate current IAM user access keys")
+    parser.set_defaults(func=iam.bootstrap)
+
+def _aws_vpc_cmd(awsparser):
+    parser = awsparser.add_parser("vpc",
+                                  help="Create VPC and associated resources",
+                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--recreate", action="store_true", default=False,
+                        help="Remove and recreate the VPC, destroying all "
+                             "AWS resources contained in it")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-n", "--network", default="10.0.0.0/16",
+                        help="network to use for the VPC, "
+                             "in CIDR notation (a.b.c.d/e)")
+    parser.set_defaults(func=vpc.bootstrap)
+
+def _aws_icel_cmd(awsparser):
+    parser_c = awsparser.add_parser("icel",
+                                    help="Create Lustre scratch filesystem "
+                                         "using Intel Cloud Edition for "
+                                         "Lustre")
+    icel_parser = parser_c.add_subparsers(title="[icel create]")
+
+    parser = icel_parser.add_parser("create",
+                                    help="Create Lustre scratch filesystem "
+                                         "using Intel Cloud Edition for "
+                                         "Lustre",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--recreate", action="store_true", default=False,
+                        help="Remove and recreate the stack, "
+                             "destroying all data stored on it")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+
+    parser.add_argument("-s", "--size", type=int, default="2048",
+                        help="Size of the Lustre filesystem, in gigabytes")
+    parser.add_argument("-o", "--oss-count", type=int, default="4",
+                        help="Number of OSS nodes")
+    parser.add_argument("-l", "--lun-count", type=int, default="4",
+                        help="Number of EBS LUNs per OSS")
+
+    parser.add_argument("-n", "--network", metavar="NETWORK", dest="network",
+                        help="Network (in CIDR notation, a.b.c.d/e) to "
+                             "place Lustre servers in")
+
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=icel.create)
+
+
+    parser = icel_parser.add_parser("fs_spec",
+                                     help="Get the filesystem spec for a "
+                                          "running filesystem",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the stack")
+    parser.set_defaults(func=icel.fs_spec)
+
+
+    parser = icel_parser.add_parser("mount",
+                                     help="Mount Lustre filesystem on "
+                                          "all cluster nodes",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="Emit verbose output when running "
+                             "Ansible playbooks")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=icel.mount)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

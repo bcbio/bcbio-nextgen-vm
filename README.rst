@@ -118,6 +118,56 @@ bcbio-nextgen also contains tests that exercise docker functionality::
   ./run_tests.sh docker
   ./run_tests.sh docker_ipython
 
+Running on Amazon Web Services (AWS)
+------------------------------------
+
+To build a cluster running bcbio-nextgen on `Amazon Web Services
+<http://aws.amazon.com/>`_::
+
+    pip install git+https://github.com/jwm/elasticluster@bcbio
+
+Copy ``elasticluster/config`` to ``~/.elasticluster/config`` and:
+
+- Fill in the values for ``ec2_access_key`` and ``ec2_secret_key``.
+- Update ``user_key_*`` to reflect your EC2 key name and the local paths to
+  the public and private versions of the key.
+
+Set up a VPC to host bcbio::
+
+	bcbio_vm.py aws vpc
+
+By default, the cluster uses the latest pre-built AMI (ami-106aef78,
+2014-10-20) with bcbio, docker, Slurm, and human indices pre-installed.
+Start the cluster and connect to the head node::
+
+    elasticluster start bcbio
+
+The cluster will take five to ten minutes to start. Once the cluster is
+running, connect to the head node::
+
+    elasticluster ssh bcbio
+
+and run bcbio_vm.py as described in the previous section.
+
+Running Lustre on AWS
+---------------------
+
+You can use `Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
+to set up a Lustre scratch filesystem on AWS.
+
+- Subscribe to `ICEL in the Amazon Marketplace
+  <https://aws.amazon.com/marketplace/pp/B00GK6D19A>`_.
+- By default, the Lustre filesystem will be 2TB and will be accessible to
+  all hosts in the VPC. Creation takes about ten minutes and can be done
+  while elasticluster is setting up the cluster. Start the stack::
+
+    bcbio_vm.py aws icel create
+- Once the ICEL stack and elasticluster cluster are both running, mount the
+  filesystem on the cluster::
+
+    bcbio_vm.py aws icel mount
+- The cluster instances will reboot with the Lustre filesystem mounted.
+
 Upgrading
 ---------
 
@@ -190,11 +240,7 @@ Update local images during development::
 Amazon Web Services
 ===================
 
-We're actively working on updating bcbio-vm to work cleanly on
-`Amazon Web Services <http://aws.amazon.com/>`_. This is still a work in
-progress but if you have interest in development the latest pre-built AMI with
-human indices is ami-106aef78 (2014-10-20). An ansible script automates
-preparation of AMIs::
+An ansible script automates preparation of AMIs::
 
     cd ansible
     vim defaults.yml
