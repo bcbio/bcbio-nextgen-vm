@@ -15,11 +15,12 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     mounts = reduce(operator.add, (["-v", m] for m in mounts), [])
     ports = reduce(operator.add, (["-p", p] for p in ports or []), [])
     envs = _get_pass_envs()
+    networking = ["--net=host"]  # Use host-networking so Docker works correctly on AWS VPCs
 
     user = pwd.getpwuid(os.getuid())
     group = grp.getgrgid(os.getgid())
 
-    cmd = ["docker", "run", "-d", "-i"] + ports + mounts + envs + [image] + \
+    cmd = ["docker", "run", "-d", "-i"] + networking + ports + mounts + envs + [image] + \
           ["/sbin/createsetuser", user.pw_name, str(user.pw_uid), group.gr_name, str(group.gr_gid)] + \
           ["bcbio_nextgen.py"] + bcbio_nextgen_args
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
