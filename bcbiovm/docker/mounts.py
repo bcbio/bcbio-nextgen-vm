@@ -21,6 +21,7 @@ def prepare_system(datadir, docker_biodata_dir):
 def update_config(config, input_dir, fcdir=None):
     """Update input configuration with local docker container mounts.
     Maps input files into docker mounts and resolved relative and symlinked paths.
+    If input_dir is None, maps directories directly into container.
     """
     config, directories = normalize_config(config, fcdir)
     if config.get("upload", {}).get("dir"):
@@ -31,7 +32,10 @@ def update_config(config, input_dir, fcdir=None):
         directories.append(config["upload"]["dir"])
     mounts = {}
     for i, d in enumerate(sorted(set(directories))):
-        mounts[d] = os.path.join(input_dir, str(i))
+        if input_dir:
+            mounts[d] = os.path.join(input_dir, str(i))
+        else:
+            mounts[d] = d
     mounts = ["%s:%s" % (k, v) for k, v in mounts.items()]
     config = remap.external_to_docker(config, mounts)
     return config, mounts
@@ -57,9 +61,6 @@ def normalize_config(config, fcdir=None):
 
 def find_genome_directory(dirname, container_dir):
     """Handle external non-docker installed biodata located relative to config directory.
-
-    Need a general way to handle mounting these and adjusting paths, but this handles
-    the special case used in testing.
     """
     mounts = []
     sam_loc = os.path.join(dirname, "tool-data", "sam_fa_indices.loc")
@@ -71,11 +72,16 @@ def find_genome_directory(dirname, container_dir):
                     parts = line.split()
                     genome_dirs[parts[1].strip()] = parts[-1].strip()
     for genome_dir in sorted(list(set(genome_dirs.values()))):
+        # Special case used in testing -- relative paths
         if genome_dir and not os.path.isabs(genome_dir):
             rel_genome_dir = os.path.dirname(os.path.dirname(os.path.dirname(genome_dir)))
             mounts.append("%s:%s" % (os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir)),
                                      os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
                                                                    rel_genome_dir))))
+        # General case -- map it into the internal filesystem directly for references match
+        else:
+            base_genome_dir = os.path.dirname(os.path.dirname(genome_dir))
+            mounts.append("%s:%s" % (base_genome_dir, base_genome_dir))
     return mounts
 
 def _get_directories(xs):

@@ -46,19 +46,28 @@ def cmd_ipython(args):
                                      (os.path.splitext(os.path.basename(args.sample_config))))
     with open(ready_config_file, "w") as out_handle:
         yaml.safe_dump(ready_config, out_handle, default_flow_style=False, allow_unicode=False)
+    work_dir = os.getcwd()
+    systemconfig = run.local_system_config(args.systemconfig, args.datadir, work_dir)
+    cur_pack = pack.shared_filesystem(work_dir, args.datadir, args.tmpdir)
     parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
                                          "fcdir": args.fcdir,
-                                         "pack": pack.shared_filesystem(work_dir, args.datadir, args.tmpdir),
-                                         "systemconfig": args.systemconfig,
+                                         "pack": cur_pack,
+                                         "systemconfig": systemconfig,
                                          "image": args.image}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
     workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
     manage.run_bcbio_cmd(args.image, [workdir_mount],
                          ["version", "--workdir=%s" % DOCKER["work_dir"]])
+    cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
+                "sample_config": args.sample_config, "fcdir": args.fcdir,
+                "orig_systemconfig": args.systemconfig}
+    config = {"algorithm": {}, "resources": {}}
+    runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
+    samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
     main.run_main(work_dir, run_info_yaml=ready_config_file,
-                  config_file=args.systemconfig, fc_dir=args.fcdir,
-                  parallel=parallel)
+                  config_file=systemconfig, fc_dir=args.fcdir,
+                  parallel=parallel, samples=samples)
 
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")

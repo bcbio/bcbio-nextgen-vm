@@ -38,9 +38,12 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     dmounts = []
     if cmd_args.get("sample_config"):
         with open(cmd_args["sample_config"]) as in_handle:
-            _, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"],
-                                              cmd_args["fcdir"])
+            _, dmounts = mounts.update_config(yaml.load(in_handle), None, cmd_args["fcdir"])
     datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
+    if "orig_systemconfig" in cmd_args:
+        orig_sconfig = _get_system_configfile(cmd_args["orig_systemconfig"], datadir)
+        orig_galaxydir = os.path.dirname(orig_sconfig)
+        dmounts.append("%s:%s" % (orig_galaxydir, orig_galaxydir))
     work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"], parallel, fn_args)
     dmounts += mounts.prepare_system(datadir, dockerconf["biodata_dir"])
     reconstitute.prep_systemconfig(datadir, fn_args)
@@ -71,15 +74,35 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
             os.remove(f)
     return out
 
-def _read_system_config(dockerconf, systemconfig, datadir):
+def local_system_config(systemconfig, datadir, work_dir):
+    """Create a ready to run local system configuration file.
+    """
+    config = _get_system_config(systemconfig, datadir)
+    system_cfile = os.path.join(work_dir, "bcbio_system-prep.yaml")
+    with open(system_cfile, "w") as out_handle:
+        yaml.dump(config, out_handle, default_flow_style=False, allow_unicode=False)
+    return system_cfile
+
+def _get_system_configfile(systemconfig, datadir):
+    """Retrieve system configuration file from input or default directory.
+    """
     if systemconfig:
-        f = systemconfig
+        return systemconfig
     else:
-        f = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+        return os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+
+def _get_system_config(systemconfig, datadir):
+    """Retrieve a system configuration with galaxy references specified.
+    """
+    f = _get_system_configfile(systemconfig, datadir)
     with open(f) as in_handle:
         config = yaml.load(in_handle)
     if "galaxy_config" not in config:
         config["galaxy_config"] = os.path.join(os.path.dirname(f), "universe_wsgi.ini")
+    return config
+
+def _read_system_config(dockerconf, systemconfig, datadir):
+    config = _get_system_config(systemconfig, datadir)
     # Map external galaxy specifications over to docker container
     dmounts = []
     for k in ["galaxy_config"]:
