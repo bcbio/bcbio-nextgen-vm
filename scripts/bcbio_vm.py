@@ -19,7 +19,7 @@ from bcbiovm.ship import pack
 
 # default information about docker container
 DOCKER = {"port": 8085,
-          "biodata_dir": "/mnt/biodata",
+          "biodata_dir": "/usr/local/share/bcbio-nextgen",
           "input_dir": "/mnt/inputs",
           "work_dir": "/mnt/work",
           "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}

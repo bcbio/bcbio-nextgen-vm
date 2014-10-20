@@ -9,6 +9,7 @@ import sys
 import yaml
 
 from bcbio import log
+from bcbio.log import logger
 from bcbiovm.docker import manage, mounts, remap
 from bcbiovm.ship import reconstitute
 
