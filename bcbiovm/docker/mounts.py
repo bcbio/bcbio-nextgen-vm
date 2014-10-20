@@ -78,10 +78,6 @@ def find_genome_directory(dirname, container_dir):
             mounts.append("%s:%s" % (os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir)),
                                      os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
                                                                    rel_genome_dir))))
-        # General case -- map it into the internal filesystem directly for references match
-        else:
-            base_genome_dir = os.path.dirname(os.path.dirname(genome_dir))
-            mounts.append("%s:%s" % (base_genome_dir, base_genome_dir))
     return mounts
 
 def _get_directories(xs):

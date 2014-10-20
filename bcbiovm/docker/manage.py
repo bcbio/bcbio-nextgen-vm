@@ -7,6 +7,7 @@ import os
 import pwd
 import subprocess
 
+from bcbio.log import logger
 from bcbio.provenance import do
 
 def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
@@ -23,6 +24,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     cmd = ["docker", "run", "-d", "-i"] + networking + ports + mounts + envs + [image] + \
           ["/sbin/createsetuser", user.pw_name, str(user.pw_uid), group.gr_name, str(group.gr_gid)] + \
           ["bcbio_nextgen.py"] + bcbio_nextgen_args
+    #logger.info(" ".join(cmd))
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     cid = process.communicate()[0].strip()
     try:

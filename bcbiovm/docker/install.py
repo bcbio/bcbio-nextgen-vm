@@ -34,7 +34,7 @@ def full(args, dockerconf):
             sys.exit(1)
         else:
             updates.append("biological data")
-    manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
+        manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     _save_install_defaults(args)
     if updates:
         print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
@@ -46,10 +46,10 @@ def _get_cl(args):
     clargs = ["upgrade"]
     if args.install_data:
         clargs.append("--data")
-    for g in args.genomes:
-        clargs.extend(["--genomes", g])
-    for a in args.aligners:
-        clargs.extend(["--aligners", a])
+        for g in args.genomes:
+            clargs.extend(["--genomes", g])
+        for a in args.aligners:
+            clargs.extend(["--aligners", a])
     return clargs
 
 def upgrade_bcbio_vm():
@@ -81,7 +81,7 @@ def _save_install_defaults(args):
     install_config = _get_config_file(args)
     if install_config is None:
         return
-    if os.path.exists(install_config):
+    if os.path.exists(install_config) and os.path.getsize(install_config) > 0:
         with open(install_config) as in_handle:
             cur_config = yaml.load(in_handle)
     else:
@@ -99,7 +99,7 @@ def _save_install_defaults(args):
 
 def _get_install_defaults(args):
     install_config = _get_config_file(args)
-    if install_config and os.path.exists(install_config):
+    if install_config and os.path.exists(install_config) and os.path.getsize(install_config) > 0:
         with open(install_config) as in_handle:
             return yaml.load(in_handle)
     return {}
