@@ -193,7 +193,7 @@ Amazon Web Services
 We're actively working on updating bcbio-vm to work cleanly on
 `Amazon Web Services <http://aws.amazon.com/>`_. This is still a work in
 progress but if you have interest in development the latest pre-built AMI with
-human indices is ami-783ce610 (2014-08-27). An ansible script automates
+human indices is ami-106aef78 (2014-10-20). An ansible script automates
 preparation of AMIs::
 
     cd ansible
