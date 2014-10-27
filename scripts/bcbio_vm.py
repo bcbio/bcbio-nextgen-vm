@@ -11,8 +11,12 @@ import sys
 
 import yaml
 
+import warnings
+warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
+
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
+from bcbiovm.aws import iam
 from bcbiovm.docker import defaults, install, manage, mounts, run
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.ship import pack
@@ -183,6 +187,14 @@ def _config_cmd(subparsers):
                                      "Avoids need to specify on the command line in future runs.")
     parser_c.set_defaults(func=cmd_save_defaults)
 
+def _aws_cmd(subparsers):
+    parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
+    awssub = parser_c.add_subparsers(title="[aws commands]")
+    parser_iam = awssub.add_parser("iam", help="Create IAM user and policies")
+    parser_iam.add_argument("--recreate", help="Recreate current IAM user access keys",
+                            action="store_true", default=False)
+    parser_iam.set_defaults(func=iam.bootstrap)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines, with docker.")
@@ -194,6 +206,7 @@ if __name__ == "__main__":
     _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
+    _aws_cmd(subparsers)
     _server_cmd(subparsers)
     _runfn_cmd(subparsers)
     _config_cmd(subparsers)
