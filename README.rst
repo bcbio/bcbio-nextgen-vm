@@ -121,51 +121,73 @@ bcbio-nextgen also contains tests that exercise docker functionality::
 Running on Amazon Web Services (AWS)
 ------------------------------------
 
-To build a cluster running bcbio-nextgen on `Amazon Web Services
-<http://aws.amazon.com/>`_::
+bcbio installs `Elasticluster <https://github.com/gc3-uzh-ch/elasticluster>`_,
+to build a cluster on `Amazon Web Services <http://aws.amazon.com/>`_.
 
-    pip install git+https://github.com/jwm/elasticluster@bcbio
+AWS setup
+=========
 
-Copy ``elasticluster/config`` to ``~/.elasticluster/config`` and:
+The first time running bcbio on AWS you'll need to setup some basic
+infrastructure. We provide commands to automate all these steps and they can be
+re-used for subsequent runs. To start you'll need to have an account at Amazon
+and your Access Key ID and Secret Key ID from the `AWS security credentials page
+<https://console.aws.amazon.com/iam/home?#security_credential>`_. These can be
+`IAM credentials <https://aws.amazon.com/iam/getting-started/>` instead of root
+credentials as long as they have administrator privileges. These should be
+available an environmental variables::
 
-- Fill in the values for ``ec2_access_key`` and ``ec2_secret_key``.
-- Update ``user_key_*`` to reflect your EC2 key name and the local paths to
-  the public and private versions of the key.
+  export AWS_ACCESS_KEY_ID=your_access_key
+  export AWS_SECRET_ACCESS_KEY=your_secret_key
 
-Set up a VPC to host bcbio::
+With this in place, two commands setup your elasticluster and AWS environment to
+run a bcbio cluster. The first creates public/private keys, a bcbio IAM user,
+and sets up your elasticluster config in ``~/.elasticluster/config``::
 
-	bcbio_vm.py aws vpc
+  bcbio_vm.py aws iam
 
+The second set up a VPC to host bcbio::
+
+  bcbio_vm.py aws vpc
+
+Running a cluster
+=================
+
+Following this setup, you're ready to run a bcbio cluster on AWS.
 By default, the cluster uses the latest pre-built AMI (ami-106aef78,
-2014-10-20) with bcbio, docker, Slurm, and human indices pre-installed.
+2014-10-20) with bcbio, docker, Slurm, and human GRCh37 indices pre-installed.
+It will start up one m3.large head node and two m3.large worker nodes. You can
+adjust the nodes and sizes by editing your ``~/.elasticluster/config``.
 Start the cluster and connect to the head node::
 
     elasticluster start bcbio
 
-The cluster will take five to ten minutes to start. Once the cluster is
-running, connect to the head node::
+The cluster will take five to ten minutes to start. Once running,
+connect to the head node with::
 
     elasticluster ssh bcbio
 
 and run bcbio_vm.py as described in the previous section.
 
 Running Lustre on AWS
----------------------
+=====================
 
 You can use `Intel Cloud Edition for Lustre (ICEL) <https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software>`_
 to set up a Lustre scratch filesystem on AWS.
 
 - Subscribe to `ICEL in the Amazon Marketplace
   <https://aws.amazon.com/marketplace/pp/B00GK6D19A>`_.
+
 - By default, the Lustre filesystem will be 2TB and will be accessible to
   all hosts in the VPC. Creation takes about ten minutes and can be done
   while elasticluster is setting up the cluster. Start the stack::
 
     bcbio_vm.py aws icel create
+
 - Once the ICEL stack and elasticluster cluster are both running, mount the
   filesystem on the cluster::
 
     bcbio_vm.py aws icel mount
+
 - The cluster instances will reboot with the Lustre filesystem mounted.
 
 Upgrading

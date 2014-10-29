@@ -6,12 +6,13 @@ ec2_secret_key=
 ec2_region=us-east-1
 vpc=bcbio
 request_floating_ip=True
+instance_profile=bcbio_full_s3_access
 
 [login/ubuntu]
 image_user=ubuntu
 image_user_sudo=root
 image_sudo=True
-user_key_name=user@example.com
+user_key_name=example-keypair
 user_key_private=~/.ssh/id_rsa
 user_key_public=~/.ssh/id_rsa.pub
 
