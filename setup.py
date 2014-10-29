@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import shutil
 import sys
 from setuptools import setup, find_packages
 
@@ -23,7 +24,7 @@ write_version_py()
 if "--record=/dev/null" in sys.argv:  # conda build
     install_requires = []
 else:
-    install_requires = ["six", "PyYAML", "bcbio-nextgen", "boto"]
+    install_requires = ["six", "PyYAML", "bcbio-nextgen"]
 
 setup(name="bcbio-nextgen-vm",
       version=version,
@@ -34,3 +35,33 @@ setup(name="bcbio-nextgen-vm",
       packages=find_packages(),
       scripts=["scripts/bcbio_vm.py"],
       install_requires=install_requires)
+
+def ansible_pb_files(ansible_pb_dir):
+    """Retrieve ansible files for installation. Derived from elasticluster setup.
+    """
+    ansible_data = []
+    for (dirname, dirnames, filenames) in os.walk(ansible_pb_dir):
+        tmp = []
+        for fname in filenames:
+            if fname.startswith('.git'): continue
+            tmp.append(os.path.join(dirname, fname))
+        ansible_data.append((os.path.join('share', "bcbio-vm", dirname), tmp))
+    return ansible_data
+
+def elasticluster_config_files(base_dir):
+    """Retrieve example elasticluster config files for installation.
+    """
+    return [(os.path.join("share", "bcbio-vm", base_dir),
+             [os.path.join(base_dir, x) for x in os.listdir(base_dir)])]
+
+if __name__ == "__main__":
+    """Install ansible playbooks and other associated data files.
+    """
+    if sys.argv[1] in ["install"]:
+        sharedir = os.path.join(os.path.abspath(sys.prefix), 'share', 'bcbio-vm')
+        for dirname, fnames in ansible_pb_files("ansible") + elasticluster_config_files("elasticluster"):
+            dirname = os.path.join(os.path.abspath(sys.prefix), dirname)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+            for fname in fnames:
+                shutil.copy(fname, dirname)

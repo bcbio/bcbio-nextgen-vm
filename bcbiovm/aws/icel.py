@@ -128,9 +128,10 @@ def mount(args):
         runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
         ansible.utils.VERBOSITY = args.verbose - 1
 
-    playbook_path = '/home/jwm/dev/bcbio-nextgen-vm.git/ansible/roles/lustre_client/tasks/main.yml'
+    playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
+                                 "roles", "lustre_client", "tasks", "main.yml")
     inventory_path = os.path.expanduser(
-        '~/.elasticluster/storage/ansible-inventory.{}'.format(args.cluster))
+        os.path.join("~", ".elasticluster", "storage", "ansible-inventory", args.cluster))
     extra_vars = {
         'lustre_fs_spec': _get_fs_spec(
             args.stack_name, cluster_config['cloud']),
