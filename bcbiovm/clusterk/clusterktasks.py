@@ -36,10 +36,12 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args):
         else:
             do.run(["tar", "-czvpf", tarball, script_file, arg_file, parallel_file],
                    "Prepare submission tarball")
-            do.run(["ksub.py", "-q", queue["queue"], "-e", str(int(float(queue["mem"]) * 1024)),
-                    "-c", str(100 * int(queue["cores_per_job"])), "-u", os.path.abspath(tarball),
-                    os.path.basename(script_file)],
-                   "Submit to clusterk")
+            cmd = ["ksub.py", "-q", queue["queue"], "-e", str(int(float(queue["mem"]) * 1024)),
+                   "-c", str(queue["cores_per_job"]), "-u", os.path.abspath(tarball),
+                   os.path.basename(script_file)]
+            for tag in ["fnname=%s" % fn_name]:
+                cmd += ["--tag", tag]
+            do.run(cmd, "Submit to clusterk")
         with open(reconstitute.get_output(out_file, parallel["pack"])) as in_handle:
             out = yaml.safe_load(in_handle)
         for f in [script_file, parallel_file, arg_file, tarball, out_file]:

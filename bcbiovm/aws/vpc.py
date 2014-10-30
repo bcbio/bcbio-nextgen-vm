@@ -13,6 +13,7 @@ from elasticluster.main import ElastiCluster
 
 def bootstrap(args):
     _setup_vpc(args)
+    print("Created VPC: %s" % args.cluster)
 
 
 def _setup_vpc(args):
@@ -50,7 +51,7 @@ def _setup_vpc(args):
             # like the AWS management console does.
             conn.delete_vpc(existing_vpcs[0].id)
         else:
-            raise Exception('VPC {} already exists.'.format(name))
+            raise Exception('VPC {} already exists.'.format(args.cluster))
 
     vpc = conn.create_vpc(args.network)
     vpc.add_tag('Name', args.cluster)
@@ -59,7 +60,7 @@ def _setup_vpc(args):
       '{}_cluster_sg'.format(args.cluster),
       'bcbio cluster nodes', vpc.id)
     sg.authorize(ip_protocol='tcp', from_port=22, to_port=22,
-        cidr_ip='0.0.0.0/0')
+                 cidr_ip='0.0.0.0/0')
     sg.authorize(ip_protocol='-1', src_group=sg)
 
     igw = conn.create_internet_gateway()
