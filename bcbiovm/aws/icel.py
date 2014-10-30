@@ -3,8 +3,8 @@
 from __future__ import print_function
 
 import argparse
+import getpass
 import json
-import logging
 import os
 import re
 import socket
@@ -21,8 +21,6 @@ import ansible.playbook
 import boto.cloudformation
 import boto.ec2
 import boto.s3
-import elasticluster
-from elasticluster.providers.ansible_provider import ElasticlusterPbCallbacks
 from elasticluster.conf import Configurator
 from elasticluster.main import ElastiCluster
 import requests
@@ -39,6 +37,82 @@ ICEL_TEMPLATES = {
     'us-west-2': 'http://s3-us-west-2.amazonaws.com/hpdd-templates-us-west-2/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
 }
 
+def setup_cmd(awsparser):
+    parser_c = awsparser.add_parser("icel",
+                                    help="Create Lustre scratch filesystem "
+                                         "using Intel Cloud Edition for "
+                                         "Lustre")
+    icel_parser = parser_c.add_subparsers(title="[icel create]")
+
+    # ## Create
+
+    parser = icel_parser.add_parser("create",
+                                    help="Create Lustre scratch filesystem "
+                                         "using Intel Cloud Edition for "
+                                         "Lustre",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--recreate", action="store_true", default=False,
+                        help="Remove and recreate the stack, "
+                             "destroying all data stored on it")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+
+    parser.add_argument("-s", "--size", type=int, default="2048",
+                        help="Size of the Lustre filesystem, in gigabytes")
+    parser.add_argument("-o", "--oss-count", type=int, default="4",
+                        help="Number of OSS nodes")
+    parser.add_argument("-l", "--lun-count", type=int, default="4",
+                        help="Number of EBS LUNs per OSS")
+
+    parser.add_argument("-n", "--network", metavar="NETWORK", dest="network",
+                        help="Network (in CIDR notation, a.b.c.d/e) to "
+                             "place Lustre servers in")
+
+    parser.add_argument("-b", "--bucket", default="bcbio-lustre-%s" % getpass.getuser(),
+                        help="bucket to store generated ICEL template for CloudFormation")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=create)
+
+    # ## Spec
+
+    parser = icel_parser.add_parser("fs_spec",
+                                    help="Get the filesystem spec for a running filesystem",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the stack")
+    parser.set_defaults(func=fs_spec)
+
+    # ## Mount
+
+    parser = icel_parser.add_parser("mount",
+                                    help="Mount Lustre filesystem on all cluster nodes",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="Emit verbose output when running "
+                             "Ansible playbooks")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=mount)
+
+    # ## Stop
+
+    parser = icel_parser.add_parser("stop",
+                                    help="Stop the running Lustre filesystem and clean up resources",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=stop)
 
 def _cluster_config(name):
     ecluster_config = Configurator.fromConfig(
@@ -70,11 +144,11 @@ def create(args):
         'ost_vol_count': args.lun_count,
     }
     template_url = _upload_icel_cf_template(
-        icel_param, 'bcbio', cluster_config['cloud'])
+        icel_param, args.bucket, cluster_config['cloud'])
 
     _create_icel_stack(
         args.stack_name, template_url, args.network,
-        args.cluster, cluster_config)
+        args.cluster, cluster_config, args.recreate)
     try:
         sys.stdout.write('Waiting for stack to launch (this will take '
                          'a few minutes)')
@@ -131,7 +205,7 @@ def mount(args):
     playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
                                  "roles", "lustre_client", "tasks", "main.yml")
     inventory_path = os.path.expanduser(
-        os.path.join("~", ".elasticluster", "storage", "ansible-inventory", args.cluster))
+        os.path.join("~", ".elasticluster", "storage", "ansible-inventory.%s" % args.cluster))
     extra_vars = {
         'lustre_fs_spec': _get_fs_spec(
             args.stack_name, cluster_config['cloud']),
@@ -167,7 +241,6 @@ def mount(args):
     if unreachable or failures:
         sys.exit(1)
 
-
 def _template_param(tree, param):
     return [
         (i, name)
@@ -176,7 +249,6 @@ def _template_param(tree, param):
          if type(name) in (str, unicode) and
             name.startswith(param)
     ][0]
-
 
 def _upload_icel_cf_template(param, bucket_name, aws_config):
     url = ICEL_TEMPLATES[aws_config['ec2_region']]
@@ -221,7 +293,7 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
         aws_access_key_id=aws_config['ec2_access_key'],
         aws_secret_access_key=aws_config['ec2_secret_key'])
 
-    bucket = conn.create_bucket('slkdjfslkfjs')
+    bucket = conn.create_bucket(bucket_name)
 
     k = boto.s3.key.Key(bucket)
     k.key = 'icel-cf-template.json'
@@ -230,6 +302,22 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
 
     return k.generate_url(5 * 60, query_auth=False)
 
+def stop(args):
+    cluster_config = _cluster_config(args.cluster)
+    _delete_stack(args.stack_name, cluster_config)
+
+def _delete_stack(stack_name, cluster_config):
+    """Delete a Lustre CloudFormation stack.
+    """
+    cf_conn = boto.cloudformation.connect_to_region(
+        cluster_config['cloud']['ec2_region'],
+        aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
+        aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
+    cf_conn.delete_stack(stack_name)
+    sys.stdout.write('Waiting for stack to delete (this will take a few minutes)')
+    sys.stdout.flush()
+    _wait_for_stack(stack_name, 'DELETE_COMPLETE',
+                    15 * 60, cluster_config['cloud'])
 
 # The awscli(1) equivalent of this is:
 #
@@ -245,7 +333,8 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
 #       ParameterKey=KeyName,ParameterValue=keypair@example.com \
 #       ParameterKey=HTTPFrom,ParameterValue=0.0.0.0/0 \
 #       ParameterKey=SSHFrom,ParameterValue=0.0.0.0/0
-def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_config):
+def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_config,
+                       recreate):
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
@@ -257,13 +346,8 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_co
 
     for stack in cf_conn.list_stacks('CREATE_COMPLETE'):
         if stack.stack_name == stack_name:
-            if args.recreate:
-                cf_conn.delete_stack(stack_name)
-                sys.stdout.write('Waiting for stack to launch (this will '
-                                 'take a few minutes)')
-                sys.stdout.flush()
-                _wait_for_stack(args.stack_name, 'DELETE_COMPLETE',
-                                15 * 60, cluster_config['cloud'])
+            if recreate:
+                _delete_stack(stack_name, cluster_config)
             else:
                 raise Exception('Stack {} already exists.'.format(stack_name))
 
@@ -293,7 +377,6 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_co
         lustre_net = socket.inet_ntoa(struct.pack('>L', vpc_net_int + 256))
         lustre_net = '{}/24'.format(lustre_net)
 
-
     cf_conn.create_stack(stack_name,
         template_url=template_url,
         capabilities=['CAPABILITY_IAM'],
@@ -307,7 +390,6 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_co
             ('HTTPFrom', '0.0.0.0/0'),
             ('SSHFrom', '0.0.0.0/0'),
         ))
-
 
 def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
     conn = boto.cloudformation.connect_to_region(
