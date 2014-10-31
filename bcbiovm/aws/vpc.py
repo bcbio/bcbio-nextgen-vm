@@ -8,7 +8,6 @@ import sys
 
 import boto.ec2
 from elasticluster.conf import Configurator
-from elasticluster.main import ElastiCluster
 
 
 def bootstrap(args):
@@ -30,13 +29,11 @@ def _setup_vpc(args):
         sys.exit(1)
     compute_subnet = '{}/24'.format(net)
 
-    ecluster_config = Configurator.fromConfig(
-        ElastiCluster.default_configuration_file,
-        storage_path=Configurator.default_storage_dir
-    )
+    storage_dir = os.path.join(os.path.dirname(args.econfig), "storage")
+    ecluster_config = Configurator.fromConfig(args.econfig, storage_dir)
     if args.cluster not in ecluster_config.cluster_conf:
         sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
-            args.cluster, os.path.expanduser('~/.elasticluster/config')))
+            args.cluster, os.path.expanduser(args.econfig)))
         sys.exit(1)
     cluster_config = ecluster_config.cluster_conf[args.cluster]
 

@@ -200,6 +200,8 @@ def _aws_cmd(subparsers):
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=icel.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
     parser.set_defaults(func=iam.bootstrap)
@@ -208,6 +210,8 @@ def _aws_vpc_cmd(awsparser):
     parser = awsparser.add_parser("vpc",
                                   help="Create VPC and associated resources",
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=icel.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the VPC, destroying all "
                              "AWS resources contained in it")
@@ -240,6 +244,12 @@ if __name__ == "__main__":
         if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
             from elasticluster.main import main as ecmain
             sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
+            if "-s" not in sys.argv and "--storage" not in sys.argv:
+                sys.argv = [sys.argv[0]] + \
+                           ["--storage", os.path.join(os.path.dirname(icel.DEFAULT_EC_CONFIG), "storage")] + \
+                           sys.argv[1:]
+            if "-c" not in sys.argv and "--config" not in sys.argv:
+                sys.argv = [sys.argv[0]] + ["--config", icel.DEFAULT_EC_CONFIG] + sys.argv[1:]
             sys.exit(ecmain())
         else:
             args = parser.parse_args()
