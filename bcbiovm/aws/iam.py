@@ -13,17 +13,16 @@ import toolz as tz
 
 def bootstrap(args):
     conn = boto.connect_iam()
-    config = _create_keypair()
+    config = _create_keypair(args.econfig)
     config.update(_bcbio_iam_user(conn, args))
     config.update(_bcbio_s3_instance_profile(conn))
-    econfig = _write_elasticluster_config(config)
+    econfig = _write_elasticluster_config(config, args.econfig)
     print("\nWrote elasticluster config file at: %s" % econfig)
 
-def _write_elasticluster_config(config):
+def _write_elasticluster_config(config, out_file):
     """Write Elasticluster configuration file with user and security information.
     """
     orig_file = os.path.join(sys.prefix, "share", "bcbio-vm", "elasticluster", "config")
-    out_file = os.path.expanduser(os.path.join("~", ".elasticluster", "config"))
     if not os.path.exists(os.path.dirname(out_file)):
         os.makedirs(os.path.dirname(out_file))
     if os.path.exists(out_file):
@@ -39,11 +38,11 @@ def _write_elasticluster_config(config):
                     out_handle.write(line)
     return out_file
 
-def _create_keypair():
+def _create_keypair(econfig_file):
     """Create a bcbio keypair and import to ec2. Gives us access to keypair locally and at AWS.
     """
     keyname = "bcbio"
-    keypair_dir = os.path.expanduser(os.path.join("~", ".elasticluster", "aws_keypairs"))
+    keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
     if not os.path.exists(keypair_dir):
         os.makedirs(keypair_dir)
     private_key = os.path.join(os.path.join(keypair_dir, "bcbio"))

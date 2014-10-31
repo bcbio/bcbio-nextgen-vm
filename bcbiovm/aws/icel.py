@@ -22,9 +22,9 @@ import boto.cloudformation
 import boto.ec2
 import boto.s3
 from elasticluster.conf import Configurator
-from elasticluster.main import ElastiCluster
 import requests
 
+DEFAULT_EC_CONFIG = os.path.expanduser(os.path.join("~", ".bcbio", "elasticluster", "config"))
 
 ICEL_TEMPLATES = {
     'ap-northeast-1': 'http://s3-ap-northeast-1.amazonaws.com/hpdd-templates-ap-northeast-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
@@ -51,6 +51,8 @@ def setup_cmd(awsparser):
                                          "using Intel Cloud Edition for "
                                          "Lustre",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the stack, "
                              "destroying all data stored on it")
@@ -80,6 +82,8 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("fs_spec",
                                     help="Get the filesystem spec for a running filesystem",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
@@ -92,6 +96,8 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("mount",
                                     help="Mount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument("-v", "--verbose", action="count", default=0,
@@ -107,6 +113,8 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("stop",
                                     help="Stop the running Lustre filesystem and clean up resources",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
@@ -114,18 +122,14 @@ def setup_cmd(awsparser):
                         help="CloudFormation name for the new stack")
     parser.set_defaults(func=stop)
 
-def _cluster_config(name):
-    ecluster_config = Configurator.fromConfig(
-        ElastiCluster.default_configuration_file,
-        storage_path=Configurator.default_storage_dir
-    )
+def _cluster_config(name, econfig_file):
+    storage_dir = os.path.join(os.path.dirname(econfig_file), "storage")
+    ecluster_config = Configurator.fromConfig(econfig_file, storage_dir)
     if name not in ecluster_config.cluster_conf:
         sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
-            name, os.path.expanduser('~/.elasticluster/config')))
+            name, os.path.expanduser(econfig_file)))
         sys.exit(1)
-
     return ecluster_config.cluster_conf[name]
-
 
 def create(args):
     if args.network:
@@ -136,7 +140,7 @@ def create(args):
                     args.network))
             sys.exit(1)
 
-    cluster_config = _cluster_config(args.cluster)
+    cluster_config = _cluster_config(args.cluster, args.econfig)
 
     icel_param = {
         'oss_count': args.oss_count,
@@ -161,7 +165,7 @@ def create(args):
 
 
 def fs_spec(args):
-    cluster_config = _cluster_config(args.cluster)
+    cluster_config = _cluster_config(args.cluster, args.econfig)
     print(_get_fs_spec(args.stack_name, cluster_config['cloud']))
 
 
@@ -192,7 +196,7 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
 
 
 def mount(args):
-    cluster_config = _cluster_config(args.cluster)
+    cluster_config = _cluster_config(args.cluster, args.econfig)
 
     stats = ansible.callbacks.AggregateStats()
     callbacks = SilentPlaybook()
@@ -204,8 +208,8 @@ def mount(args):
 
     playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
                                  "roles", "lustre_client", "tasks", "main.yml")
-    inventory_path = os.path.expanduser(
-        os.path.join("~", ".elasticluster", "storage", "ansible-inventory.%s" % args.cluster))
+    inventory_path = os.path.join(os.path.dirname(args.econfig),
+                                  "storage", "ansible-inventory.%s" % args.cluster)
     extra_vars = {
         'lustre_fs_spec': _get_fs_spec(
             args.stack_name, cluster_config['cloud']),
@@ -303,7 +307,7 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     return k.generate_url(5 * 60, query_auth=False)
 
 def stop(args):
-    cluster_config = _cluster_config(args.cluster)
+    cluster_config = _cluster_config(args.cluster, args.econfig)
     _delete_stack(args.stack_name, cluster_config)
 
 def _delete_stack(stack_name, cluster_config):
