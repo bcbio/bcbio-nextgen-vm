@@ -47,15 +47,15 @@ def normalize_config(config, fcdir=None):
     """
     absdetails = []
     directories = []
+    ignore = ["variantcaller", "realign", "recalibrate", "phasing", "svcaller"]
     for d in config["details"]:
         d = abs_file_paths(d, base_dirs=[fcdir] if fcdir else None,
                            ignore=["description", "analysis", "resources",
                                    "genome_build", "lane"])
         d["algorithm"] = abs_file_paths(d["algorithm"], base_dirs=[fcdir] if fcdir else None,
-                                        ignore=["variantcaller", "realign", "recalibrate",
-                                                "phasing", "svcaller"])
+                                        ignore=ignore)
         absdetails.append(d)
-        directories.extend(_get_directories(d))
+        directories.extend(_get_directories(d, ignore))
     config["details"] = absdetails
     return config, directories
 
@@ -80,19 +80,21 @@ def find_genome_directory(dirname, container_dir):
                                                                    rel_genome_dir))))
     return mounts
 
-def _get_directories(xs):
+def _get_directories(xs, ignore):
     """Retrieve all directories specified in an input file.
     """
     out = []
     if not isinstance(xs, dict):
         return out
     for k, v in xs.items():
-        if isinstance(v, dict):
-            out.extend(_get_directories(v))
-        elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
-            out.append(os.path.dirname(v))
-        elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]):
-            out.extend(os.path.dirname(x) for x in v)
+        if k not in ignore:
+            if isinstance(v, dict):
+                out.extend(_get_directories(v, ignore))
+            elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
+                out.append(os.path.dirname(v))
+            elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]) and os.path.isabs(v[0]):
+                out.extend(os.path.dirname(x) for x in v)
+    out = [x for x in out if x]
     return out
 
 def _normalize_path(x, base_dirs):
