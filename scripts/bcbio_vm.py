@@ -17,8 +17,9 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 from bcbiovm.aws import iam, icel, vpc
-from bcbiovm.docker import defaults, install, manage, mounts, run
 from bcbiovm.clusterk import main as clusterk_main
+from bcbiovm.docker import defaults, install, manage, mounts, run
+from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
 
 # default information about docker container
@@ -141,8 +142,7 @@ def _run_cmd(subparsers):
     parser_r = _std_run_args(parser_r)
     parser_r.set_defaults(func=cmd_run)
 
-def _run_ipython_cmd(subparsers):
-    parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
+def _add_ipython_args(parser):
     parser = _std_run_args(parser)
     parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm"])
     parser.add_argument("queue", help="Scheduler queue to run jobs on.")
@@ -159,7 +159,17 @@ def _run_ipython_cmd(subparsers):
     parser.add_argument("-t", "--tag", help="Tag name to label jobs on the cluster",
                         default="")
     parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
+    return parser
+
+def _run_ipython_cmd(subparsers):
+    parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
+    parser = _add_ipython_args(parser)
     parser.set_defaults(func=cmd_ipython)
+
+def _run_ipythonprep_cmd(subparsers):
+    parser = subparsers.add_parser("ipythonprep", help="Prepare a batch script to run bcbio on a scheduler.")
+    parser = _add_ipython_args(parser)
+    parser.set_defaults(func=batchprep.submit_script)
 
 def _runfn_cmd(subparsers):
     parser = subparsers.add_parser("runfn", help="Run a specific bcbio-nextgen function with provided arguments")
@@ -232,9 +242,10 @@ if __name__ == "__main__":
     _install_cmd(subparsers, name="install")
     _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
-    _run_clusterk_cmd(subparsers)
+    _run_ipythonprep_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
+    _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)
     _runfn_cmd(subparsers)
     _config_cmd(subparsers)
