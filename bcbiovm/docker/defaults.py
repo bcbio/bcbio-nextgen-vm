@@ -26,11 +26,12 @@ def update_check_args(args, command_info, need_datadir=True):
 def _handle_remotes(args):
     """Retrieve supported remote inputs specified on the command line.
     """
-    if args.sample_config.startswith(utils.SUPPORTED_REMOTES):
-        if args.sample_config.startswith("s3://"):
-            args.sample_config = awsconfig.load_s3(args.sample_config)
-        else:
-            raise NotImplementedError("Do not recognize remote input %s" % args.sample_config)
+    if hasattr(args, "sample_config"):
+        if args.sample_config.startswith(utils.SUPPORTED_REMOTES):
+            if args.sample_config.startswith("s3://"):
+                args.sample_config = awsconfig.load_s3(args.sample_config)
+            else:
+                raise NotImplementedError("Do not recognize remote input %s" % args.sample_config)
     return args
 
 def _find_default_datadir(must_exist=True):
