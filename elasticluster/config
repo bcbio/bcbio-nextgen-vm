@@ -20,6 +20,8 @@ user_key_public=~/.ssh/id_rsa.pub
 provider=ansible
 frontend_groups=slurm_master
 compute_groups=slurm_clients
+global_var_slurm_selecttype=select/cons_res
+global_var_slurm_selecttypeparameters=CR_Core_Memory
 
 [cluster/bcbio]
 cloud=amazon-us-east-1
@@ -32,8 +34,6 @@ frontend_nodes=1
 compute_nodes=2
 ssh_to=frontend
 network_ids=bcbio_cluster
-global_var_selecttype=select/cons_res
-global_var_selecttypeparameters=CR_Core_Memory
 
 [cluster/bcbio/frontend]
 flavor=m3.large

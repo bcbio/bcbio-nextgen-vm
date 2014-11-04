@@ -5,6 +5,8 @@ standard IPython runs.
 """
 import os
 
+from bcbiovm.docker import defaults
+
 def _get_ipython_cmdline(args):
     """Translate arguments back into a standard bcbio_vm ipython submission command.
     """
@@ -18,6 +20,7 @@ def _get_ipython_cmdline(args):
     return " ".join(cmd)
 
 def submit_script(args):
+    args = defaults.update_check_args(args, "Could not prep batch scripts")
     out_file = os.path.join(os.getcwd(), "bcbio_submit.sh")
     with open(out_file, "w") as out_handle:
         out_handle.write("#!/bin/bash\n")

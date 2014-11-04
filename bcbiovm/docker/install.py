@@ -23,7 +23,7 @@ def full(args, dockerconf):
     if args.install_tools:
         updates.append("bcbio-nextgen code and third party tools")
         pull(args, dockerconf)
-    _check_docker_image(args)
+        _check_docker_image(args)
     dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     if args.install_data:
         if len(args.genomes) == 0:
@@ -34,6 +34,7 @@ def full(args, dockerconf):
             sys.exit(1)
         else:
             updates.append("biological data")
+        _check_docker_image(args)
         manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     _save_install_defaults(args)
     if updates:

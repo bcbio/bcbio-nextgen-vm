@@ -206,8 +206,6 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
         ansible.utils.VERBOSITY = args.verbose - 1
 
-    playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
-                                 "roles", "lustre_client", "tasks", "main.yml")
     inventory_path = os.path.join(os.path.dirname(args.econfig),
                                   "storage", "ansible-inventory.%s" % args.cluster)
     extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
@@ -267,6 +265,9 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     tree['Description'].replace(
         '4 Object Storage Servers',
         '{} Object Storage Servers'.format(param['oss_count']))
+    if aws_config["ec2_region"] == "us-east-1":
+        tree["Parameters"]["NATInstanceType"]["AllowedValues"].append("m3.medium")
+        tree["Mappings"]["AWSNATAMI"]["us-east-1"]["AMI"] = "ami-184dc970"
     resources = tree['Resources']
 
     # We don't need the demo Lustre client instance.
@@ -387,12 +388,14 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_co
         lustre_net = socket.inet_ntoa(struct.pack('>L', vpc_net_int + 256))
         lustre_net = '{}/24'.format(lustre_net)
 
+    aws_config = cluster_config["cloud"]
     cf_conn.create_stack(stack_name,
         template_url=template_url,
         capabilities=['CAPABILITY_IAM'],
         parameters=(
             ('FsName', 'scratch'),
             ('AccessFrom', vpc.cidr_block),
+            ('NATInstanceType', "m3.medium" if aws_config["ec2_region"] == "us-east-1" else "m1.small"),
             ('VpcId', vpc.id),
             ('VpcPrivateCIDR', lustre_net),
             ('VpcPublicSubnetId', public_subnet.id),

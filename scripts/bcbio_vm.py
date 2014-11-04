@@ -257,9 +257,16 @@ if __name__ == "__main__":
             from elasticluster.main import main as ecmain
             sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
             if "-s" not in sys.argv and "--storage" not in sys.argv:
-                sys.argv = [sys.argv[0]] + \
-                           ["--storage", os.path.join(os.path.dirname(icel.DEFAULT_EC_CONFIG), "storage")] + \
-                           sys.argv[1:]
+                # clean up old storage directory if starting a new cluster
+                # old pickle files will cause consistent errors when restarting
+                storage_dir = os.path.join(os.path.dirname(icel.DEFAULT_EC_CONFIG), "storage")
+                std_args = [x for x in sys.argv if not x.startswith("-")]
+                if len(std_args) >= 3 and std_args[1] == "start":
+                    cluster = std_args[2]
+                    pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
+                    if os.path.exists(pickle_file):
+                        os.remove(pickle_file)
+                sys.argv = [sys.argv[0], "--storage", storage_dir] + sys.argv[1:]
             if "-c" not in sys.argv and "--config" not in sys.argv:
                 sys.argv = [sys.argv[0]] + ["--config", icel.DEFAULT_EC_CONFIG] + sys.argv[1:]
             sys.exit(ecmain())
