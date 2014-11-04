@@ -16,7 +16,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
-from bcbiovm.aws import iam, icel, vpc
+from bcbiovm.aws import bootstrap, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, install, manage, mounts, run
 from bcbiovm.ipython import batchprep
@@ -144,7 +144,7 @@ def _run_cmd(subparsers):
 
 def _add_ipython_args(parser):
     parser = _std_run_args(parser)
-    parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm"])
+    parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm", "pbspro"])
     parser.add_argument("queue", help="Scheduler queue to run jobs on.")
     parser.add_argument("-r", "--resources",
                         help=("Cluster specific resources specifications. Can be specified multiple times.\n"
@@ -207,6 +207,7 @@ def _aws_cmd(subparsers):
     _aws_iam_cmd(awssub)
     icel.setup_cmd(awssub)
     _aws_vpc_cmd(awssub)
+    bootstrap.setup_cmd(awssub)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")

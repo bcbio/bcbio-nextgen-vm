@@ -39,18 +39,14 @@ ICEL_TEMPLATES = {
 
 def setup_cmd(awsparser):
     parser_c = awsparser.add_parser("icel",
-                                    help="Create Lustre scratch filesystem "
-                                         "using Intel Cloud Edition for "
-                                         "Lustre")
+                                    help="Create scratch filesystem using Intel Cloud Edition for Lustre")
     icel_parser = parser_c.add_subparsers(title="[icel create]")
 
     # ## Create
 
     parser = icel_parser.add_parser("create",
-                                    help="Create Lustre scratch filesystem "
-                                         "using Intel Cloud Edition for "
-                                         "Lustre",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                    help="Create scratch filesystem using Intel Cloud Edition for Lustre",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
                         default=DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
@@ -194,8 +190,12 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
     def on_stats(self, stats):
         pass
 
+def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
+    """Generalized functionality for running an ansible playbook on elasticluster.
 
-def mount(args):
+    calc_extra_vars is an option function that should return extra variables
+    to pass to ansible given the arguments and cluster configuration.
+    """
     cluster_config = _cluster_config(args.cluster, args.econfig)
 
     stats = ansible.callbacks.AggregateStats()
@@ -210,10 +210,8 @@ def mount(args):
                                  "roles", "lustre_client", "tasks", "main.yml")
     inventory_path = os.path.join(os.path.dirname(args.econfig),
                                   "storage", "ansible-inventory.%s" % args.cluster)
-    extra_vars = {
-        'lustre_fs_spec': _get_fs_spec(
-            args.stack_name, cluster_config['cloud']),
-    }
+    extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
+
     pb = ansible.playbook.PlayBook(
         playbook=playbook_path,
         extra_vars=extra_vars,
@@ -244,6 +242,14 @@ def mount(args):
                  in failures.items()])))
     if unreachable or failures:
         sys.exit(1)
+
+def mount(args):
+    playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
+                                 "roles", "lustre_client", "tasks", "main.yml")
+    def get_lustre_vars(args, cluster_config):
+        return {'lustre_fs_spec': _get_fs_spec(
+            args.stack_name, cluster_config['cloud'])}
+    run_ansible_pb(playbook_path, args, get_lustre_vars)
 
 def _template_param(tree, param):
     return [

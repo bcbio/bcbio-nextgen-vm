@@ -156,15 +156,19 @@ Running a cluster
 
 Following this setup, you're ready to run a bcbio cluster on AWS.  By default,
 the cluster uses the latest pre-built AMI (ami-106aef78, 2014-10-20) with bcbio,
-docker, Slurm, and human GRCh37 indices pre-installed.  It will start up one
-m3.large head node and two m3.large worker nodes. You can adjust the number of
-nodes and sizes by editing your ``~/.bcbio/elasticluster/config``.  Start the cluster
+docker and human GRCh37 indices pre-installed.  It will start up one m3.large
+head node and two m3.large worker nodes. You can adjust the number of nodes and
+sizes by editing your ``~/.bcbio/elasticluster/config``.  Start the cluster
 with::
 
     bcbio_vm.py elasticluster start bcbio
 
 The cluster will take five to ten minutes to start. Once running,
-connect to the head node with::
+update bcbio wrapper code and Dockerized tools with::
+
+    bcbio_vm.py aws bcbio bootstrap
+
+Finally, connect to the head node with::
 
     bcbio_vm.py elasticluster ssh bcbio
 

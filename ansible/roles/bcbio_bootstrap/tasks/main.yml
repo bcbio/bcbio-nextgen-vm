@@ -1,0 +1,23 @@
+---
+- name: Update bcbio_vm code and tools
+  hosts: all
+  sudo: false
+  tasks:
+    - name: install collectl for run stats
+      apt: name=collectl state=present
+      sudo: true
+
+    - name: Install bcbio-vm docker image and data
+      shell: >
+        bcbio_vm.py upgrade --wrapper --tools
+        >/tmp/bcbio.log 2>&1
+      args:
+        executable: /bin/bash
+      register: bcbio_vm_doupgrade
+      async: 18000
+      poll: 30
+
+    - command: "tail -100 /tmp/bcbio.log"
+      register: bcbio_vm_debug
+
+    - debug: var=bcbio_vm_debug.stdout_lines
