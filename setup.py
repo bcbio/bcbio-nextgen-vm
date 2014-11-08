@@ -43,9 +43,9 @@ def ansible_pb_files(ansible_pb_dir):
     for (dirname, dirnames, filenames) in os.walk(ansible_pb_dir):
         tmp = []
         for fname in filenames:
-            if fname.startswith('.git'): continue
+            if fname.startswith(".git"): continue
             tmp.append(os.path.join(dirname, fname))
-        ansible_data.append((os.path.join('share', "bcbio-vm", dirname), tmp))
+        ansible_data.append((os.path.join("share", "bcbio-vm", dirname), tmp))
     return ansible_data
 
 def elasticluster_config_files(base_dir):
@@ -57,11 +57,16 @@ def elasticluster_config_files(base_dir):
 if __name__ == "__main__":
     """Install ansible playbooks and other associated data files.
     """
-    if sys.argv[1] in ["install"]:
-        sharedir = os.path.join(os.path.abspath(sys.prefix), 'share', 'bcbio-vm')
+    if sys.argv[1] in ["develop", "install"]:
         for dirname, fnames in ansible_pb_files("ansible") + elasticluster_config_files("elasticluster"):
             dirname = os.path.join(os.path.abspath(sys.prefix), dirname)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             for fname in fnames:
-                shutil.copy(fname, dirname)
+                if sys.argv[1] == "develop":
+                    link_path = os.path.join(dirname, os.path.basename(fname))
+                    if not os.path.exists(link_path):
+                        link_target = os.path.join(os.getcwd(), fname)
+                        os.symlink(link_target, link_path)
+                else:
+                    shutil.copy(fname, dirname)
