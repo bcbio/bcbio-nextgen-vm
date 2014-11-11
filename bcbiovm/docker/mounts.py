@@ -75,9 +75,13 @@ def find_genome_directory(dirname, container_dir):
         # Special case used in testing -- relative paths
         if genome_dir and not os.path.isabs(genome_dir):
             rel_genome_dir = os.path.dirname(os.path.dirname(os.path.dirname(genome_dir)))
-            mounts.append("%s:%s" % (os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir)),
-                                     os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
-                                                                   rel_genome_dir))))
+            full_genome_dir = os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir))
+            container_dir = os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
+                                                          rel_genome_dir))
+            for target in [full_genome_dir, container_dir]:
+                mount = "%s:%s" % (full_genome_dir, target)
+                if mount not in mounts:
+                    mounts.append(mount)
     return mounts
 
 def _get_directories(xs, ignore):
