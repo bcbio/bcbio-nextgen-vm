@@ -9,7 +9,6 @@ import sys
 import yaml
 
 from bcbio import log
-from bcbio.log import logger
 from bcbiovm.docker import manage, mounts, remap
 from bcbiovm.ship import reconstitute
 
@@ -88,7 +87,10 @@ def _get_system_configfile(systemconfig, datadir):
     """Retrieve system configuration file from input or default directory.
     """
     if systemconfig:
-        return systemconfig
+        if not os.path.isabs(systemconfig):
+            return os.path.normpath(os.path.join(os.getcwd(), systemconfig))
+        else:
+            return systemconfig
     else:
         return os.path.join(datadir, "galaxy", "bcbio_system.yaml")
 

@@ -68,7 +68,7 @@ def cmd_ipython(args):
                 "sample_config": args.sample_config, "fcdir": args.fcdir,
                 "orig_systemconfig": args.systemconfig}
     config = {"algorithm": {}, "resources": {}}
-    runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
+    runargs = [read_config_file, systemconfig, work_dir, args.fcdir, config]
     samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=systemconfig, fc_dir=args.fcdir,
