@@ -18,10 +18,8 @@ def prepare_system(datadir, docker_biodata_dir):
         mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(**locals()))
     return mounts
 
-def update_config(config, input_dir, fcdir=None):
-    """Update input configuration with local docker container mounts.
-    Maps input files into docker mounts and resolved relative and symlinked paths.
-    If input_dir is None, maps directories directly into container.
+def update_config(config, fcdir=None):
+    """Resolve relative and symlinked path, providing mappings for docker container.
     """
     config, directories = normalize_config(config, fcdir)
     if config.get("upload", {}).get("dir"):
@@ -32,10 +30,7 @@ def update_config(config, input_dir, fcdir=None):
         directories.append(config["upload"]["dir"])
     mounts = {}
     for i, d in enumerate(sorted(set(directories))):
-        if input_dir:
-            mounts[d] = os.path.join(input_dir, str(i))
-        else:
-            mounts[d] = d
+        mounts[d] = d
     mounts = ["%s:%s" % (k, v) for k, v in mounts.items()]
     config = remap.external_to_docker(config, mounts)
     return config, mounts
@@ -59,7 +54,7 @@ def normalize_config(config, fcdir=None):
     config["details"] = absdetails
     return config, directories
 
-def find_genome_directory(dirname, container_dir):
+def find_genome_directory(dirname):
     """Handle external non-docker installed biodata located relative to config directory.
     """
     mounts = []
@@ -76,12 +71,7 @@ def find_genome_directory(dirname, container_dir):
         if genome_dir and not os.path.isabs(genome_dir):
             rel_genome_dir = os.path.dirname(os.path.dirname(os.path.dirname(genome_dir)))
             full_genome_dir = os.path.normpath(os.path.join(os.path.dirname(sam_loc), rel_genome_dir))
-            container_dir = os.path.normpath(os.path.join(os.path.join(container_dir, "tool-data"),
-                                                          rel_genome_dir))
-            for target in [full_genome_dir, container_dir]:
-                mount = "%s:%s" % (full_genome_dir, target)
-                if mount not in mounts:
-                    mounts.append(mount)
+            mounts.append("%s:%s" % (full_genome_dir, full_genome_dir))
     return mounts
 
 def _get_directories(xs, ignore):

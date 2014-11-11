@@ -25,7 +25,6 @@ from bcbiovm.ship import pack
 # default information about docker container
 DOCKER = {"port": 8085,
           "biodata_dir": "/usr/local/share/bcbio-nextgen",
-          "input_dir": "/mnt/inputs",
           "work_dir": "/mnt/work",
           "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
@@ -70,6 +69,8 @@ def cmd_ipython(args):
     config = {"algorithm": {}, "resources": {}}
     runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
     samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
+    # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel, samples]
+    # run.do_runfn("run_main", main_args, cmd_args, parallel, DOCKER)
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=systemconfig, fc_dir=args.fcdir,
                   parallel=parallel, samples=samples)
