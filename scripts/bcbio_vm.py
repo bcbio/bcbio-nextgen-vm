@@ -18,7 +18,7 @@ from bcbio.distributed import clargs
 from bcbio.pipeline import main
 from bcbiovm.aws import bootstrap, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
-from bcbiovm.docker import defaults, install, manage, mounts, run
+from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
 
@@ -249,6 +249,7 @@ if __name__ == "__main__":
     _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)
     _runfn_cmd(subparsers)
+    devel.setup_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
         parser.print_help()

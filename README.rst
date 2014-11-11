@@ -242,7 +242,6 @@ ToDo
 - Enable specification of external programs/jars to handle tricky non-distributable
   issues like GATK protected versions. Map these directories into docker
   container.
-- Improve ability to develop and test on locally installed images.
 
 Creating docker image
 =====================
@@ -272,14 +271,15 @@ with the bcbio-nextgen docker image independently from the wrapper.
 Updates
 =======
 
-Update local images during development::
+To update bcbio-nextgen in a local docker instance during development, first
+clone the development code::
 
-    DID=$(docker run -d -i -t -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
-          chapmanb/bcbio-nextgen-devel /bin/bash)
-    docker attach $DID
-    cd /tmp/bcbio-nextgen
-    /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
-    docker commit $DID chapmanb/bcbio-nextgen-devel
+    git clone https://github.com/chapmanb/bcbio-nextgen
+    cd bcbio-nextgen
+
+Edit the code as needed, then update your local install with::
+
+    bcbio_vm.py devel setup_install
 
 Amazon Web Services
 ===================
