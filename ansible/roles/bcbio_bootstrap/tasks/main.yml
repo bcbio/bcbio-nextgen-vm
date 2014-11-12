@@ -5,7 +5,7 @@
   tasks:
     - name: Upgrade bcbio-vm wrapper code
       shell: >
-        bcbio_vm.py upgrade --wrapper
+        bcbio_vm.py upgrade --wrapper --tools
         >/tmp/bcbio-wrapper.log 2>&1
       args:
         executable: /bin/bash
@@ -16,6 +16,10 @@
       register: bcbio_vm_wrapper_debug
 
     - debug: var=bcbio_vm_wrapper_debug.stdout_lines
+
+    - name: Update bcbio system YAML file with memory and core usage
+      shell: >
+        bcbio_vm.py devel system {{ target_cores }} {{ target_memory }}
 
 - name: Update bcbio_vm tools
   hosts: all
