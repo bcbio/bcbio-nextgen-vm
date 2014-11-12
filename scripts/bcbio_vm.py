@@ -16,6 +16,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
+from bcbio.workflow import template
 from bcbiovm.aws import bootstrap, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
@@ -172,6 +173,12 @@ def _run_ipythonprep_cmd(subparsers):
     parser = _add_ipython_args(parser)
     parser.set_defaults(func=batchprep.submit_script)
 
+def _template_cmd(subparsers):
+    parser = subparsers.add_parser("template",
+                                   help="Create a bcbio sample.yaml file from a standard template and inputs")
+    parser = template.setup_args(parser)
+    parser.set_defaults(func=template.setup)
+
 def _runfn_cmd(subparsers):
     parser = subparsers.add_parser("runfn", help="Run a specific bcbio-nextgen function with provided arguments")
     parser = _std_config_args(parser)
@@ -245,6 +252,7 @@ if __name__ == "__main__":
     _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
     _run_ipythonprep_cmd(subparsers)
+    _template_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
     _run_clusterk_cmd(subparsers)

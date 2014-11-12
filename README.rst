@@ -230,18 +230,34 @@ To update the associated data files::
 
 Combine all commands to update everything concurrently.
 
+Extra software
+--------------
+
+We're not able to automatically install some useful tools in pre-built
+docker containers due to licensing restrictions. Variant calling with GATK
+requires a manual download from the `GATK download`_ site for academic users.
+Appistry provides `a distribution of GATK for commercial users`_. Commercial
+users also need a license for somatic calling with muTect. To make these jars
+available during docker runs, upload them to an S3 bucket you own, and specify
+the path to the jars in a global ``resources`` specification in your input sample
+YAML file::
+
+    resources:
+      gatk:
+        jar: s3://bcbio-syn3-eval/jars/GenomeAnalysisTK.jar
+
+If you store your configuration files on S3, bcbio will look for a ``jars``
+directory next to your YAML and automatically include the correct
+GATK and muTect directives.
+
+.. _GATK download: http://www.broadinstitute.org/gatk/download
+.. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
+
 Development Notes
 -----------------
 
 These notes are for building containers from scratch or developing on
 bcbio-nextgen.
-
-ToDo
-====
-
-- Enable specification of external programs/jars to handle tricky non-distributable
-  issues like GATK protected versions. Map these directories into docker
-  container.
 
 Creating docker image
 =====================

@@ -44,7 +44,8 @@ def _get_pass_envs():
     out = []
     for proxyenv in ["HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy",
                      "ALL_PROXY", "all_proxy", "FTP_PROXY", "ftp_proxy",
-                     "RSYNC_PROXY", "rsync_proxy"]:
+                     "RSYNC_PROXY", "rsync_proxy",
+                     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]:
         if proxyenv in os.environ:
             out += ["-e", "%s=%s" % (proxyenv, os.environ[proxyenv])]
     return out
