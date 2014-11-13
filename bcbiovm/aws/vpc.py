@@ -7,7 +7,6 @@ import re
 import sys
 
 import boto.ec2
-from elasticluster.conf import Configurator
 
 
 def bootstrap(args):
@@ -29,14 +28,7 @@ def _setup_vpc(args):
         sys.exit(1)
     compute_subnet = '{}/24'.format(net)
 
-    storage_dir = os.path.join(os.path.dirname(args.econfig), "storage")
-    ecluster_config = Configurator.fromConfig(args.econfig, storage_dir)
-    if args.cluster not in ecluster_config.cluster_conf:
-        sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
-            args.cluster, os.path.expanduser(args.econfig)))
-        sys.exit(1)
-    cluster_config = ecluster_config.cluster_conf[args.cluster]
-
+    cluster_config = common.ecluster_config(args.cluster, args.econfig)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])

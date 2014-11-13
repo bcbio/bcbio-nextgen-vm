@@ -6,7 +6,7 @@ import sys
 
 import toolz as tz
 
-from bcbiovm.aws import icel
+from bcbiovm.aws import common
 
 def setup_cmd(awsparser):
     parser_sub_b = awsparser.add_parser("bcbio", help="Manage bcbio on AWS systems")
@@ -16,7 +16,7 @@ def setup_cmd(awsparser):
                                  help="Update a bcbio AWS system with the latest code and tools",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=icel.DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument("-v", "--verbose", action="count", default=0,
@@ -57,4 +57,4 @@ def bootstrap(args):
         if compute_nodes < 5 and compute_nodes > 0:
             cores = cores - 2
         return {"target_cores": cores, "target_memory": mem}
-    icel.run_ansible_pb(playbook_path, args, _calculate_cores_mem)
+    common.run_ansible_pb(playbook_path, args, _calculate_cores_mem)

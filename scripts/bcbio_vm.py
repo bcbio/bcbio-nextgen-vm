@@ -17,7 +17,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, iam, icel, vpc
+from bcbiovm.aws import bootstrap, common, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.ipython import batchprep
@@ -220,7 +220,7 @@ def _aws_cmd(subparsers):
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=icel.DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
     parser.set_defaults(func=iam.bootstrap)
@@ -230,7 +230,7 @@ def _aws_vpc_cmd(awsparser):
                                   help="Create VPC and associated resources",
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=icel.DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the VPC, destroying all "
                              "AWS resources contained in it")
@@ -269,7 +269,7 @@ if __name__ == "__main__":
             if "-s" not in sys.argv and "--storage" not in sys.argv:
                 # clean up old storage directory if starting a new cluster
                 # old pickle files will cause consistent errors when restarting
-                storage_dir = os.path.join(os.path.dirname(icel.DEFAULT_EC_CONFIG), "storage")
+                storage_dir = os.path.join(os.path.dirname(common.DEFAULT_EC_CONFIG), "storage")
                 std_args = [x for x in sys.argv if not x.startswith("-")]
                 if len(std_args) >= 3 and std_args[1] == "start":
                     cluster = std_args[2]
@@ -278,7 +278,7 @@ if __name__ == "__main__":
                         os.remove(pickle_file)
                 sys.argv = [sys.argv[0], "--storage", storage_dir] + sys.argv[1:]
             if "-c" not in sys.argv and "--config" not in sys.argv:
-                sys.argv = [sys.argv[0]] + ["--config", icel.DEFAULT_EC_CONFIG] + sys.argv[1:]
+                sys.argv = [sys.argv[0]] + ["--config", common.DEFAULT_EC_CONFIG] + sys.argv[1:]
             sys.exit(ecmain())
         else:
             args = parser.parse_args()
