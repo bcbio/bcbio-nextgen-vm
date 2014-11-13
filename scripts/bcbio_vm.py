@@ -15,7 +15,6 @@ import warnings
 warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
 from bcbio.distributed import clargs
-from bcbio.pipeline import main
 from bcbio.workflow import template
 from bcbiovm.aws import bootstrap, common, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
@@ -72,6 +71,8 @@ def cmd_ipython(args):
     samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
     # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel, samples]
     # run.do_runfn("run_main", main_args, cmd_args, parallel, DOCKER)
+
+    from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=systemconfig, fc_dir=args.fcdir,
                   parallel=parallel, samples=samples)

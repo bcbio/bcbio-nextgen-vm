@@ -5,7 +5,6 @@ import os
 import yaml
 
 from bcbiovm.docker import manage, mounts
-from bcbio.pipeline import main
 from bcbiovm.ship import pack
 
 def run(args, docker_config):
@@ -27,6 +26,8 @@ def run(args, docker_config):
     workdir_mount = "%s:%s" % (work_dir, docker_config["work_dir"])
     manage.run_bcbio_cmd(args.image, [workdir_mount],
                          ["version", "--workdir=%s" % docker_config["work_dir"]])
+
+    from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)
