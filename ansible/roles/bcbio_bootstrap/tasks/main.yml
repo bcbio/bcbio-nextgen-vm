@@ -1,32 +1,47 @@
 ---
-- name: Update bcbio_vm code
+- name: Install bcbio_vm
   hosts: frontend*
   sudo: false
+  vars:
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
   tasks:
-    - name: Upgrade bcbio-vm wrapper code
-      shell: >
-        bcbio_vm.py upgrade --wrapper --tools
-        >/tmp/bcbio-wrapper.log 2>&1
+    - name: Get Miniconda install script
+      get_url:
+        url: http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+        dest: /tmp/Miniconda-latest-Linux-x86_64.sh
+
+    - name: Install Miniconda
+      shell: "bash /tmp/Miniconda-latest-Linux-x86_64.sh -b -p {{anaconda_dir}}"
       args:
-        executable: /bin/bash
-      async: 18000
-      poll: 30
+        creates: "{{anaconda_dir}}/bin/conda"
 
-    - command: "tail -100 /tmp/bcbio-wrapper.log"
-      register: bcbio_vm_wrapper_debug
+    - name: Install bcbio_vm
+      shell: "{{anaconda_dir}}/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
 
-    - debug: var=bcbio_vm_wrapper_debug.stdout_lines
-
-    - name: Update bcbio system YAML file with memory and core usage
-      shell: >
-        bcbio_vm.py devel system {{ target_cores }} {{ target_memory }}
+    - name: bcbio_vm.py -- setgid docker
+      file:
+        path: "{{anaconda_dir}}/bin/bcbio_vm.py"
+        owner: "{{ansible_user_id}}"
+        group: docker
+        mode: '2775'
 
 - name: Update bcbio_vm tools
   hosts: all
   sudo: false
+  vars:
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
   tasks:
     - name: install collectl for run stats
       apt: name=collectl state=present
+      sudo: true
+
+    - name: Add bcbio_vm.py to PATH
+      file:
+        src: "{{anaconda_dir}}/bin/bcbio_vm.py"
+        dest: /usr/local/bin/bcbio_vm.py
+        owner: "{{ansible_user_id}}"
+        group: docker
+        state: link
       sudo: true
 
     - name: Upgrade bcbio-vm docker container with tools
@@ -43,3 +58,11 @@
       register: bcbio_vm_debug
 
     - debug: var=bcbio_vm_debug.stdout_lines
+
+- name: Update system configuration
+  hosts: frontend*
+  sudo: false
+  tasks:
+    - name: Update bcbio system YAML file with memory and core usage
+      shell: >
+        bcbio_vm.py devel system {{ target_cores }} {{ target_memory }}

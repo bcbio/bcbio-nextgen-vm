@@ -16,6 +16,10 @@ user_key_name=example-keypair
 user_key_private=~/.ssh/id_rsa
 user_key_public=~/.ssh/id_rsa.pub
 
+[setup/ansible]
+provider=ansible
+frontend_groups=common
+
 [setup/ansible-slurm]
 provider=ansible
 frontend_groups=slurm_master
@@ -26,14 +30,14 @@ global_var_slurm_selecttypeparameters=CR_Core_Memory
 [cluster/bcbio]
 cloud=amazon-us-east-1
 login=ubuntu
-setup_provider=ansible-slurm
-security_group=bcbio_cluster_sg
-image_id=ami-106aef78
-flavor=m3.large
-frontend_nodes=1
-compute_nodes=2
 ssh_to=frontend
 network_ids=bcbio_cluster
+security_group=bcbio_cluster_sg
+image_id=ami-9eaa1cf6
+setup_provider=ansible-slurm
+frontend_nodes=1
+compute_nodes=2
+flavor=m3.large
 
 [cluster/bcbio/frontend]
 flavor=m3.large

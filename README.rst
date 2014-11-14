@@ -182,15 +182,3 @@ clone the development code::
 Edit the code as needed, then update your local install with::
 
     bcbio_vm.py devel setup_install
-
-Amazon Web Services AMIs
-========================
-
-An ansible script automates preparation of AMIs::
-
-    cd ansible
-    vim defaults.yml
-    ansible-playbook bcbio_vm_aws.yml --extra-vars "@defaults.yml"
-
-This script doesn't yet terminate EC2 instances, so please manually ensure
-instances get cleaned up when developing with it.

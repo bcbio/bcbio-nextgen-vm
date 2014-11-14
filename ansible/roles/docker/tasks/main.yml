@@ -1,35 +1,39 @@
 ---
-- name: Add docker apt key
-  apt_key:
-    url: https://get.docker.io/gpg
-    state: present
-  sudo: True
+- name: Docker installation
+  hosts: all
+  tasks:
+    - name: Add docker apt key
+      apt_key:
+        url: https://get.docker.io/gpg
+        state: present
+      sudo: True
 
-- name: Add docker apt repo
-  shell: echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list
-  sudo: True
+    - name: Add docker apt repo
+      shell: echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list
+      sudo: True
 
-- name: Install Docker
-  register: docker_install
-  apt:
-    name: "{{ item }}"
-    update_cache: True
-  with_items:
-    - lxc-docker
-    - git
-  sudo: True
+    - name: Install Docker
+      register: docker_install
+      apt:
+        name: "{{ item }}"
+        update_cache: True
+      with_items:
+        - lxc-docker
+        - git
+        - pigz
+      sudo: True
 
-- debug: var=docker_install.stdout_lines
+    - debug: var=docker_install.stdout_lines
 
-- name: Add current user to the docker group 
-  user:
-    name: "{{ ansible_user_id }}"
-    groups: docker
-    append: True
-  sudo: True
+    - name: Add current user to the docker group 
+      user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: True
+      sudo: True
 
-- name: Restart Docker server
-  service:
-    name: docker
-    state: restarted
-  sudo: True
+    - name: Restart Docker server
+      service:
+        name: docker
+        state: restarted
+      sudo: True

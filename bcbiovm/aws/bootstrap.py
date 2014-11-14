@@ -42,10 +42,26 @@ AWS_INFO = {
 }
 
 def bootstrap(args):
-    """Update bcbio_vm on worker nodes and set core and memory usage.
+    """Bootstrap base machines to get bcbio-vm ready to run.
     """
-    playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
-                                 "roles", "bcbio_bootstrap", "tasks", "main.yml")
+    playbook_base = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible", "roles")
+    _bootstrap_baseline(args, playbook_base)
+    _bootstrap_bcbio(args, playbook_base)
+
+def _bootstrap_baseline(args, playbook_base):
+    """Install required tools -- docker and gof3r on system.
+    """
+    def _all_hosts(args, cluster_config):
+        return {"hosts": "all"}
+    docker_pb = os.path.join(playbook_base, "docker", "tasks", "main.yml")
+    common.run_ansible_pb(docker_pb, args)
+    gof3r_pb = os.path.join(playbook_base, "gof3r", "tasks", "main.yml")
+    common.run_ansible_pb(gof3r_pb, args)
+
+def _bootstrap_bcbio(args, playbook_base):
+    """Install bcbio_vm and docker container with tools. Set core and memory usage.
+    """
+    playbook_path = os.path.join(playbook_base, "bcbio_bootstrap", "tasks", "main.yml")
     def _calculate_cores_mem(args, cluster_config):
         compute_nodes = int(tz.get_in(["nodes", "frontend", "compute_nodes"], cluster_config, 0))
         if compute_nodes > 0:
