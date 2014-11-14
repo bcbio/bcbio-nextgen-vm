@@ -173,7 +173,7 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     url = ICEL_TEMPLATES[aws_config['ec2_region']]
     source_template = requests.get(url)
     tree = json.loads(source_template.text)
-    tree['Description'].replace(
+    tree['Description'] = tree['Description'].replace(
         '4 Object Storage Servers',
         '{} Object Storage Servers'.format(param['oss_count']))
     if aws_config["ec2_region"] == "us-east-1":
