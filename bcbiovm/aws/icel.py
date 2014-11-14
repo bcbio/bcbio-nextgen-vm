@@ -353,6 +353,7 @@ def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
             raise Exception(
                 'Stack {} did not launch successfully: {}: {}'.format(
                 stack_name, status, failed_descr))
+    print()
 
 
 def _get_stack_param(stack_name, param_name, aws_config):
