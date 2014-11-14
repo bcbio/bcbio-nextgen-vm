@@ -20,11 +20,13 @@ def full(args, dockerconf):
     if args.wrapper:
         updates.append("wrapper scripts")
         upgrade_bcbio_vm()
+    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     if args.install_tools:
         updates.append("bcbio-nextgen code and third party tools")
         pull(args, dockerconf)
         _check_docker_image(args)
-    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
+        # Ensure external galaxy configuration in sync when doing tool upgrade
+        manage.run_bcbio_cmd(args.image, dmounts, ["upgrade"])
     if args.install_data:
         if len(args.genomes) == 0:
             print("Data not installed, no genomes provided with `--genomes` flag")
