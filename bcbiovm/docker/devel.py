@@ -188,7 +188,7 @@ def _upload_biodata(gbuild, target, all_dirs):
     key = bucket.get_key(keyname)
     if not key:
         target_dirs = " ".join(target_dirs)
-        cmd = ("tar -cvpf - {target_dirs} | plzip -c | "
+        cmd = ("tar -cvpf - {target_dirs} | pigz -c | "
                "gof3r put --no-md5 -k {keyname} -b {bucketname} "
                "-m x-amz-storage-class:REDUCED_REDUNDANCY -m x-amz-acl:public-read")
         do.run(cmd.format(**locals()), "Upload pre-prepared genome data: %s %s" % (gbuild, target))

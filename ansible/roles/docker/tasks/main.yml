@@ -21,7 +21,6 @@
         - lxc-docker
         - git
         - pigz
-        - plzip
       sudo: True
 
     - debug: var=docker_install.stdout_lines
