@@ -22,21 +22,15 @@ from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
 
-# default information about docker container
-DOCKER = {"port": 8085,
-          "biodata_dir": "/usr/local/share/bcbio-nextgen",
-          "work_dir": "/mnt/work",
-          "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
-
 def cmd_install(args):
     args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.",
                                       need_datadir=args.install_data)
-    install.full(args, DOCKER)
+    install.full(args, devel.DOCKER)
 
 def cmd_run(args):
     args = defaults.update_check_args(args, "Could not run analysis.")
     args = install.docker_image_arg(args)
-    run.do_analysis(args, DOCKER)
+    run.do_analysis(args, devel.DOCKER)
 
 def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
@@ -53,24 +47,24 @@ def cmd_ipython(args):
     work_dir = os.getcwd()
     systemconfig = run.local_system_config(args.systemconfig, args.datadir, work_dir)
     cur_pack = pack.shared_filesystem(work_dir, args.datadir, args.tmpdir)
-    parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
-                                         "fcdir": args.fcdir,
-                                         "pack": cur_pack,
-                                         "systemconfig": systemconfig,
-                                         "image": args.image}]
+    parallel["wrapper_args"] = [devel.DOCKER, {"sample_config": ready_config_file,
+                                               "fcdir": args.fcdir,
+                                               "pack": cur_pack,
+                                               "systemconfig": systemconfig,
+                                               "image": args.image}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
-    workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
+    workdir_mount = "%s:%s" % (work_dir, devel.DOCKER["work_dir"])
     manage.run_bcbio_cmd(args.image, [workdir_mount],
-                         ["version", "--workdir=%s" % DOCKER["work_dir"]])
+                         ["version", "--workdir=%s" % devel.DOCKER["work_dir"]])
     cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
                 "sample_config": args.sample_config, "fcdir": args.fcdir,
                 "orig_systemconfig": args.systemconfig}
     config = {"algorithm": {}, "resources": {}}
     runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
-    samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
+    samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, devel.DOCKER)
     # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel, samples]
-    # run.do_runfn("run_main", main_args, cmd_args, parallel, DOCKER)
+    # run.do_runfn("run_main", main_args, cmd_args, parallel, devel.DOCKER)
 
     from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
@@ -80,7 +74,7 @@ def cmd_ipython(args):
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
     args = install.docker_image_arg(args)
-    clusterk_main.run(args, DOCKER)
+    clusterk_main.run(args, devel.DOCKER)
 
 def cmd_runfn(args):
     args = defaults.update_check_args(args, "Could not run bcbio-nextgen function.")
@@ -90,7 +84,7 @@ def cmd_runfn(args):
     with open(args.runargs) as in_handle:
         runargs = yaml.safe_load(in_handle)
     cmd_args = {"systemconfig": args.systemconfig, "image": args.image, "pack": parallel["pack"]}
-    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, DOCKER)
+    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, devel.DOCKER)
     out_file = "%s-out%s" % os.path.splitext(args.runargs)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -99,9 +93,9 @@ def cmd_runfn(args):
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
     args = install.docker_image_arg(args)
-    ports = ["%s:%s" % (args.port, DOCKER["port"])]
+    ports = ["%s:%s" % (args.port, devel.DOCKER["port"])]
     print("Running server on port %s. Press ctrl-c to exit." % args.port)
-    manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(DOCKER["port"])],
+    manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(devel.DOCKER["port"])],
                          ports)
 
 def cmd_save_defaults(args):
@@ -109,13 +103,7 @@ def cmd_save_defaults(args):
 
 def _install_cmd(subparsers, name):
     parser_i = subparsers.add_parser(name, help="Install or upgrade bcbio-nextgen docker container and data.")
-    parser_i.add_argument("--genomes", help="Genomes to download",
-                          action="append", default=[],
-                          choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix",
-                                   "sacCer3", "xenTro3", "TAIR10", "WBcel235"])
-    parser_i.add_argument("--aligners", help="Aligner indexes to download",
-                          action="append", default=[],
-                          choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+    parser_i = devel.add_biodata_args(parser_i)
     parser_i.add_argument("--data", help="Install or upgrade data dependencies",
                           dest="install_data", action="store_true", default=False)
     parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",

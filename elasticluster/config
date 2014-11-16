@@ -37,7 +37,9 @@ image_id=ami-9eaa1cf6
 setup_provider=ansible-slurm
 frontend_nodes=1
 compute_nodes=2
-flavor=m3.large
+flavor=r3.2xlarge
 
 [cluster/bcbio/frontend]
 flavor=m3.large
+root_volume_size=100
+root_volume_type=gp2
