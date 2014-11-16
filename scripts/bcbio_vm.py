@@ -19,6 +19,7 @@ from bcbio.workflow import template
 from bcbiovm.aws import bootstrap, common, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
+from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
 
@@ -195,6 +196,25 @@ def _config_cmd(subparsers):
 def _elasticluster_cmd(subparsers):
     subparsers.add_parser("elasticluster", help="Interface to standard elasticluster commands")
 
+def _graph_cmd(subparsers):
+    parser = subparsers.add_parser("graph",
+                                   help="Generate system graphs "
+                                        "(CPU/memory/network/disk I/O "
+                                        "consumption) from bcbio runs",
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-d", "--datadir",
+                        help="Directory containing collectl data files.")
+    parser.add_argument("-e", "--econfig",
+                        help="Elasticluster bcbio configuration file",
+                        default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("-l", "--log",
+                        help="Path to bcbio log file written by the run.")
+    parser.add_argument("-o", "--outdir",
+                        help="Directory to write graphs to.")
+    parser.set_defaults(func=graph.bootstrap)
+
 def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
@@ -242,6 +262,7 @@ if __name__ == "__main__":
     _template_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
+    _graph_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
     _server_cmd(subparsers)
     _runfn_cmd(subparsers)

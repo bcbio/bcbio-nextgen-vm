@@ -28,7 +28,7 @@ def _setup_vpc(args):
         sys.exit(1)
     compute_subnet = '{}/24'.format(net)
 
-    cluster_config = common.ecluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])

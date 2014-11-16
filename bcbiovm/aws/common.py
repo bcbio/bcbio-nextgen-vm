@@ -42,14 +42,15 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
         pass
 
 
-def ecluster_config(name, econfig_file):
+def ecluster_config(econfig_file, name=None):
     """Load the Elasticluster configuration."""
     storage_dir = os.path.join(os.path.dirname(econfig_file), "storage")
     config = Configurator.fromConfig(econfig_file, storage_dir)
+    if not name:
+        return config
     if name not in config.cluster_conf:
-        sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
+        raise Exception('Cluster {} is not defined in {}.\n'.format(
             name, os.path.expanduser(econfig_file)))
-        sys.exit(1)
     return config.cluster_conf[name]
 
 

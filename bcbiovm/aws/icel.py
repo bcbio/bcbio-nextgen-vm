@@ -123,7 +123,7 @@ def create(args):
                     args.network))
             sys.exit(1)
 
-    cluster_config = common.ecluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
 
     icel_param = {
         'oss_count': args.oss_count,
@@ -148,7 +148,7 @@ def create(args):
 
 
 def fs_spec(args):
-    cluster_config = common.ecluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     print(_get_fs_spec(args.stack_name, cluster_config['cloud']))
 
 
@@ -225,7 +225,7 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     return k.generate_url(5 * 60, query_auth=False)
 
 def stop(args):
-    cluster_config = common.ecluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     _delete_stack(args.stack_name, cluster_config)
 
 def _delete_stack(stack_name, cluster_config):
