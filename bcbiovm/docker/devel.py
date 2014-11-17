@@ -7,6 +7,7 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 
 import boto
 import numpy
@@ -16,6 +17,7 @@ from bcbio import utils
 from bcbio.pipeline import genome
 from bcbio.provenance import do
 
+from bcbiovm.aws import common
 from bcbiovm.docker import defaults, install, manage, mounts
 
 # default information about docker container
@@ -53,6 +55,11 @@ def setup_cmd(subparsers):
     dparser = psub.add_parser("biodata", help="Upload pre-prepared biological data to cache")
     dparser = add_biodata_args(dparser)
     dparser.set_defaults(func=_run_biodata_upload)
+
+    dbparser = psub.add_parser("dockerbuild", help="Build docker image and export to S3")
+    dbparser.add_argument("-v", "--verbose", action="count", default=0,
+                          help="Emit verbose output when running Ansible playbooks")
+    dbparser.set_defaults(func=_run_docker_build)
 
 # ## Install code to docker image
 
@@ -147,6 +154,12 @@ def _update_memory(key, cur, target, common_mem):
         else:
             out = new_val
         return out
+
+# ## Build docker images
+
+def _run_docker_build(args):
+    playbook = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible", "bcbio_vm_docker_local.yml")
+    common.run_ansible_pb(playbook, args)
 
 # ## Upload pre-build biological data
 

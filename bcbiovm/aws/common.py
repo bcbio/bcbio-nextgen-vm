@@ -68,18 +68,21 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
         ansible.utils.VERBOSITY = args.verbose - 1
 
-    inventory_path = os.path.join(os.path.dirname(args.econfig),
-                                  "storage",
-                                  "ansible-inventory.%s" % args.cluster)
-
-    cluster_config = ecluster_config(args.cluster, args.econfig)
+    if hasattr(args, "cluster") and hasattr(args, "econfig"):
+        inventory_path = os.path.join(os.path.dirname(args.econfig),
+                                      "storage",
+                                      "ansible-inventory.%s" % args.cluster)
+        cluster_config = ecluster_config(args.cluster, args.econfig)
+    else:
+        cluster_config = {}
+        inventory_path = os.path.join(os.path.dirname(playbook_path), "standard_hosts.txt")
     extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
 
     pb = ansible.playbook.PlayBook(
         playbook=playbook_path,
         extra_vars=extra_vars,
         host_list=inventory_path,
-        private_key_file=cluster_config['login']['user_key_private'],
+        private_key_file=cluster_config['login']['user_key_private'] if cluster_config else None,
         callbacks=callbacks,
         runner_callbacks=runner_cb,
         forks=10,
