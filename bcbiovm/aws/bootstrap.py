@@ -51,8 +51,6 @@ def bootstrap(args):
 def _bootstrap_baseline(args, playbook_base):
     """Install required tools -- docker and gof3r on system.
     """
-    def _all_hosts(args, cluster_config):
-        return {"hosts": "all"}
     docker_pb = os.path.join(playbook_base, "docker", "tasks", "main.yml")
     common.run_ansible_pb(docker_pb, args)
     gof3r_pb = os.path.join(playbook_base, "gof3r", "tasks", "main.yml")

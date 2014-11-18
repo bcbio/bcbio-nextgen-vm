@@ -57,6 +57,8 @@ def setup_cmd(subparsers):
     dparser.set_defaults(func=_run_biodata_upload)
 
     dbparser = psub.add_parser("dockerbuild", help="Build docker image and export to S3")
+    dbparser.add_argument("-b", "--bucket", default="bcbio_nextgen",
+                          help="S3 bucket to upload the gzipped docker image to")
     dbparser.add_argument("-v", "--verbose", action="count", default=0,
                           help="Emit verbose output when running Ansible playbooks")
     dbparser.set_defaults(func=_run_docker_build)
@@ -159,7 +161,9 @@ def _update_memory(key, cur, target, common_mem):
 
 def _run_docker_build(args):
     playbook = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible", "bcbio_vm_docker_local.yml")
-    common.run_ansible_pb(playbook, args)
+    def _setup_args(args, cluster_config):
+        return {"bcbio_bucket": args.bucket}
+    common.run_ansible_pb(playbook, args, _setup_args)
 
 # ## Upload pre-build biological data
 

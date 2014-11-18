@@ -145,21 +145,6 @@ Development Notes
 These notes are for building containers from scratch or developing on
 bcbio-nextgen.
 
-Creating docker image
-=====================
-
-An `ansible <http://www.ansible.com>`_ playbook automates the process of
-creating the bcbio-nextgen docker images. To build on AWS and upload the latest
-image to S3::
-
-    cd ansible
-    vim defaults.yml
-    ansible-playbook bcbio_vm_docker_aws.yml --extra-vars "@defaults.yml"
-
-or locally, with Docker pre-installed::
-
-    ansible-playbook -c local bcbio_vm_docker_local.yml --extra-vars "@defaults.yml"
-
 Docker image installation
 =========================
 
@@ -182,3 +167,30 @@ clone the development code::
 Edit the code as needed, then update your local install with::
 
     bcbio_vm.py devel setup_install
+
+Creating docker image
+=====================
+
+An `ansible <http://www.ansible.com>`_ playbook automates the process of
+creating the bcbio-nextgen docker images. To build on AWS and upload the latest
+image to S3, first use the elasticluster interface to start an AWS
+instance. Then ssh in, start a screen session, and run::
+
+    ssh-keygen -t rsa
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+    bcbio_vm.py devel dockerbuild -v
+
+This requires permissions to write to the ``bcbio_nextgen`` bucket.
+
+Preparing pre-build genomes
+===========================
+
+bcbio_vm downloads pre-built reference genomes when running analyses, to avoid
+needing these to be present on the initial machine images. To create the
+pre-built tarballs for a specific genome, start and bootstrap a single bcbio
+machine using the elasticluster interface. On the machine start a screen session
+then run::
+
+   bcbio_vm.py devel biodata --genomes GRCh37 --aligners bwa --aligners bowtie2
+
+This requires permissions to write to the ``biodata`` bucket.
