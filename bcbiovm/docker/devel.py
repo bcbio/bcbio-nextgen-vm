@@ -69,7 +69,7 @@ def _run_setup_install(args):
     """Install python code from a bcbio-nextgen development tree inside of docker.
     """
     bmounts = ["-v", "%s:%s" % (os.getcwd(), "/tmp/bcbio-nextgen")]
-    cmd = ["docker", "run", "-i", "-d"] + bmounts + [args.image] + \
+    cmd = ["docker", "run", "-i", "-d", "--net=host"] + bmounts + [args.image] + \
           ["bash", "-l", "-c",
            ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio && "
             "cd /tmp/bcbio-nextgen && "

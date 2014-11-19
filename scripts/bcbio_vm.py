@@ -54,22 +54,20 @@ def cmd_ipython(args):
                                                "image": args.image}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
-    workdir_mount = "%s:%s" % (work_dir, devel.DOCKER["work_dir"])
-    manage.run_bcbio_cmd(args.image, [workdir_mount],
-                         ["version", "--workdir=%s" % devel.DOCKER["work_dir"]])
-    cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
-                "sample_config": args.sample_config, "fcdir": args.fcdir,
-                "orig_systemconfig": args.systemconfig}
-    config = {"algorithm": {}, "resources": {}}
-    runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
-    samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, devel.DOCKER)
-    # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel, samples]
-    # run.do_runfn("run_main", main_args, cmd_args, parallel, devel.DOCKER)
 
     from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=systemconfig, fc_dir=args.fcdir,
-                  parallel=parallel, samples=samples)
+                  parallel=parallel)
+
+    # Approach for running main function inside of docker
+    # Could be useful for architectures where we can spawn docker jobs from docker
+    #
+    # cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
+    #             "sample_config": args.sample_config, "fcdir": args.fcdir,
+    #             "orig_systemconfig": args.systemconfig}
+    # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel]
+    # run.do_runfn("run_main", main_args, cmd_args, parallel, devel.DOCKER)
 
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
