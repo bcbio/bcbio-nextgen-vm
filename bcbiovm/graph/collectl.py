@@ -101,10 +101,10 @@ def _parse_raw(fp):
         elif False or line.startswith('proc:'):
             title_pid, rest = line.split(None, 1)
             title, pid = title_pid.split(':')
-        
+
             if pid not in data[tstamp]['proc']:
                 data[tstamp]['proc'][pid] = {}
-        
+
             if rest.startswith('cmd '):
                 title, cmd = rest.split(None, 1)
                 data[tstamp]['proc'][pid]['cmd'] = cmd
@@ -144,11 +144,14 @@ def load_collectl(pattern):
             for tstamp, sample in raw.iteritems():
                 for group, items in sample.iteritems():
                     if group == 'disk':
-                        instances['disk'] = instances['disk'].union(items.keys())
+                        instances['disk'] = instances['disk'].union(
+                            items.keys())
                     elif group == 'net':
-                        instances['net'] = instances['net'].union(items.keys())
+                        instances['net'] = instances['net'].union(
+                            items.keys())
                     elif group == 'proc':
-                        instances['proc'] = instances['proc'].union(items.keys())
+                        instances['proc'] = instances['proc'].union(
+                            items.keys())
 
             cols = ['tstamp']
             cols.extend([
@@ -183,7 +186,7 @@ def load_collectl(pattern):
                          'tfifo', 'tcoll', 'tcarrier', 'tcomp']
                      ])
             for pid in instances['proc']:
-                 cols.extend([
+                cols.extend([
                     '{}_{}'.format(pid, var)
                     for var
                      in ['name', 'read_bytes', 'write_bytes']
