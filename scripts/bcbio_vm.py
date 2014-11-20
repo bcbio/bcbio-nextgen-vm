@@ -202,17 +202,17 @@ def _graph_cmd(subparsers):
                                         "(CPU/memory/network/disk I/O "
                                         "consumption) from bcbio runs",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("log",
+                        help="Local path to bcbio log file written by the run.")
+    parser.add_argument("-o", "--outdir", default="monitoring/graphs",
+                        help="Directory to write graphs to.")
+    parser.add_argument("-r", "--rawdir", default="monitoring/collectl",
+                        help="Directory to put raw collectl data files.")
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
-    parser.add_argument("-d", "--datadir",
-                        help="Directory containing collectl data files.")
     parser.add_argument("-e", "--econfig",
                         help="Elasticluster bcbio configuration file",
                         default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-l", "--log",
-                        help="Path to bcbio log file written by the run.")
-    parser.add_argument("-o", "--outdir",
-                        help="Directory to write graphs to.")
     parser.set_defaults(func=graph.bootstrap)
 
 def _aws_cmd(subparsers):

@@ -8,6 +8,7 @@ matplotlib.use('Agg')
 import pylab
 pylab.rcParams['figure.figsize'] = (35.0, 12.0)
 
+from bcbio import utils
 from bcbiovm.graph.collectl import load_collectl
 from bcbiovm.graph.elasticluster import fetch_collectl
 
@@ -17,7 +18,7 @@ def get_bcbio_timings(path):
     with open(path, 'r') as fp:
         steps = {}
         for line in fp:
-            matches = re.search(r'^\[([^\]]+)\] [^:]+: (.*)', line)
+            matches = re.search(r'^\[([^\]]+)\] ([^:]+: .*)', line)
             if not matches:
                 continue
 
@@ -275,5 +276,5 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
 
 def bootstrap(args):
     if args.cluster:
-        fetch_collectl(args.econfig, args.cluster, args.datadir)
-    generate_graphs(args.datadir, args.log, args.outdir)
+        fetch_collectl(args.econfig, args.cluster, utils.safe_makedir(args.rawdir))
+    generate_graphs(args.rawdir, args.log, utils.safe_makedir(args.outdir))
