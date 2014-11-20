@@ -73,7 +73,7 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         inventory_path = os.path.join(os.path.dirname(args.econfig),
                                       "storage",
                                       "ansible-inventory.%s" % args.cluster)
-        cluster_config = ecluster_config(args.cluster, args.econfig)
+        cluster_config = ecluster_config(args.econfig, args.cluster)
     else:
         cluster_config = {}
         inventory_path = os.path.join(os.path.dirname(playbook_path), "standard_hosts.txt")
