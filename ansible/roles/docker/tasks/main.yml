@@ -1,6 +1,7 @@
 ---
 - name: Docker installation
   hosts: all
+  connection: paramiko
   tasks:
     - name: Add docker apt key
       apt_key:
