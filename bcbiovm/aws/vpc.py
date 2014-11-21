@@ -8,6 +8,8 @@ import sys
 
 import boto.ec2
 
+from bcbiovm.aws import common
+
 
 def bootstrap(args):
     _setup_vpc(args)
