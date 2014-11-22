@@ -3,18 +3,20 @@
   hosts: all
   connection: paramiko
   tasks:
-    - name: Add docker apt key
+    - name: Add docker apt key (Ubuntu)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
       apt_key:
         url: https://get.docker.io/gpg
         state: present
       sudo: True
 
-    - name: Add docker apt repo
+    - name: Add docker apt repo (Ubuntu)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
       shell: echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list
       sudo: True
 
-    - name: Install Docker
-      register: docker_install
+    - name: Install Docker (Ubuntu)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
       apt:
         name: "{{ item }}"
         update_cache: True
@@ -24,7 +26,16 @@
         - pigz
       sudo: True
 
-    - debug: var=docker_install.stdout_lines
+    - name: Install Docker (CentOS)
+      when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
+      yum:
+        name: "{{ item }}"
+        update_cache: True
+      with_items:
+        - docker
+        - git
+        - pigz
+      sudo: True
 
     - name: Add current user to the docker group 
       user:

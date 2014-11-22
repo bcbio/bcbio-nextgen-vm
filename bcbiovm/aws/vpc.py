@@ -11,9 +11,20 @@ from bcbiovm.aws import common
 
 
 def bootstrap(args):
+    _setup_placment_group(args)
     _setup_vpc(args)
     print("Created VPC: %s" % args.cluster)
 
+def _setup_placment_group(args):
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
+    conn = boto.connect_vpc(
+        aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
+        aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
+
+    pgname = "{}_cluster_pg".format(args.cluster)
+    pgs = conn.get_all_placement_groups()
+    if pgname not in [x.name for x in pgs]:
+        conn.create_placement_group(pgname)
 
 def _setup_vpc(args):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
