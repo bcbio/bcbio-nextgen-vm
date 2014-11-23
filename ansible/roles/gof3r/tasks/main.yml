@@ -4,12 +4,14 @@
   vars:
     gof3r_ver: '0.4.9'
     gof3r_tmpdir: /tmp/gof3r-install
+    gof3r_install_dir: /usr/local/bin
   tasks:
     - name: Prep gof3r release directory
       file: path='{{ gof3r_tmpdir }}' state=directory
 
     - name: Prep local bin directory
-      file: path=~/bin state=directory
+      file: path='{{ gof3r_install_dir }}' state=directory
+      sudo: true
 
     - name: Get latest gof3r release
       get_url:
@@ -23,6 +25,7 @@
         creates: '{{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r'
 
     - name: Install gof3r binary
-      command: 'cp {{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r ~/bin'
+      command: 'cp {{gof3r_tmpdir}}/gof3r_{{gof3r_ver}}_linux_amd64/gof3r {{ gof3r_install_dir }}'
+      sudo: true
       args:
-        creates: ~/bin/gof3r
+        creates: '{{ gof3r_install_dir }}/gof3r'

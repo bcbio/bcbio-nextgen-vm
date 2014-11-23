@@ -31,8 +31,14 @@
   vars:
     anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
   tasks:
-    - name: install collectl for run stats
+    - name: install collectl for run stats (deb)
       apt: name=collectl state=present
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      sudo: true
+
+    - name: install collectl for run stats (rpm)
+      yum: name=collectl state=present
+      when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
       sudo: true
 
     - name: Add bcbio_vm.py to PATH
