@@ -31,11 +31,11 @@ def get_bcbio_timings(path):
             #    steps[when] = 'Starting'
             #    continue
 
-            if not msg.startswith('Timing: '):
+            if not msg.find('Timing: ') >= 0:
                 continue
 
             when = datetime.strptime(tstamp, '%Y-%m-%d %H:%M')
-            step = msg.replace('Timing: ', '')
+            step = msg.split(":")[-1].strip()
             steps[when] = step
 
         return steps
@@ -116,11 +116,11 @@ def add_common_plot_features(plot, steps):
             continue
         plot.vlines(tstamp, *ylim, linestyles='dashed')
         ticks[tstamp] = step
+    tick_kvs = sorted(ticks.iteritems())
     top_axis = plot.twiny()
     top_axis.set_xlim(*plot.get_xlim())
-    top_axis.set_xticklabels(ticks.values(), rotation=45, ha='left')
-    top_axis.set_xticks(
-        [calendar.timegm(k.timetuple()) for k in ticks.keys()])
+    top_axis.set_xticks([k for k, v in tick_kvs])
+    top_axis.set_xticklabels([v for k, v in tick_kvs], rotation=45, ha='left')
 
     return plot
 
@@ -182,10 +182,12 @@ def graph_net_pkts(df, steps, ifaces):
 def graph_memory(df, steps):
     graph = prep_for_graph(
         df, series=['mem_total', 'mem_free', 'mem_buffers', 'mem_cached'])
+    print(graph.head())
 
     free_memory = graph['mem_free'] + graph['mem_buffers'] + \
         graph['mem_cached']
     graph = (graph['mem_total'] - free_memory) / 1024 / 1024
+    print(graph.head())
 
     plot = graph.plot()
     plot.set_ylabel('gbytes')
@@ -243,6 +245,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
         graph = graph_cpu(df, steps, hardware['num_cpus'])
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_cpu.png'.format(host)))
+        pylab.close()
 
         ifaces = set([
             series.split('_')[0]
@@ -254,14 +257,17 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
         graph = graph_net_bytes(df, steps, ifaces)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_net_bytes.png'.format(host)))
+        pylab.close()
 
         graph = graph_net_pkts(df, steps, ifaces)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_net_pkts.png'.format(host)))
+        pylab.close()
 
         graph = graph_memory(df, steps)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_memory.png'.format(host)))
+        pylab.close()
 
         drives = set([
             series.split('_')[0]
@@ -272,9 +278,10 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
         graph = graph_disk_io(df, steps, drives)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_disk_io.png'.format(host)))
+        pylab.close()
 
 
 def bootstrap(args):
-    if args.cluster:
+    if args.cluster and args.cluster.lower() not in ["none", "false"]:
         fetch_collectl(args.econfig, args.cluster, utils.safe_makedir(args.rawdir))
     generate_graphs(args.rawdir, args.log, utils.safe_makedir(args.outdir))
