@@ -6,10 +6,14 @@ import sys
 
 import yaml
 
+from bcbio import utils
+from bcbiovm.aws import config as awsconfig
+
 TOSAVE_DEFAULTS = {"datadir": None}
 
 def update_check_args(args, command_info, need_datadir=True):
     args = add_defaults(args)
+    args = _handle_remotes(args)
     if not args.datadir:
         default_datadir = _find_default_datadir(need_datadir)
         if default_datadir:
@@ -17,6 +21,17 @@ def update_check_args(args, command_info, need_datadir=True):
         else:
             print("Must specify a `--datadir` or save the default location with `saveconfig`.\n" + command_info)
             sys.exit(1)
+    return args
+
+def _handle_remotes(args):
+    """Retrieve supported remote inputs specified on the command line.
+    """
+    if hasattr(args, "sample_config"):
+        if args.sample_config.startswith(utils.SUPPORTED_REMOTES):
+            if args.sample_config.startswith("s3://"):
+                args.sample_config = awsconfig.load_s3(args.sample_config)
+            else:
+                raise NotImplementedError("Do not recognize remote input %s" % args.sample_config)
     return args
 
 def _find_default_datadir(must_exist=True):

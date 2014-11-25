@@ -46,12 +46,16 @@ def _create_keypair(econfig_file):
     if not os.path.exists(keypair_dir):
         os.makedirs(keypair_dir)
     private_key = os.path.join(os.path.join(keypair_dir, "bcbio"))
-    if not os.path.exists(private_key):
+    new_key = not os.path.exists(private_key)
+    if new_key:
         cmd = ["ssh-keygen", "-t", "rsa", "-N", "", "-f", private_key, "-C", "bcbio_aws_keypair"]
         subprocess.check_call(cmd)
     public_key = private_key + ".pub"
     ec2 = boto.connect_ec2()
     key = ec2.get_key_pair(keyname)
+    if key and new_key:
+        ec2.delete_key_pair(keyname)
+        key = None
     if not key:
         with open(public_key) as in_handle:
             ec2.import_key_pair(keyname, in_handle.read())

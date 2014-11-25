@@ -1,0 +1,74 @@
+---
+- name: Install bcbio_vm
+  hosts: frontend*
+  sudo: false
+  vars:
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
+  tasks:
+    - name: Get Miniconda install script
+      get_url:
+        url: http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+        dest: /tmp/Miniconda-latest-Linux-x86_64.sh
+
+    - name: Install Miniconda
+      shell: "bash /tmp/Miniconda-latest-Linux-x86_64.sh -b -p {{anaconda_dir}}"
+      args:
+        creates: "{{anaconda_dir}}/bin/conda"
+
+    - name: Install bcbio_vm
+      shell: "{{anaconda_dir}}/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
+
+    - name: bcbio_vm.py -- setgid docker
+      file:
+        path: "{{anaconda_dir}}/bin/bcbio_vm.py"
+        owner: "{{ansible_user_id}}"
+        group: docker
+        mode: '2775'
+
+- name: Update bcbio_vm tools
+  hosts: all
+  sudo: false
+  vars:
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
+  tasks:
+    - name: install collectl for run stats (deb)
+      apt: name=collectl state=present
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      sudo: true
+
+    - name: install collectl for run stats (rpm)
+      yum: name=collectl state=present
+      when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
+      sudo: true
+
+    - name: Add bcbio_vm.py to PATH
+      file:
+        src: "{{anaconda_dir}}/bin/bcbio_vm.py"
+        dest: /usr/local/bin/bcbio_vm.py
+        owner: "{{ansible_user_id}}"
+        group: docker
+        state: link
+      sudo: true
+
+    - name: Upgrade bcbio-vm docker container with tools
+      shell: >
+        bcbio_vm.py upgrade --tools
+        >/tmp/bcbio.log 2>&1
+      args:
+        executable: /bin/bash
+      register: bcbio_vm_doupgrade
+      async: 18000
+      poll: 30
+
+    - command: "tail -100 /tmp/bcbio.log"
+      register: bcbio_vm_debug
+
+    - debug: var=bcbio_vm_debug.stdout_lines
+
+- name: Update system configuration
+  hosts: frontend*
+  sudo: false
+  tasks:
+    - name: Update bcbio system YAML file with memory and core usage
+      shell: >
+        bcbio_vm.py devel system {{ target_cores }} {{ target_memory }}

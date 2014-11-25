@@ -6,6 +6,7 @@ calls since local runs can happen fully inside of docker.
 """
 from bcbio import utils
 
+from bcbio.distributed import multitasks
 from bcbiovm.docker import run
 
 @utils.map_wrap
@@ -15,4 +16,8 @@ def runfn(*args):
     cmd_args = args[2]
     parallel = args[3]
     fn_args = args[4:]
-    return run.do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf)
+    if parallel.get("checkpointed"):
+        fn = getattr(multitasks, fn_name)
+        return fn(fn_args)
+    else:
+        return run.do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf)

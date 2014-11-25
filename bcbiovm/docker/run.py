@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import os
+import pwd
 import uuid
 import sys
 
@@ -18,7 +19,7 @@ def do_analysis(args, dockerconf):
     """
     work_dir = os.getcwd()
     with open(args.sample_config) as in_handle:
-        sample_config, dmounts = mounts.update_config(yaml.load(in_handle), dockerconf["input_dir"], args.fcdir)
+        sample_config, dmounts = mounts.update_config(yaml.load(in_handle), args.fcdir)
     dmounts += mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     system_config, system_mounts = _read_system_config(dockerconf, args.systemconfig, args.datadir)
@@ -39,7 +40,7 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     dmounts = []
     if cmd_args.get("sample_config"):
         with open(cmd_args["sample_config"]) as in_handle:
-            _, dmounts = mounts.update_config(yaml.load(in_handle), None, cmd_args["fcdir"])
+            _, dmounts = mounts.update_config(yaml.load(in_handle), cmd_args["fcdir"])
     datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
     if "orig_systemconfig" in cmd_args:
         orig_sconfig = _get_system_configfile(cmd_args["orig_systemconfig"], datadir)
@@ -51,6 +52,8 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     _, system_mounts = _read_system_config(dockerconf, cmd_args["systemconfig"], datadir)
 
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
+    homedir = pwd.getpwuid(os.getuid()).pw_dir
+    dmounts.append("%s:%s" % (homedir, homedir))
     all_mounts = dmounts + system_mounts
 
     argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" % (fn_name, uuid.uuid4()))
@@ -88,7 +91,10 @@ def _get_system_configfile(systemconfig, datadir):
     """Retrieve system configuration file from input or default directory.
     """
     if systemconfig:
-        return systemconfig
+        if not os.path.isabs(systemconfig):
+            return os.path.normpath(os.path.join(os.getcwd(), systemconfig))
+        else:
+            return systemconfig
     else:
         return os.path.join(datadir, "galaxy", "bcbio_system.yaml")
 
@@ -109,8 +115,7 @@ def _read_system_config(dockerconf, systemconfig, datadir):
     for k in ["galaxy_config"]:
         if k in config:
             dirname, base = os.path.split(os.path.normpath(os.path.realpath(config[k])))
-            container_dir = os.path.join(dockerconf["input_dir"], "system", "galaxy", k)
-            dmounts.append("%s:%s" % (dirname, container_dir))
-            dmounts.extend(mounts.find_genome_directory(dirname, container_dir))
-            config[k] = str(os.path.join(container_dir, base))
+            dmounts.append("%s:%s" % (dirname, dirname))
+            dmounts.extend(mounts.find_genome_directory(dirname))
+            config[k] = str(os.path.join(dirname, base))
     return config, dmounts

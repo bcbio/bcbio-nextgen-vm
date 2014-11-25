@@ -12,19 +12,13 @@ import struct
 import sys
 import time
 
-# ansible.utils must be imported before ansible.callbacks.
-import ansible.utils
-import ansible.callbacks
-import ansible.callback_plugins.noop
-import ansible.constants
-import ansible.playbook
 import boto.cloudformation
 import boto.ec2
 import boto.s3
-from elasticluster.conf import Configurator
 import requests
 
-DEFAULT_EC_CONFIG = os.path.expanduser(os.path.join("~", ".bcbio", "elasticluster", "config"))
+from bcbiovm.aws import common
+
 
 ICEL_TEMPLATES = {
     'ap-northeast-1': 'http://s3-ap-northeast-1.amazonaws.com/hpdd-templates-ap-northeast-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
@@ -37,22 +31,19 @@ ICEL_TEMPLATES = {
     'us-west-2': 'http://s3-us-west-2.amazonaws.com/hpdd-templates-us-west-2/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
 }
 
+
 def setup_cmd(awsparser):
     parser_c = awsparser.add_parser("icel",
-                                    help="Create Lustre scratch filesystem "
-                                         "using Intel Cloud Edition for "
-                                         "Lustre")
+                                    help="Create scratch filesystem using Intel Cloud Edition for Lustre")
     icel_parser = parser_c.add_subparsers(title="[icel create]")
 
     # ## Create
 
     parser = icel_parser.add_parser("create",
-                                    help="Create Lustre scratch filesystem "
-                                         "using Intel Cloud Edition for "
-                                         "Lustre",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                    help="Create scratch filesystem using Intel Cloud Edition for Lustre",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the stack, "
                              "destroying all data stored on it")
@@ -83,7 +74,7 @@ def setup_cmd(awsparser):
                                     help="Get the filesystem spec for a running filesystem",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
@@ -97,7 +88,7 @@ def setup_cmd(awsparser):
                                     help="Mount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument("-v", "--verbose", action="count", default=0,
@@ -114,7 +105,7 @@ def setup_cmd(awsparser):
                                     help="Stop the running Lustre filesystem and clean up resources",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
@@ -122,14 +113,6 @@ def setup_cmd(awsparser):
                         help="CloudFormation name for the new stack")
     parser.set_defaults(func=stop)
 
-def _cluster_config(name, econfig_file):
-    storage_dir = os.path.join(os.path.dirname(econfig_file), "storage")
-    ecluster_config = Configurator.fromConfig(econfig_file, storage_dir)
-    if name not in ecluster_config.cluster_conf:
-        sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
-            name, os.path.expanduser(econfig_file)))
-        sys.exit(1)
-    return ecluster_config.cluster_conf[name]
 
 def create(args):
     if args.network:
@@ -140,7 +123,7 @@ def create(args):
                     args.network))
             sys.exit(1)
 
-    cluster_config = _cluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
 
     icel_param = {
         'oss_count': args.oss_count,
@@ -165,85 +148,17 @@ def create(args):
 
 
 def fs_spec(args):
-    cluster_config = _cluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     print(_get_fs_spec(args.stack_name, cluster_config['cloud']))
 
 
-class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
-    def on_no_hosts_matched(self):
-        pass
-
-    def on_no_hosts_remaining(self):
-        pass
-
-    def on_task_start(self, name, is_conditional):
-        pass
-
-    def on_setup(self):
-        pass
-
-    def on_import_for_host(self, host, imported_file):
-        pass
-
-    def on_not_import_for_host(self, host, missing_file):
-        pass
-
-    def on_play_start(self, pattern):
-        pass
-
-    def on_stats(self, stats):
-        pass
-
-
 def mount(args):
-    cluster_config = _cluster_config(args.cluster, args.econfig)
-
-    stats = ansible.callbacks.AggregateStats()
-    callbacks = SilentPlaybook()
-    runner_cb = ansible.callbacks.DefaultRunnerCallbacks()
-    if args.verbose:
-        callbacks = ansible.callbacks.PlaybookCallbacks()
-        runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
-        ansible.utils.VERBOSITY = args.verbose - 1
-
     playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
                                  "roles", "lustre_client", "tasks", "main.yml")
-    inventory_path = os.path.join(os.path.dirname(args.econfig),
-                                  "storage", "ansible-inventory.%s" % args.cluster)
-    extra_vars = {
-        'lustre_fs_spec': _get_fs_spec(
-            args.stack_name, cluster_config['cloud']),
-    }
-    pb = ansible.playbook.PlayBook(
-        playbook=playbook_path,
-        extra_vars=extra_vars,
-        host_list=inventory_path,
-        private_key_file=cluster_config['login']['user_key_private'],
-        callbacks=callbacks,
-        runner_callbacks=runner_cb,
-        forks=10,
-        stats=stats)
-    status = pb.run()
-
-    unreachable = []
-    failures = {}
-    for host, hoststatus in status.items():
-        if hoststatus['unreachable']:
-            unreachable.append(host)
-        if hoststatus['failures']:
-            failures[host] = hoststatus['failures']
-
-    if unreachable:
-        sys.stderr.write(
-            'Unreachable hosts: {}\n'.format(', '.join(unreachable)))
-    if failures:
-        sys.stderr.write(
-            'Failures: {}\n'.format(', '.join([
-                '{} ({} failures)'.format(host, num)
-                for host, num
-                 in failures.items()])))
-    if unreachable or failures:
-        sys.exit(1)
+    def get_lustre_vars(args, cluster_config):
+        return {'lustre_fs_spec': _get_fs_spec(
+            args.stack_name, cluster_config['cloud'])}
+    common.run_ansible_pb(playbook_path, args, get_lustre_vars)
 
 def _template_param(tree, param):
     return [
@@ -258,9 +173,12 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     url = ICEL_TEMPLATES[aws_config['ec2_region']]
     source_template = requests.get(url)
     tree = json.loads(source_template.text)
-    tree['Description'].replace(
+    tree['Description'] = tree['Description'].replace(
         '4 Object Storage Servers',
         '{} Object Storage Servers'.format(param['oss_count']))
+    if aws_config["ec2_region"] == "us-east-1":
+        tree["Parameters"]["NATInstanceType"]["AllowedValues"].append("m3.medium")
+        tree["Mappings"]["AWSNATAMI"]["us-east-1"]["AMI"] = "ami-184dc970"
     resources = tree['Resources']
 
     # We don't need the demo Lustre client instance.
@@ -307,7 +225,7 @@ def _upload_icel_cf_template(param, bucket_name, aws_config):
     return k.generate_url(5 * 60, query_auth=False)
 
 def stop(args):
-    cluster_config = _cluster_config(args.cluster, args.econfig)
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     _delete_stack(args.stack_name, cluster_config)
 
 def _delete_stack(stack_name, cluster_config):
@@ -337,8 +255,8 @@ def _delete_stack(stack_name, cluster_config):
 #       ParameterKey=KeyName,ParameterValue=keypair@example.com \
 #       ParameterKey=HTTPFrom,ParameterValue=0.0.0.0/0 \
 #       ParameterKey=SSHFrom,ParameterValue=0.0.0.0/0
-def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_config,
-                       recreate):
+def _create_icel_stack(stack_name, template_url, lustre_net, cluster,
+                       cluster_config, recreate):
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
@@ -381,12 +299,14 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster, cluster_co
         lustre_net = socket.inet_ntoa(struct.pack('>L', vpc_net_int + 256))
         lustre_net = '{}/24'.format(lustre_net)
 
+    aws_config = cluster_config["cloud"]
     cf_conn.create_stack(stack_name,
         template_url=template_url,
         capabilities=['CAPABILITY_IAM'],
         parameters=(
             ('FsName', 'scratch'),
             ('AccessFrom', vpc.cidr_block),
+            ('NATInstanceType', "m3.medium" if aws_config["ec2_region"] == "us-east-1" else "m1.small"),
             ('VpcId', vpc.id),
             ('VpcPrivateCIDR', lustre_net),
             ('VpcPublicSubnetId', public_subnet.id),
@@ -433,6 +353,7 @@ def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
             raise Exception(
                 'Stack {} did not launch successfully: {}: {}'.format(
                 stack_name, status, failed_descr))
+    print()
 
 
 def _get_stack_param(stack_name, param_name, aws_config):

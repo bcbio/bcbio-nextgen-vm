@@ -20,6 +20,9 @@ isolated inside of lightweight containers. This enables:
 This currently supports lightweight `docker`_ containers. It is still a work in
 progress and we welcome feedback and problem reports.
 
+The bcbio documentation contains details on using `bcbio-vm to run analyses on AWS
+<https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_.
+
 .. _bcbio-nextgen: https://github.com/chapmanb/bcbio-nextgen
 .. _docker: http://www.docker.io/
 .. _modules: http://modules.sourceforge.net/
@@ -232,29 +235,6 @@ Development Notes
 These notes are for building containers from scratch or developing on
 bcbio-nextgen.
 
-ToDo
-====
-
-- Enable specification of external programs/jars to handle tricky non-distributable
-  issues like GATK protected versions. Map these directories into docker
-  container.
-- Improve ability to develop and test on locally installed images.
-
-Creating docker image
-=====================
-
-An `ansible <http://www.ansible.com>`_ playbook automates the process of
-creating the bcbio-nextgen docker images. To build on AWS and upload the latest
-image to S3::
-
-    cd ansible
-    vim defaults.yml
-    ansible-playbook bcbio_vm_docker_aws.yml --extra-vars "@defaults.yml"
-
-or locally, with Docker pre-installed::
-
-    ansible-playbook -c local bcbio_vm_docker_local.yml --extra-vars "@defaults.yml"
-
 Docker image installation
 =========================
 
@@ -268,23 +248,39 @@ with the bcbio-nextgen docker image independently from the wrapper.
 Updates
 =======
 
-Update local images during development::
+To update bcbio-nextgen in a local docker instance during development, first
+clone the development code::
 
-    DID=$(docker run -d -i -t -v ~/bio/bcbio-nextgen:/tmp/bcbio-nextgen
-          chapmanb/bcbio-nextgen-devel /bin/bash)
-    docker attach $DID
-    cd /tmp/bcbio-nextgen
-    /usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install
-    docker commit $DID chapmanb/bcbio-nextgen-devel
+    git clone https://github.com/chapmanb/bcbio-nextgen
+    cd bcbio-nextgen
 
-Amazon Web Services
-===================
+Edit the code as needed, then update your local install with::
 
-An ansible script automates preparation of AMIs::
+    bcbio_vm.py devel setup_install
 
-    cd ansible
-    vim defaults.yml
-    ansible-playbook bcbio_vm_aws.yml --extra-vars "@defaults.yml"
+Creating docker image
+=====================
 
-This script doesn't yet terminate EC2 instances, so please manually ensure
-instances get cleaned up when developing with it.
+An `ansible <http://www.ansible.com>`_ playbook automates the process of
+creating the bcbio-nextgen docker images. To build on AWS and upload the latest
+image to S3, first use the elasticluster interface to start an AWS
+instance. Then ssh in, start a screen session, and run::
+
+    ssh-keygen -t rsa
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+    bcbio_vm.py devel dockerbuild -v
+
+This requires permissions to write to the ``bcbio_nextgen`` bucket.
+
+Preparing pre-build genomes
+===========================
+
+bcbio_vm downloads pre-built reference genomes when running analyses, to avoid
+needing these to be present on the initial machine images. To create the
+pre-built tarballs for a specific genome, start and bootstrap a single bcbio
+machine using the elasticluster interface. On the machine start a screen session
+then run::
+
+   bcbio_vm.py devel biodata --genomes GRCh37 --aligners bwa --aligners bowtie2
+
+This requires permissions to write to the ``biodata`` bucket.

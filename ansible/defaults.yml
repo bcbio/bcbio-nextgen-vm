@@ -11,7 +11,3 @@ ansible_ssh_user: ubuntu
 image: ami-9eaa1cf6
 # S3 details
 bcbio_bucket: bcbio_nextgen
-# Creating a bcbio-vm AMI
-bcbio_vm_install:
-  opts: '--genomes GRCh37 --aligners bwa'
-  volume_size: 45

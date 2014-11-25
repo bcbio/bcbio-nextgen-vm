@@ -20,11 +20,13 @@ def full(args, dockerconf):
     if args.wrapper:
         updates.append("wrapper scripts")
         upgrade_bcbio_vm()
+    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     if args.install_tools:
         updates.append("bcbio-nextgen code and third party tools")
         pull(args, dockerconf)
-    _check_docker_image(args)
-    dmounts = mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
+        _check_docker_image(args)
+        # Ensure external galaxy configuration in sync when doing tool upgrade
+        manage.run_bcbio_cmd(args.image, dmounts, ["upgrade"])
     if args.install_data:
         if len(args.genomes) == 0:
             print("Data not installed, no genomes provided with `--genomes` flag")
@@ -34,6 +36,7 @@ def full(args, dockerconf):
             sys.exit(1)
         else:
             updates.append("biological data")
+        _check_docker_image(args)
         manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     _save_install_defaults(args)
     if updates:
@@ -70,7 +73,7 @@ def pull(args, dockerconf):
     currently smaller with an exported gzipped image.
     """
     print("Retrieving bcbio-nextgen docker image with code and tools")
-    #subprocess.check_call(["docker", "pull", image])
+    # subprocess.check_call(["docker", "pull", image])
     assert args.image, "Unspecified image name for docker import"
     subprocess.check_call(["docker", "import", dockerconf["image_url"], args.image])
 

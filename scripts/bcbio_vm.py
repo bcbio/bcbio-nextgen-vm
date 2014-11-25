@@ -15,28 +15,23 @@ import warnings
 warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
 from bcbio.distributed import clargs
-from bcbio.pipeline import main
-from bcbiovm.aws import iam, icel, vpc
-from bcbiovm.docker import defaults, install, manage, mounts, run
+from bcbio.workflow import template
+from bcbiovm.aws import bootstrap, common, iam, icel, vpc
 from bcbiovm.clusterk import main as clusterk_main
+from bcbiovm.docker import defaults, devel, install, manage, mounts, run
+from bcbiovm.graph import graph
+from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
-
-# default information about docker container
-DOCKER = {"port": 8085,
-          "biodata_dir": "/usr/local/share/bcbio-nextgen",
-          "input_dir": "/mnt/inputs",
-          "work_dir": "/mnt/work",
-          "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
 def cmd_install(args):
     args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.",
                                       need_datadir=args.install_data)
-    install.full(args, DOCKER)
+    install.full(args, devel.DOCKER)
 
 def cmd_run(args):
     args = defaults.update_check_args(args, "Could not run analysis.")
     args = install.docker_image_arg(args)
-    run.do_analysis(args, DOCKER)
+    run.do_analysis(args, devel.DOCKER)
 
 def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
@@ -53,30 +48,32 @@ def cmd_ipython(args):
     work_dir = os.getcwd()
     systemconfig = run.local_system_config(args.systemconfig, args.datadir, work_dir)
     cur_pack = pack.shared_filesystem(work_dir, args.datadir, args.tmpdir)
-    parallel["wrapper_args"] = [DOCKER, {"sample_config": ready_config_file,
-                                         "fcdir": args.fcdir,
-                                         "pack": cur_pack,
-                                         "systemconfig": systemconfig,
-                                         "image": args.image}]
+    parallel["wrapper_args"] = [devel.DOCKER, {"sample_config": ready_config_file,
+                                               "fcdir": args.fcdir,
+                                               "pack": cur_pack,
+                                               "systemconfig": systemconfig,
+                                               "image": args.image}]
     # For testing, run on a local ipython cluster
     parallel["run_local"] = parallel.get("queue") == "localrun"
-    workdir_mount = "%s:%s" % (work_dir, DOCKER["work_dir"])
-    manage.run_bcbio_cmd(args.image, [workdir_mount],
-                         ["version", "--workdir=%s" % DOCKER["work_dir"]])
-    cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
-                "sample_config": args.sample_config, "fcdir": args.fcdir,
-                "orig_systemconfig": args.systemconfig}
-    config = {"algorithm": {}, "resources": {}}
-    runargs = [ready_config_file, systemconfig, work_dir, args.fcdir, config]
-    samples = run.do_runfn("organize_samples", runargs, cmd_args, parallel, DOCKER)
+
+    from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=systemconfig, fc_dir=args.fcdir,
-                  parallel=parallel, samples=samples)
+                  parallel=parallel)
+
+    # Approach for running main function inside of docker
+    # Could be useful for architectures where we can spawn docker jobs from docker
+    #
+    # cmd_args = {"systemconfig": systemconfig, "image": args.image, "pack": cur_pack,
+    #             "sample_config": args.sample_config, "fcdir": args.fcdir,
+    #             "orig_systemconfig": args.systemconfig}
+    # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel]
+    # run.do_runfn("run_main", main_args, cmd_args, parallel, devel.DOCKER)
 
 def cmd_clusterk(args):
     args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
     args = install.docker_image_arg(args)
-    clusterk_main.run(args, DOCKER)
+    clusterk_main.run(args, devel.DOCKER)
 
 def cmd_runfn(args):
     args = defaults.update_check_args(args, "Could not run bcbio-nextgen function.")
@@ -86,7 +83,7 @@ def cmd_runfn(args):
     with open(args.runargs) as in_handle:
         runargs = yaml.safe_load(in_handle)
     cmd_args = {"systemconfig": args.systemconfig, "image": args.image, "pack": parallel["pack"]}
-    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, DOCKER)
+    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, devel.DOCKER)
     out_file = "%s-out%s" % os.path.splitext(args.runargs)
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -95,9 +92,9 @@ def cmd_runfn(args):
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
     args = install.docker_image_arg(args)
-    ports = ["%s:%s" % (args.port, DOCKER["port"])]
+    ports = ["%s:%s" % (args.port, devel.DOCKER["port"])]
     print("Running server on port %s. Press ctrl-c to exit." % args.port)
-    manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(DOCKER["port"])],
+    manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(devel.DOCKER["port"])],
                          ports)
 
 def cmd_save_defaults(args):
@@ -105,13 +102,7 @@ def cmd_save_defaults(args):
 
 def _install_cmd(subparsers, name):
     parser_i = subparsers.add_parser(name, help="Install or upgrade bcbio-nextgen docker container and data.")
-    parser_i.add_argument("--genomes", help="Genomes to download",
-                          action="append", default=[],
-                          choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix",
-                                   "sacCer3", "xenTro3", "TAIR10", "WBcel235"])
-    parser_i.add_argument("--aligners", help="Aligner indexes to download",
-                          action="append", default=[],
-                          choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+    parser_i = devel.add_biodata_args(parser_i)
     parser_i.add_argument("--data", help="Install or upgrade data dependencies",
                           dest="install_data", action="store_true", default=False)
     parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",
@@ -141,10 +132,9 @@ def _run_cmd(subparsers):
     parser_r = _std_run_args(parser_r)
     parser_r.set_defaults(func=cmd_run)
 
-def _run_ipython_cmd(subparsers):
-    parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
+def _add_ipython_args(parser):
     parser = _std_run_args(parser)
-    parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm"])
+    parser.add_argument("scheduler", help="Scheduler to use.", choices=["lsf", "sge", "torque", "slurm", "pbspro"])
     parser.add_argument("queue", help="Scheduler queue to run jobs on.")
     parser.add_argument("-r", "--resources",
                         help=("Cluster specific resources specifications. Can be specified multiple times.\n"
@@ -159,7 +149,23 @@ def _run_ipython_cmd(subparsers):
     parser.add_argument("-t", "--tag", help="Tag name to label jobs on the cluster",
                         default="")
     parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
+    return parser
+
+def _run_ipython_cmd(subparsers):
+    parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
+    parser = _add_ipython_args(parser)
     parser.set_defaults(func=cmd_ipython)
+
+def _run_ipythonprep_cmd(subparsers):
+    parser = subparsers.add_parser("ipythonprep", help="Prepare a batch script to run bcbio on a scheduler.")
+    parser = _add_ipython_args(parser)
+    parser.set_defaults(func=batchprep.submit_script)
+
+def _template_cmd(subparsers):
+    parser = subparsers.add_parser("template",
+                                   help="Create a bcbio sample.yaml file from a standard template and inputs")
+    parser = template.setup_args(parser)
+    parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
     parser = subparsers.add_parser("runfn", help="Run a specific bcbio-nextgen function with provided arguments")
@@ -190,6 +196,25 @@ def _config_cmd(subparsers):
 def _elasticluster_cmd(subparsers):
     subparsers.add_parser("elasticluster", help="Interface to standard elasticluster commands")
 
+def _graph_cmd(subparsers):
+    parser = subparsers.add_parser("graph",
+                                   help="Generate system graphs "
+                                        "(CPU/memory/network/disk I/O "
+                                        "consumption) from bcbio runs",
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("log",
+                        help="Local path to bcbio log file written by the run.")
+    parser.add_argument("-o", "--outdir", default="monitoring/graphs",
+                        help="Directory to write graphs to.")
+    parser.add_argument("-r", "--rawdir", default="monitoring/collectl",
+                        help="Directory to put raw collectl data files.")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-e", "--econfig",
+                        help="Elasticluster bcbio configuration file",
+                        default=common.DEFAULT_EC_CONFIG)
+    parser.set_defaults(func=graph.bootstrap)
+
 def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
@@ -197,11 +222,12 @@ def _aws_cmd(subparsers):
     _aws_iam_cmd(awssub)
     icel.setup_cmd(awssub)
     _aws_vpc_cmd(awssub)
+    bootstrap.setup_cmd(awssub)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=icel.DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
     parser.set_defaults(func=iam.bootstrap)
@@ -211,7 +237,7 @@ def _aws_vpc_cmd(awsparser):
                                   help="Create VPC and associated resources",
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=icel.DEFAULT_EC_CONFIG)
+                        default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the VPC, destroying all "
                              "AWS resources contained in it")
@@ -221,6 +247,32 @@ def _aws_vpc_cmd(awsparser):
                         help="network to use for the VPC, "
                              "in CIDR notation (a.b.c.d/e)")
     parser.set_defaults(func=vpc.bootstrap)
+
+def _run_elasticluster():
+    """Wrap elasticluster commands to avoid need to call separately.
+
+    - Uses .bcbio/elasticluster as default configuration location.
+    - Sets NFS client parameters for elasticluster Ansible playbook. Uses async
+      clients which provide better throughput on reads/writes:
+      http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
+    """
+    from elasticluster.main import main as ecmain
+    sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
+    if "-s" not in sys.argv and "--storage" not in sys.argv:
+        # clean up old storage directory if starting a new cluster
+        # old pickle files will cause consistent errors when restarting
+        storage_dir = os.path.join(os.path.dirname(common.DEFAULT_EC_CONFIG), "storage")
+        std_args = [x for x in sys.argv if not x.startswith("-")]
+        if len(std_args) >= 3 and std_args[1] == "start":
+            cluster = std_args[2]
+            pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
+            if os.path.exists(pickle_file):
+                os.remove(pickle_file)
+        sys.argv = [sys.argv[0], "--storage", storage_dir] + sys.argv[1:]
+    if "-c" not in sys.argv and "--config" not in sys.argv:
+        sys.argv = [sys.argv[0]] + ["--config", common.DEFAULT_EC_CONFIG] + sys.argv[1:]
+    os.environ["nfsoptions"] = "rw,async,nfsvers=3"  # NFS tuning
+    sys.exit(ecmain())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -232,25 +284,23 @@ if __name__ == "__main__":
     _install_cmd(subparsers, name="install")
     _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
+    _run_ipythonprep_cmd(subparsers)
+    _template_cmd(subparsers)
+    _aws_cmd(subparsers)
+    _elasticluster_cmd(subparsers)
+    _graph_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
     _server_cmd(subparsers)
     _runfn_cmd(subparsers)
+    devel.setup_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
         parser.print_help()
     else:
         if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
-            from elasticluster.main import main as ecmain
-            sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
-            if "-s" not in sys.argv and "--storage" not in sys.argv:
-                sys.argv = [sys.argv[0]] + \
-                           ["--storage", os.path.join(os.path.dirname(icel.DEFAULT_EC_CONFIG), "storage")] + \
-                           sys.argv[1:]
-            if "-c" not in sys.argv and "--config" not in sys.argv:
-                sys.argv = [sys.argv[0]] + ["--config", icel.DEFAULT_EC_CONFIG] + sys.argv[1:]
-            sys.exit(ecmain())
+            _run_elasticluster()
         else:
             args = parser.parse_args()
             args.func(args)

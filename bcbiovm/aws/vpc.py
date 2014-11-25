@@ -2,18 +2,29 @@
 """
 from __future__ import print_function
 
-import os
 import re
 import sys
 
 import boto.ec2
-from elasticluster.conf import Configurator
+
+from bcbiovm.aws import common
 
 
 def bootstrap(args):
+    _setup_placment_group(args)
     _setup_vpc(args)
     print("Created VPC: %s" % args.cluster)
 
+def _setup_placment_group(args):
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
+    conn = boto.connect_vpc(
+        aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
+        aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
+
+    pgname = "{}_cluster_pg".format(args.cluster)
+    pgs = conn.get_all_placement_groups()
+    if pgname not in [x.name for x in pgs]:
+        conn.create_placement_group(pgname)
 
 def _setup_vpc(args):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
@@ -29,14 +40,7 @@ def _setup_vpc(args):
         sys.exit(1)
     compute_subnet = '{}/24'.format(net)
 
-    storage_dir = os.path.join(os.path.dirname(args.econfig), "storage")
-    ecluster_config = Configurator.fromConfig(args.econfig, storage_dir)
-    if args.cluster not in ecluster_config.cluster_conf:
-        sys.stderr.write('Cluster {} is not defined in {}.\n'.format(
-            args.cluster, os.path.expanduser(args.econfig)))
-        sys.exit(1)
-    cluster_config = ecluster_config.cluster_conf[args.cluster]
-
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
