@@ -16,7 +16,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, common, iam, icel, vpc
+from bcbiovm.aws import bootstrap, common, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
