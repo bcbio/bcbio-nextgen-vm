@@ -1,4 +1,4 @@
-"""Create a VPC and associated AWS resources for running bcbio on AWS.
+"""Create a VPC and associated resources for running bcbio on AWS.
 """
 from __future__ import print_function
 
@@ -13,7 +13,6 @@ from bcbiovm.aws import common
 def bootstrap(args):
     _setup_placment_group(args)
     _setup_vpc(args)
-    print("Created VPC: %s" % args.cluster)
 
 def _setup_placment_group(args):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
@@ -25,6 +24,9 @@ def _setup_placment_group(args):
     pgs = conn.get_all_placement_groups()
     if pgname not in [x.name for x in pgs]:
         conn.create_placement_group(pgname)
+        print("Placement group %s created." % pgname)
+    else:
+        print("Placement group %s already exists. Skipping" % pgname)
 
 def _setup_vpc(args):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
@@ -52,7 +54,8 @@ def _setup_vpc(args):
             # like the AWS management console does.
             conn.delete_vpc(existing_vpcs[0].id)
         else:
-            raise Exception('VPC {} already exists.'.format(args.cluster))
+            print('VPC {} already exists. Skipping. Use --recreate to re-create if needed.'.format(args.cluster))
+            return
 
     vpc = conn.create_vpc(args.network)
     vpc.add_tag('Name', args.cluster)
@@ -75,3 +78,5 @@ def _setup_vpc(args):
     subnet = conn.create_subnet(vpc.id, compute_subnet)
     subnet.add_tag('Name', '{}_cluster'.format(args.cluster))
     conn.associate_route_table(rtb.id, subnet.id)
+
+    print("Created VPC: %s" % args.cluster)
