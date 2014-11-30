@@ -7,13 +7,21 @@ import os
 
 from bcbiovm.docker import defaults
 
+# names that indicate we're running on a dedicated AWS queue
+AWS_QUEUES = set(["cloud"])
+
 def _get_ipython_cmdline(args):
     """Translate arguments back into a standard bcbio_vm ipython submission command.
     """
     cmd = ["bcbio_vm.py", "ipython", args.sample_config, args.scheduler, args.queue,
            "--numcores", str(args.numcores)]
+    has_timelimit = False
     for resource in args.resources:
         cmd += ["-r", resource]
+        if resource.startswith("timelimit"):
+            has_timelimit = True
+    if not has_timelimit and args.queue in AWS_QUEUES:
+        cmd += ["-r", "timelimit=0"]
     for opt_arg in ["timeout", "retries", "tag", "tmpdir", "fcdir", "systemconfig"]:
         if getattr(args, opt_arg):
             cmd += ["--%s" % opt_arg, str(getattr(args, opt_arg))]
@@ -42,7 +50,7 @@ def _get_scheduler_cmds(args):
 
 def _get_slurm_cmds(args):
     cmds = ["--cpus-per-task=1", "--mem=2000", "-p %s" % args.queue]
-    timelimit = "1-00:00:00"
+    timelimit = "0" if args.queue in AWS_QUEUES else "1-00:00:00"
     for r in args.resources:
         if r.startswith("timelimit"):
             _, timelimit = r.split("=")
