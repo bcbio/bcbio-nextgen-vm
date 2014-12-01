@@ -121,6 +121,7 @@ def add_common_plot_features(plot, steps):
     top_axis.set_xlim(*plot.get_xlim())
     top_axis.set_xticks([k for k, v in tick_kvs])
     top_axis.set_xticklabels([v for k, v in tick_kvs], rotation=45, ha='left')
+    plot.set_ylim(0)
 
     return plot
 
@@ -182,12 +183,10 @@ def graph_net_pkts(df, steps, ifaces):
 def graph_memory(df, steps):
     graph = prep_for_graph(
         df, series=['mem_total', 'mem_free', 'mem_buffers', 'mem_cached'])
-    print(graph.head())
 
     free_memory = graph['mem_free'] + graph['mem_buffers'] + \
         graph['mem_cached']
     graph = (graph['mem_total'] - free_memory) / 1024 / 1024
-    print(graph.head())
 
     plot = graph.plot()
     plot.set_ylabel('gbytes')

@@ -17,6 +17,12 @@ def load_s3(sample_config):
                         "dir": os.path.join(os.pardir, "final"),
                         "bucket": bucket,
                         "folder": os.path.join(os.path.dirname(key), "final")}
+    if not os.access(os.pardir, os.W_OK | os.X_OK):
+        raise IOError("Cannot write to the parent directory of work directory %s\n"
+                      "bcbio wants to store prepared uploaded files to %s\n"
+                      "We recommend structuring your project in a project specific directory structure\n"
+                      "with a specific work directory (mkdir -p your-project/work && cd your-project/work)."
+                      % (os.getcwd(), os.path.join(os.pardir, "final")))
     config = _add_jar_resources(config, bucket, key)
     out_file = os.path.join(utils.safe_makedir(os.path.join(os.getcwd(), "config")),
                             os.path.basename(key))

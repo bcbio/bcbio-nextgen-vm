@@ -42,11 +42,11 @@ image_id=ami-9eaa1cf6
 setup_provider=ansible-slurm
 frontend_nodes=1
 compute_nodes=2
-flavor=r3.2xlarge
+flavor=c3.xlarge
 
 [cluster/bcbio/frontend]
 flavor=c3.large
-root_volume_size=100
+root_volume_size=200
 root_volume_type=io1
 root_volume_iops=3000
 # AWS Linux AMI
