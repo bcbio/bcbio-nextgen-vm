@@ -16,7 +16,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, common, iam, icel, vpc
+from bcbiovm.aws import bootstrap, common, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -222,7 +222,12 @@ def _aws_cmd(subparsers):
     _aws_iam_cmd(awssub)
     icel.setup_cmd(awssub)
     _aws_vpc_cmd(awssub)
+    _aws_info_cmd(awssub)
     bootstrap.setup_cmd(awssub)
+
+def _aws_info_cmd(awsparser):
+    parser = awsparser.add_parser("info", help="Reports status of existing AWS cluster.")
+    parser.set_defaults(func=info.bootstrap)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
