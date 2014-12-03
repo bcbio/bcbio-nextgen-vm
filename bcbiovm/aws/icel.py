@@ -1,4 +1,6 @@
 """Create an Intel ICEL stack on AWS.
+
+https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+-+Global+Support+HVM
 """
 from __future__ import print_function
 
@@ -21,14 +23,14 @@ from bcbiovm.aws import common
 
 
 ICEL_TEMPLATES = {
-    'ap-northeast-1': 'http://s3-ap-northeast-1.amazonaws.com/hpdd-templates-ap-northeast-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'ap-southeast-1': 'http://s3-ap-southeast-1.amazonaws.com/hpdd-templates-ap-southeast-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'ap-southeast-2': 'http://s3-ap-southeast-2.amazonaws.com/hpdd-templates-ap-southeast-2/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'eu-west-1': 'http://s3-eu-west-1.amazonaws.com/hpdd-templates-eu-west-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'sa-east-1': 'http://s3-sa-east-1.amazonaws.com/hpdd-templates-sa-east-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'us-east-1': 'http://s3.amazonaws.com/hpdd-templates-us-east-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'us-west-1': 'http://s3-us-west-1.amazonaws.com/hpdd-templates-us-west-1/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
-    'us-west-2': 'http://s3-us-west-2.amazonaws.com/hpdd-templates-us-west-2/gs-hvm/1.0.1/hpdd-gs-hvm-ha-c3-small-1.0.1.template',
+    'ap-northeast-1': 'http://s3-ap-northeast-1.amazonaws.com/hpdd-templates-ap-northeast-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'ap-southeast-1': 'http://s3-ap-southeast-1.amazonaws.com/hpdd-templates-ap-southeast-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'ap-southeast-2': 'http://s3-ap-southeast-2.amazonaws.com/hpdd-templates-ap-southeast-2/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'eu-west-1': 'http://s3-eu-west-1.amazonaws.com/hpdd-templates-eu-west-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'sa-east-1': 'http://s3-sa-east-1.amazonaws.com/hpdd-templates-sa-east-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'us-east-1': 'http://s3.amazonaws.com/hpdd-templates-us-east-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'us-west-1': 'http://s3-us-west-1.amazonaws.com/hpdd-templates-us-west-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
+    'us-west-2': 'http://s3-us-west-2.amazonaws.com/hpdd-templates-us-west-2/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
 }
 
 

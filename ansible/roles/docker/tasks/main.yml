@@ -22,8 +22,6 @@
         update_cache: True
       with_items:
         - lxc-docker
-        - git
-        - pigz
       sudo: True
 
     - name: Install Docker (rpm)
@@ -32,8 +30,6 @@
         name: "{{ item }}"
       with_items:
         - docker
-        - git
-        - pigz
       sudo: True
 
     - name: Add current user to the docker group 

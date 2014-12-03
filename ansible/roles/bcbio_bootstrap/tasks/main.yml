@@ -25,6 +25,16 @@
         group: docker
         mode: '2775'
 
+    - name: Ensure slurmdbd started (deb)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      service: name=slurm-llnl-slurmdbd state=started
+      sudo: true
+
+    - name: Ensure slurmdbd started (rpm)
+      when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
+      service: name=slurmdbd state=started
+      sudo: true
+
 - name: Update bcbio_vm tools
   hosts: all
   sudo: false
@@ -40,6 +50,29 @@
       yum: name=collectl state=present
       when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
       sudo: true
+
+    - name: Install helpful supplemental tools (deb)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      apt:
+        name: "{{ item }}"
+        update_cache: True
+      with_items:
+        - git
+        - pigz
+        - tmux
+        - awscli
+      sudo: True
+
+    - name: Install helpful supplemental tools (rpm)
+      when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
+      yum:
+        name: "{{ item }}"
+      with_items:
+        - git
+        - pigz
+        - tmux
+        - awscli
+      sudo: True
 
     - name: Add bcbio_vm.py to PATH
       file:
