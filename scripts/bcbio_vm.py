@@ -1,8 +1,13 @@
 #!/usr/bin/env python -E
 """Run and install bcbio-nextgen, using code and tools isolated in a docker container.
 
-Work in progress script to explore the best ways to integrate docker isolated
-software with external data.
+See the bcbio documentation https://bcbio-nextgen.readthedocs.org for more details
+about running it for analysis.
+
+This script builds the command line options for bcbio_vm.py, which you can see by
+running `bcbio_vm.py -h`. For each specific command, like `install`, we'll have a function to
+prepare the command line arguments (`_install_cmd`) and a function to do the actual
+work (`cmd_install`).
 """
 from __future__ import print_function
 import argparse
