@@ -11,10 +11,10 @@ from bcbiovm.aws import common
 
 
 def bootstrap(args):
-    _setup_placment_group(args)
-    _setup_vpc(args)
+    new_vpc = _setup_vpc(args)
+    _setup_placment_group(args, new_vpc)
 
-def _setup_placment_group(args):
+def _setup_placment_group(args, new_vpc):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
@@ -22,7 +22,10 @@ def _setup_placment_group(args):
 
     pgname = "{}_cluster_pg".format(args.cluster)
     pgs = conn.get_all_placement_groups()
-    if pgname not in [x.name for x in pgs]:
+    if new_vpc or pgname not in [x.name for x in pgs]:
+        if pgname in [x.name for x in pgs]:
+            print("Refreshing placement group %s." % pgname)
+            conn.delete_placement_group(pgname)
         conn.create_placement_group(pgname)
         print("Placement group %s created." % pgname)
     else:
@@ -50,6 +53,9 @@ def _setup_vpc(args):
     existing_vpcs = conn.get_all_vpcs(filters={'tag:Name': args.cluster})
     if existing_vpcs:
         if args.recreate:
+            raise NotImplementedError("bcbio does not currently remove VPCs. "
+                                      "The easiest way is to do this manually in the console: "
+                                      "https://console.aws.amazon.com/vpc/home")
             # FIXME: this doesn't automatically remove resources in the VPC
             # like the AWS management console does.
             conn.delete_vpc(existing_vpcs[0].id)
@@ -80,3 +86,4 @@ def _setup_vpc(args):
     conn.associate_route_table(rtb.id, subnet.id)
 
     print("Created VPC: %s" % args.cluster)
+    return args.cluster
