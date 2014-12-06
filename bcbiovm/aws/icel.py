@@ -51,6 +51,9 @@ def setup_cmd(awsparser):
                              "destroying all data stored on it")
     parser.add_argument("-c", "--cluster", default="bcbio",
                         help="elasticluster cluster name")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="Emit verbose output when running "
+                             "Ansible playbooks")
 
     parser.add_argument("-s", "--size", type=int, default="2048",
                         help="Size of the Lustre filesystem, in gigabytes")
@@ -125,7 +128,9 @@ def create(args):
                     args.network))
             sys.exit(1)
 
-    cluster_config = common.ecluster_config(args.econfig, args.cluster)
+    config = common.ecluster_config(args.econfig)
+    cluster_config = config.cluster_conf[args.cluster]
+    cluster = config.load_cluster(args.cluster)
 
     icel_param = {
         'oss_count': args.oss_count,
@@ -135,7 +140,7 @@ def create(args):
     template_url = _upload_icel_cf_template(
         icel_param, args.bucket, cluster_config['cloud'])
 
-    _create_icel_stack(
+    _create_stack(
         args.stack_name, template_url, args.network,
         args.cluster, cluster_config, args.recreate)
     try:
@@ -148,6 +153,26 @@ def create(args):
         sys.stderr.write('{}\n'.format(str(e)))
         sys.exit(1)
 
+    ssh_config_path = os.path.join(
+        cluster.repository.storage_path,
+        'icel-{}.ssh_config'.format(args.stack_name))
+    _write_ssh_config(ssh_config_path, args.stack_name, cluster_config)
+
+    ansible_config_path = os.path.join(
+        cluster.repository.storage_path,
+        'icel-{}.ansible_config'.format(args.stack_name))
+    _write_ansible_config(ansible_config_path, args.stack_name, cluster)
+
+    inventory_path = os.path.join(
+        cluster.repository.storage_path,
+        'icel-{}.inventory'.format(args.stack_name))
+    _write_inventory(inventory_path, args.stack_name, cluster_config['cloud'])
+
+    playbook_path = os.path.join(
+        common.ANSIBLE_BASE, "roles", "icel", "tasks", "main.yml")
+    common.run_ansible_pb(
+        inventory_path, playbook_path, args, ansible_cfg=ansible_config_path)
+
 
 def fs_spec(args):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
@@ -155,12 +180,20 @@ def fs_spec(args):
 
 
 def mount(args):
-    playbook_path = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible",
-                                 "roles", "lustre_client", "tasks", "main.yml")
+    cluster = common.ecluster_config(args.econfig).load_cluster(args.cluster)
+
+    inventory_path = os.path.join(
+        cluster.repository.storage_path,
+        'ansible-inventory.{}'.format(args.cluster))
+    playbook_path = os.path.join(
+        common.ANSIBLE_BASE, "roles", "lustre_client", "tasks", "main.yml")
+
     def get_lustre_vars(args, cluster_config):
         return {'lustre_fs_spec': _get_fs_spec(
             args.stack_name, cluster_config['cloud'])}
-    common.run_ansible_pb(playbook_path, args, get_lustre_vars)
+
+    common.run_ansible_pb(
+        inventory_path, playbook_path, args, get_lustre_vars)
 
 def _template_param(tree, param):
     return [
@@ -257,8 +290,8 @@ def _delete_stack(stack_name, cluster_config):
 #       ParameterKey=KeyName,ParameterValue=keypair@example.com \
 #       ParameterKey=HTTPFrom,ParameterValue=0.0.0.0/0 \
 #       ParameterKey=SSHFrom,ParameterValue=0.0.0.0/0
-def _create_icel_stack(stack_name, template_url, lustre_net, cluster,
-                       cluster_config, recreate):
+def _create_stack(stack_name, template_url, lustre_net, cluster,
+                  cluster_config, recreate):
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
@@ -317,6 +350,7 @@ def _create_icel_stack(stack_name, template_url, lustre_net, cluster,
             ('SSHFrom', '0.0.0.0/0'),
         ))
 
+
 def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
     conn = boto.cloudformation.connect_to_region(
         aws_config['ec2_region'],
@@ -373,6 +407,49 @@ def _get_stack_param(stack_name, param_name, aws_config):
     ]
 
 
+def get_stack_name(node_addr, aws_config):
+    """Get the name of the CloudFormation stack a node belongs to."""
+    conn = boto.ec2.connect_to_region(
+        aws_config['ec2_region'],
+        aws_access_key_id=aws_config['ec2_access_key'],
+        aws_secret_access_key=aws_config['ec2_secret_key'])
+
+    reservations = conn.get_all_reservations()
+    for resv in reservations:
+        for inst in resv.instances:
+            # Non-HA MGTs don't have a tagged interface.
+            if inst.private_ip_address == node_addr:
+                return inst.tags['aws:cloudformation:stack-name']
+
+            for iface in inst.interfaces:
+                iface.update()
+                if iface.private_ip_address == node_addr:
+                    return inst.tags.get('aws:cloudformation:stack-name')
+
+
+def get_instances(stack_name, aws_config):
+    """Get the IP addresses of all instances in a CloudFormation stack."""
+    conn = boto.ec2.connect_to_region(
+        aws_config['ec2_region'],
+        aws_access_key_id=aws_config['ec2_access_key'],
+        aws_secret_access_key=aws_config['ec2_secret_key'])
+
+    reservations = conn.get_all_reservations(
+        filters={
+            'tag:aws:cloudformation:stack-name': stack_name,
+        }
+    )
+    addrs = {}
+    for resv in reservations:
+        for inst in resv.instances:
+            if inst.tags['Name'] == 'NATDevice':
+                addrs[inst.tags['Name']] = inst.ip_address
+            else:
+                addrs[inst.tags['Name']] = inst.private_ip_address
+
+    return addrs
+
+
 def _get_mgt_ip_addr(stack_name, aws_config):
     conn = boto.ec2.connect_to_region(
         aws_config['ec2_region'],
@@ -396,8 +473,68 @@ def _get_mgt_ip_addr(stack_name, aws_config):
             # Non-HA MGTs don't.
             return inst.private_ip_address
 
+    return None
+
 
 def _get_fs_spec(stack_name, aws_config):
     mgt_ipaddr = _get_mgt_ip_addr(stack_name, aws_config)
     fs_name = _get_stack_param(stack_name, 'FsName', aws_config)[0]
     return '{}:/{}'.format(mgt_ipaddr, fs_name)
+
+
+def _write_ssh_config(path, stack_name, cluster_config):
+    template_path = os.path.join(
+        common.ANSIBLE_BASE, "ssh_config-icel.template")
+    with open(template_path) as input:
+        ssh_template = input.read()
+
+    instances = get_instances(stack_name, cluster_config['cloud'])
+    formatted = ssh_template.format(
+        nat_device_ipaddr=instances['NATDevice'],
+        user_key_private=cluster_config['login']['user_key_private'],
+    )
+
+    with open(path, 'w') as output:
+        output.write(formatted)
+
+
+def _write_inventory(path, stack_name, aws_config):
+    instances = get_instances(stack_name, aws_config)
+
+    with open(path, 'w') as inventory:
+        inventory.write('[mgs]\n')
+        mgts = [name for name in instances if name.startswith('mgt')]
+        for name in mgts:
+            inventory.write(
+                '{} ansible_ssh_host={} ansible_ssh_user=ec2-user\n'.format(
+                    name, instances[name]))
+
+        inventory.write('\n')
+        inventory.write('[mds]\n')
+        mdts = [name for name in instances if name.startswith('mdt')]
+        for name in mdts:
+            inventory.write(
+                '{} ansible_ssh_host={} ansible_ssh_user=ec2-user\n'.format(
+                    name, instances[name]))
+
+        inventory.write('\n')
+        inventory.write('[oss]\n')
+        osts = [name for name in instances if name.startswith('ost')]
+        for name in osts:
+            inventory.write(
+                '{} ansible_ssh_host={} ansible_ssh_user=ec2-user\n'.format(
+                    name, instances[name]))
+
+
+def _write_ansible_config(path, stack_name, cluster):
+    template_path = os.path.join(
+        common.ANSIBLE_BASE, "ansible-icel.cfg.template")
+    with open(template_path) as input:
+        ssh_template = input.read()
+
+    formatted = ssh_template.format(
+        cluster_storage_path=cluster.repository.storage_path,
+        stack_name=stack_name)
+
+    with open(path, 'w') as output:
+        output.write(formatted)

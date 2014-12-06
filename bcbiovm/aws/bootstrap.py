@@ -2,7 +2,6 @@
 """
 import argparse
 import os
-import sys
 
 import toolz as tz
 
@@ -58,24 +57,38 @@ AWS_INFO = {
 def bootstrap(args):
     """Bootstrap base machines to get bcbio-vm ready to run.
     """
-    playbook_base = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible", "roles")
-    _bootstrap_baseline(args, playbook_base)
-    _bootstrap_bcbio(args, playbook_base)
+    _bootstrap_baseline(args, common.ANSIBLE_BASE)
+    _bootstrap_bcbio(args, common.ANSIBLE_BASE)
 
-def _bootstrap_baseline(args, playbook_base):
+def _bootstrap_baseline(args, ansible_base):
     """Install required tools -- docker and gof3r on system.
     """
-    docker_pb = os.path.join(playbook_base, "docker", "tasks", "main.yml")
-    common.run_ansible_pb(docker_pb, args)
-    gof3r_pb = os.path.join(playbook_base, "gof3r", "tasks", "main.yml")
-    common.run_ansible_pb(gof3r_pb, args)
+    cluster = common.ecluster_config(args.econfig).load_cluster(args.cluster)
+    inventory_path = os.path.join(
+        cluster.repository.storage_path,
+        'ansible-inventory.{}'.format(args.cluster))
 
-def _bootstrap_bcbio(args, playbook_base):
+    docker_pb = os.path.join(
+        ansible_base, "roles", "docker", "tasks", "main.yml")
+    common.run_ansible_pb(inventory_path, docker_pb, args)
+
+    gof3r_pb = os.path.join(
+        ansible_base, "roles", "gof3r", "tasks", "main.yml")
+    common.run_ansible_pb(inventory_path, gof3r_pb, args)
+
+def _bootstrap_bcbio(args, ansible_base):
     """Install bcbio_vm and docker container with tools. Set core and memory usage.
     """
-    playbook_path = os.path.join(playbook_base, "bcbio_bootstrap", "tasks", "main.yml")
+    cluster = common.ecluster_config(args.econfig).load_cluster(args.cluster)
+    inventory_path = os.path.join(
+        cluster.repository.storage_path,
+        'ansible-inventory.{}'.format(args.cluster))
+    playbook_path = os.path.join(
+        ansible_base, "roles", "bcbio_bootstrap", "tasks", "main.yml")
+
     def _calculate_cores_mem(args, cluster_config):
-        compute_nodes = int(tz.get_in(["nodes", "frontend", "compute_nodes"], cluster_config, 0))
+        compute_nodes = int(
+            tz.get_in(["nodes", "frontend", "compute_nodes"], cluster_config, 0))
         if compute_nodes > 0:
             machine = tz.get_in(["nodes", "compute", "flavor"], cluster_config)
         else:
@@ -85,7 +98,9 @@ def _bootstrap_bcbio(args, playbook_base):
         if compute_nodes < 5 and compute_nodes > 0:
             cores = cores - 2
         return {"target_cores": cores, "target_memory": mem}
-    common.run_ansible_pb(playbook_path, args, _calculate_cores_mem)
+
+    common.run_ansible_pb(
+        inventory_path, playbook_path, args, _calculate_cores_mem)
 
 # ## Run a remote command
 

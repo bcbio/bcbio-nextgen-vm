@@ -13,6 +13,7 @@ from elasticluster.conf import Configurator
 
 DEFAULT_EC_CONFIG = os.path.expanduser(
     os.path.join("~", ".bcbio", "elasticluster", "config"))
+ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
 
 
 class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
@@ -54,7 +55,8 @@ def ecluster_config(econfig_file, name=None):
     return config.cluster_conf[name]
 
 
-def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
+def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
+                   ansible_cfg=None):
     """Generalized functionality for running an ansible playbook on
     elasticluster.
 
@@ -70,14 +72,15 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         ansible.utils.VERBOSITY = args.verbose - 1
 
     if hasattr(args, "cluster") and hasattr(args, "econfig"):
-        inventory_path = os.path.join(os.path.dirname(args.econfig),
-                                      "storage",
-                                      "ansible-inventory.%s" % args.cluster)
         cluster_config = ecluster_config(args.econfig, args.cluster)
     else:
         cluster_config = {}
-        inventory_path = os.path.join(os.path.dirname(playbook_path), "standard_hosts.txt")
     extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
+
+    if ansible_cfg:
+        old_ansible_cfg = os.environ.get('ANSIBLE_CONFIG')
+        os.environ['ANSIBLE_CONFIG'] = ansible_cfg
+        reload(ansible.constants)
 
     pb = ansible.playbook.PlayBook(
         playbook=playbook_path,
@@ -89,6 +92,13 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         forks=10,
         stats=stats)
     status = pb.run()
+
+    if ansible_cfg:
+        if old_ansible_cfg:
+            os.environ['ANSIBLE_CONFIG'] = old_ansible_cfg
+        else:
+            del os.environ['ANSIBLE_CONFIG']
+        reload(ansible.constants)
 
     unreachable = []
     failures = {}

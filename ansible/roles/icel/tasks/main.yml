@@ -1,0 +1,9 @@
+---
+- name: Configure ICEL instances for bcbio
+  sudo: true
+  hosts:
+    - mds
+    - oss
+  tasks:
+    - name: Run collectl
+      service: name=collectl enabled=yes state=started

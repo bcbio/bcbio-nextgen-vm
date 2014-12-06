@@ -157,10 +157,11 @@ def _update_memory(key, cur, target, common_mem):
 # ## Build docker images
 
 def _run_docker_build(args):
-    playbook = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible", "bcbio_vm_docker_local.yml")
+    playbook = os.path.join(common.ANSIBLE_BASE, "bcbio_vm_docker_local.yml")
+    inventory_path = os.path.join(common.ANSIBLE_BASE, "standard_hosts.txt")
     def _setup_args(args, cluster_config):
         return {"bcbio_bucket": args.bucket}
-    common.run_ansible_pb(playbook, args, _setup_args)
+    common.run_ansible_pb(inventory_path, playbook, args, _setup_args)
 
 # ## Upload pre-build biological data
 
