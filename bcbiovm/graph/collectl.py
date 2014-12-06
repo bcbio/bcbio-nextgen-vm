@@ -60,6 +60,16 @@ def _parse_raw(fp):
                 'weighted_msec_spent_on_iops': weighted_msec_spent_on_iops,
             }
         elif line.startswith('Net '):
+            # Older kernel versions don't have whitespace after
+            # the interface colon:
+            #
+            #   Net   eth0:70627391
+            #
+            # unlike newer kernels:
+            #
+            #   Net   eth0: 415699541
+            line = re.sub(r'^(Net\s+[^:]+):', r'\1: ', line)
+
             (title, iface,
              rbyte, rpkt, rerr, rdrop, rfifo,
              rframe, rcomp, rmulti,
