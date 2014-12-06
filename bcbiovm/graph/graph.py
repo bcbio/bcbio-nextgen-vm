@@ -236,6 +236,9 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
 
     dfs = {}
     for item in sorted(os.listdir(collectl_datadir)):
+        if not item.endswith('.raw.gz'):
+            continue
+
         if verbose:
             print('Loading performance data from {}...'.format(item))
         df, hardware = load_collectl(os.path.join(collectl_datadir, item))
