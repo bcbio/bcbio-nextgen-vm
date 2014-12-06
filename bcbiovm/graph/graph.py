@@ -256,7 +256,8 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
             print('Generating CPU graph for {}...'.format(host))
         graph = graph_cpu(df, steps, hardware['num_cpus'])
         graph.get_figure().savefig(
-            os.path.join(outdir, '{}_cpu.png'.format(host)))
+            os.path.join(outdir, '{}_cpu.png'.format(host)),
+            bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
         ifaces = set([
@@ -270,19 +271,22 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
             print('Generating network graphs for {}...'.format(host))
         graph = graph_net_bytes(df, steps, ifaces)
         graph.get_figure().savefig(
-            os.path.join(outdir, '{}_net_bytes.png'.format(host)))
+            os.path.join(outdir, '{}_net_bytes.png'.format(host)),
+            bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
         graph = graph_net_pkts(df, steps, ifaces)
         graph.get_figure().savefig(
-            os.path.join(outdir, '{}_net_pkts.png'.format(host)))
+            os.path.join(outdir, '{}_net_pkts.png'.format(host)),
+            bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
         if verbose:
             print('Generating memory graph for {}...'.format(host))
         graph = graph_memory(df, steps)
         graph.get_figure().savefig(
-            os.path.join(outdir, '{}_memory.png'.format(host)))
+            os.path.join(outdir, '{}_memory.png'.format(host)),
+            bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
         if verbose:
@@ -295,7 +299,8 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
         ])
         graph = graph_disk_io(df, steps, drives)
         graph.get_figure().savefig(
-            os.path.join(outdir, '{}_disk_io.png'.format(host)))
+            os.path.join(outdir, '{}_disk_io.png'.format(host)),
+            bbox_inches='tight', pad_inches=0.25)
         pylab.close()
 
 
