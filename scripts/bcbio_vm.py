@@ -218,6 +218,8 @@ def _graph_cmd(subparsers):
     parser.add_argument("-e", "--econfig",
                         help="Elasticluster bcbio configuration file",
                         default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("-v", "--verbose", action="store_true", default=False,
+                        help="Emit verbose output")
     parser.set_defaults(func=graph.bootstrap)
 
 def _aws_cmd(subparsers):

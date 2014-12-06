@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import calendar
 from datetime import datetime
 import os
@@ -224,14 +226,18 @@ def graph_disk_io(df, steps, disks):
     return plot
 
 
-def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
+def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
     """Generate all graphs for a bcbio run."""
+    if verbose:
+        print('Reading timings from bcbio log...')
     steps = get_bcbio_timings(bcbio_log_path)
     start_time = min(steps.keys()).strftime('%Y-%m-%d %H:%M:%S')
     end_time = max(steps.keys()).strftime('%Y-%m-%d %H:%M:%S')
 
     dfs = {}
     for item in sorted(os.listdir(collectl_datadir)):
+        if verbose:
+            print('Loading performance data from {}...'.format(item))
         df, hardware = load_collectl(os.path.join(collectl_datadir, item))
         df = df[start_time:end_time]
 
@@ -243,6 +249,8 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
             dfs[host] = pd.concat([old_df, df])
 
     for host, df in dfs.iteritems():
+        if verbose:
+            print('Generating CPU graph for {}...'.format(host))
         graph = graph_cpu(df, steps, hardware['num_cpus'])
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_cpu.png'.format(host)))
@@ -255,6 +263,8 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
              if series.startswith('eth')
         ])
 
+        if verbose:
+            print('Generating network graphs for {}...'.format(host))
         graph = graph_net_bytes(df, steps, ifaces)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_net_bytes.png'.format(host)))
@@ -265,11 +275,15 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
             os.path.join(outdir, '{}_net_pkts.png'.format(host)))
         pylab.close()
 
+        if verbose:
+            print('Generating memory graph for {}...'.format(host))
         graph = graph_memory(df, steps)
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_memory.png'.format(host)))
         pylab.close()
 
+        if verbose:
+            print('Generating storage I/O graph for {}...'.format(host))
         drives = set([
             series.split('_')[0]
             for series
@@ -284,5 +298,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
 
 def bootstrap(args):
     if args.cluster and args.cluster.lower() not in ["none", "false"]:
-        fetch_collectl(args.econfig, args.cluster, utils.safe_makedir(args.rawdir))
-    generate_graphs(args.rawdir, args.log, utils.safe_makedir(args.outdir))
+        fetch_collectl(args.econfig, args.cluster,
+            utils.safe_makedir(args.rawdir), args.verbose)
+    generate_graphs(args.rawdir, args.log, utils.safe_makedir(args.outdir),
+        verbose=args.verbose)
