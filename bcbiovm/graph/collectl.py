@@ -193,8 +193,13 @@ def load_collectl(pattern):
                      ])
 
         for tstamp, sample in raw.iteritems():
-            if not sample.get("cpy") and not sample.get("mem"):
+            if ('cpu' not in sample or
+                'disk' not in sample or
+                'mem' not in sample):
+                # Skip incomplete samples; there might be a truncated
+                # sample on the end of the file.
                 continue
+
             values = [tstamp]
             values.extend([
                 sample['cpu']['user'], sample['cpu']['nice'],
