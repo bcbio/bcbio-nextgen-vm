@@ -28,11 +28,13 @@
     - name: Ensure slurmdbd started (deb)
       when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
       service: name=slurm-llnl-slurmdbd state=started
+      ignore_errors: true
       sudo: true
 
     - name: Ensure slurmdbd started (rpm)
       when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
       service: name=slurmdbd state=started
+      ignore_errors: true
       sudo: true
 
 - name: Update bcbio_vm tools

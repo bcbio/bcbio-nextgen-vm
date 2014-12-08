@@ -34,22 +34,23 @@ def _add_jar_resources(config, bucket_name, key_name):
     """Find uploaded jars for GATK and MuTect relative to input file.
 
     Automatically puts these into the configuration file to make them available
-    for downstream processing.
+    for downstream processing. Searches for them in the specific project folder
+    and also a global jar directory for a bucket.
     """
     conn = boto.connect_s3()
     bucket = conn.get_bucket(bucket_name)
-    prefix = os.path.join(os.path.dirname(key_name), "jars")
-    for key in bucket.get_all_keys(prefix=prefix):
-        if key.name.lower().find("genomeanalysistk") >= 0:
-            prog = "gatk"
-        elif key.name.lower().find("mutect") >= 0:
-            prog = "mutect"
-        else:
-            prog = None
-        if prog:
-            if "resources" not in config:
-                config["resources"] = {}
-            if prog not in config["resources"]:
-                config["resources"][prog] = {}
-            config["resources"][prog]["jar"] = str("s3://%s/%s" % (bucket.name, key.name))
+    for prefix in ["jars", os.path.join(os.path.dirname(key_name), "jars")]:
+        for key in bucket.get_all_keys(prefix=prefix):
+            if key.name.lower().find("genomeanalysistk") >= 0:
+                prog = "gatk"
+            elif key.name.lower().find("mutect") >= 0:
+                prog = "mutect"
+            else:
+                prog = None
+            if prog:
+                if "resources" not in config:
+                    config["resources"] = {}
+                if prog not in config["resources"]:
+                    config["resources"][prog] = {}
+                config["resources"][prog]["jar"] = str("s3://%s/%s" % (bucket.name, key.name))
     return config
