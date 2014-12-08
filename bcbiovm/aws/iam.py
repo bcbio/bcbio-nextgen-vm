@@ -79,20 +79,23 @@ def _bcbio_iam_user(conn, args):
     """
     name = "bcbio"
     access_key_name = "full_admin_access"
-    try:
-        conn.get_user(name)
-        if args.recreate:
-            keys = conn.get_all_access_keys(name)
-            for access_key in tz.get_in(["list_access_keys_response", "list_access_keys_result",
-                                         "access_key_metadata"], keys, []):
-                conn.delete_access_key(access_key["access_key_id"], name)
+    if args.nocreate:
+        need_creds = False
+    else:
+        try:
+            conn.get_user(name)
+            if args.recreate:
+                keys = conn.get_all_access_keys(name)
+                for access_key in tz.get_in(["list_access_keys_response", "list_access_keys_result",
+                                             "access_key_metadata"], keys, []):
+                    conn.delete_access_key(access_key["access_key_id"], name)
+                need_creds = True
+            else:
+                need_creds = False
+        except boto.exception.BotoServerError:
+            conn.create_user(name)
+            conn.put_user_policy(name, access_key_name, IAM_POLICY)
             need_creds = True
-        else:
-            need_creds = False
-    except boto.exception.BotoServerError:
-        conn.create_user(name)
-        conn.put_user_policy(name, access_key_name, IAM_POLICY)
-        need_creds = True
     if need_creds:
         creds = conn.create_access_key(name)
     else:
@@ -106,6 +109,7 @@ def _bcbio_iam_user(conn, args):
                 "ec2_secret_key": creds.get("secret_access_key")}
     else:
         print("User %s already exists, no new credentials" % name)
+        print("Edit the configuration file to add existing user's access and secret keys")
         return {}
 
 S3_POLICY = """{

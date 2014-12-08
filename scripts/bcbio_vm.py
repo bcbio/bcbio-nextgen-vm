@@ -240,6 +240,8 @@ def _aws_iam_cmd(awsparser):
                         default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
+    parser.add_argument("--nocreate", action="store_true", default=False,
+                        help="Do not create a new IAM user, just generate a configuration file")
     parser.set_defaults(func=iam.bootstrap)
 
 def _aws_vpc_cmd(awsparser):
