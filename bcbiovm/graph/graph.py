@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use('Agg')
 import pylab
 pylab.rcParams['figure.figsize'] = (35.0, 12.0)
+import pandas as pd
 
 from bcbio import utils
 from bcbiovm.graph.collectl import load_collectl
@@ -238,7 +239,8 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir):
         if host not in dfs:
             dfs[host] = df
         else:
-            dfs[host] += df
+            old_df = dfs[host]
+            dfs[host] = pd.concat([old_df, df])
 
     for host, df in dfs.iteritems():
         graph = graph_cpu(df, steps, hardware['num_cpus'])

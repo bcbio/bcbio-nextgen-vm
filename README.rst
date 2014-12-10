@@ -176,7 +176,7 @@ creating the bcbio-nextgen docker images. To build on AWS and upload the latest
 image to S3, first use the elasticluster interface to start an AWS
 instance. Then ssh in, start a screen session, and run::
 
-    ssh-keygen -t rsa
+    ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
     cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
     bcbio_vm.py devel dockerbuild -v
 

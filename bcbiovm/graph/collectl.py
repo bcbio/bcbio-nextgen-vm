@@ -193,6 +193,8 @@ def load_collectl(pattern):
                      ])
 
         for tstamp, sample in raw.iteritems():
+            if not sample.get("cpy") and not sample.get("mem"):
+                continue
             values = [tstamp]
             values.extend([
                 sample['cpu']['user'], sample['cpu']['nice'],
