@@ -141,15 +141,12 @@ def _update_memory(key, cur, target, common_mem):
     than 1.5x the current common memory setting, assuming these are pre-set for
     higher memory requirements.
     """
+    mod_swap = {"G": "M", "g": "m"}
     cur_mem, orig_mod = _get_cur_mem(key, cur)
     if cur_mem >= common_mem * 1.5:
         return cur
     else:
-        if orig_mod.lower() == "g":
-            target = int(math.floor(float(target) / 1000.0))
-        else:
-            target = int(target)
-        new_val = "%s%s" % (target, orig_mod)
+        new_val = "%s%s" % (target, mod_swap.get(orig_mod, orig_mod))
         if key == "jvm_opts":
             out = cur
             out[-1] = "-Xmx%s" % new_val

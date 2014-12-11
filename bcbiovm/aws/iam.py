@@ -18,8 +18,11 @@ Manually add the following items to your configuration file:
                     http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/AboutAWSCredentials.html#AccessKeys
                     http://docs.aws.amazon.com/IAM/latest/UserGuide/ManagingCredentials.html
   ec2_secret_key    AWS Secret Key ID matching the ec2_access_key
-  instance_profile  Create an IAM Instance profile allowing access to S3 buckets for pushing/pulling data
+  instance_profile  Create an IAM Instance profile allowing access to S3 buckets for pushing/pulling data.
+                    Use 'InstanceProfileName' from aws iam list-instance-profiles after setting up.
+                    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
                     http://docs.aws.amazon.com/IAM/latest/UserGuide/role-usecase-ec2app.html
+                    http://j.mp/iams3ip
 
 The IAM user you create will need to have access permissions for:
   - EC2 and VPC -- ec2:*
