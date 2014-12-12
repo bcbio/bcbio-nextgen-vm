@@ -91,7 +91,7 @@ def _instance_info(cluster_config):
     print("Instances in VPC '{}':".format(vpc_name))
     for res in reservations:
         for inst in res.instances:
-            if vpcs_by_id[inst.vpc_id] != vpc_name:
+            if vpcs_by_id.get(inst.vpc_id) != vpc_name:
                 continue
             print("\tname: {} ({}, {}) in {}".format(
                 inst.tags.get("Name", "(none)"), inst.instance_type,
