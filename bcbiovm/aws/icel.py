@@ -104,6 +104,23 @@ def setup_cmd(awsparser):
                         help="CloudFormation name for the new stack")
     parser.set_defaults(func=mount)
 
+    # ## Unmount
+
+    parser = icel_parser.add_parser("unmount",
+                                    help="Unmount Lustre filesystem on all cluster nodes",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
+                        default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="Emit verbose output when running "
+                             "Ansible playbooks")
+    parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
+                        default="bcbiolustre",
+                        help="CloudFormation name for the new stack")
+    parser.set_defaults(func=unmount)
+
     # ## Stop
 
     parser = icel_parser.add_parser("stop",
@@ -180,13 +197,26 @@ def fs_spec(args):
 
 
 def mount(args):
+    mount_or_unmount(args, True)
+
+
+def unmount(args):
+    mount_or_unmount(args, False)
+
+
+def mount_or_unmount(args, mount=True):
     cluster = common.ecluster_config(args.econfig).load_cluster(args.cluster)
 
     inventory_path = os.path.join(
         cluster.repository.storage_path,
         'ansible-inventory.{}'.format(args.cluster))
+
+    if mount:
+        playbook_file = "mount.yml"
+    else:
+        playbook_file = "unmount.yml"
     playbook_path = os.path.join(
-        common.ANSIBLE_BASE, "roles", "lustre_client", "tasks", "main.yml")
+        common.ANSIBLE_BASE, "roles", "lustre_client", "tasks", playbook_file)
 
     def get_lustre_vars(args, cluster_config):
         return {'lustre_fs_spec': _get_fs_spec(
@@ -194,6 +224,7 @@ def mount(args):
 
     common.run_ansible_pb(
         inventory_path, playbook_path, args, get_lustre_vars)
+
 
 def _template_param(tree, param):
     return [
@@ -203,6 +234,7 @@ def _template_param(tree, param):
          if type(name) in (str, unicode) and
             name.startswith(param)
     ][0]
+
 
 def _upload_icel_cf_template(param, bucket_name, aws_config):
     url = ICEL_TEMPLATES[aws_config['ec2_region']]

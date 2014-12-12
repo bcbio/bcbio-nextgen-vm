@@ -1,0 +1,12 @@
+---
+- name: unmount Lustre filesystem
+  hosts: all
+  sudo: true
+  tasks:
+    - name: unmount Lustre volume
+      mount: name=/scratch src={{ lustre_fs_spec }} fstype=lustre
+             opts=defaults,_netdev state=unmounted
+
+    - name: remove Lustre volume from fstab
+      mount: name=/scratch src={{ lustre_fs_spec }} fstype=lustre
+             state=absent
