@@ -1,76 +1,98 @@
-"""Reports status of bcbio instances you're launched on AWS. 
+"""Reports status of bcbio instances you're launched on AWS.
 """
 from __future__ import print_function
-
-import sys
 
 import boto.ec2
 import boto.iam
 import boto.vpc
 
-from bcbiovm.aws import common
-
-'''This script can help you understand if your bcbio instances on AWS
-is setup correct or troubleshoot it if there is a problem.
-'''
+from common import ecluster_config
 
 
 def bootstrap(args):
-    conn = boto.ec2.connect_to_region("us-east-1")
+    cluster_config = ecluster_config(args.econfig, args.cluster)
 
     _iam_info()
-    _sg_info(conn)
-    _vpc_info()
-    _instance_info(conn)
-
-
-def _vpc_info():
-    print('\nVPC check: Bcbio setups a VPC.')
-    conn = boto.vpc.VPCConnection()
-    for vpn in conn.get_all_vpcs():
-        print('\t{0}'.format(vpn))
+    _sg_info(cluster_config)
+    _vpc_info(cluster_config)
+    print()
+    _instance_info(cluster_config)
 
 
 def _iam_info():
-    print (
-        '''
-IAM check: Bcbio needs an IAM user called 'bcbio'. Do you see
-it in this list? ''')
-
     conn = boto.iam.connection.IAMConnection()
 
-    # user
-    user_list = conn.get_all_users()
-    user_list = user_list[u'list_users_response'][u'list_users_result']['users']
-    if user_list:
-        for u in user_list:
-            print("\tIAM User: {0}".format(u['user_name']))
+    users = conn.get_all_users()
+    users = users[u'list_users_response'][u'list_users_result']['users']
+    if not users:
+        print("WARNING: no IAM users exist.")
+        return
+
+    expect_iam_username = "bcbio"
+
+    if any([user['user_name'] == expect_iam_username for user in users]):
+        print("OK: expected IAM user '{}' exists.".format(expect_iam_username))
     else:
-        print("\nIAM User: None.")
+        print("WARNING: IAM user '{}' does not exist.".format(
+            expect_iam_username))
 
 
-def _sg_info(conn):
-    print(
-        '''
-Security group check: Bcbio needs a security group called
-'bcbio_cluster_sg'. Do you see it in this list?''')
+def _sg_info(cluster_config):
+    conn = boto.ec2.connect_to_region(cluster_config['cloud']['ec2_region'])
 
-    # list security groups.
-    group_list = conn.get_all_security_groups()
-    if group_list:
-        for sg in group_list:
-            print('\t{0}'.format(sg))
+    security_groups = conn.get_all_security_groups()
+    if not security_groups:
+        print("WARNING: no security groups defined.")
+        return
+
+    expected_sg_name = cluster_config['cluster']['security_group']
+
+    if any([sg.name == expected_sg_name for sg in security_groups]):
+        print("OK: expected security group '{}' exists.".format(
+            expected_sg_name))
     else:
-        print("no security groups.")
+        print("WARNING: security group '{}' does not exist.".format(
+            expected_sg_name))
 
 
-def _instance_info(conn):
-    print('\nHere is a list of instances. ')
-    res_list = conn.get_all_reservations()
-    if res_list:
-        for res in res_list:
-            for inst in res.instances:
-                print("\ttype: {0}, zone: {1}".format(
-                    inst.instance_type, inst.placement))
+def _vpc_info(cluster_config):
+    conn = boto.vpc.VPCConnection()
+
+    vpcs = conn.get_all_vpcs()
+    if not vpcs:
+        print("WARNING: no VPCs exist.")
+        return
+
+    expected_vpc_name = cluster_config['cloud']['vpc']
+
+    if any([vpc.tags['Name'] == expected_vpc_name for vpc in vpcs]):
+        print("OK: VPC '{}' exists.".format(expected_vpc_name))
     else:
-        print("\tNo instances")
+        print("WARNING: VPC '{}' does not exist.".format(expected_vpc_name))
+
+
+def _instance_info(cluster_config):
+    conn = boto.vpc.VPCConnection()
+    vpcs = conn.get_all_vpcs()
+
+    vpcs_by_id = {}
+    for vpc in vpcs:
+        vpcs_by_id[vpc.id] = vpc.tags['Name']
+
+    conn = boto.ec2.connect_to_region(cluster_config['cloud']['ec2_region'])
+
+    reservations = conn.get_all_reservations()
+    if not reservations:
+        print("WARNING: no instances.")
+        return
+
+    vpc_name = cluster_config['cloud']['vpc']
+
+    print("Instances in VPC '{}':".format(vpc_name))
+    for res in reservations:
+        for inst in res.instances:
+            if vpcs_by_id[inst.vpc_id] != vpc_name:
+                continue
+            print("\tname: {} ({}, {}) in {}".format(
+                inst.tags.get("Name", "(none)"), inst.instance_type,
+                inst.state, inst.placement))

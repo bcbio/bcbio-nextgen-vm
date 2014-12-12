@@ -235,6 +235,11 @@ def _aws_cmd(subparsers):
 def _aws_info_cmd(awsparser):
     parser = awsparser.add_parser("info", help="Reports status of existing AWS cluster.")
     parser.set_defaults(func=info.bootstrap)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-e", "--econfig",
+                        help="Elasticluster bcbio configuration file",
+                        default=common.DEFAULT_EC_CONFIG)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
