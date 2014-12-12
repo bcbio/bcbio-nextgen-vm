@@ -136,7 +136,7 @@ def _parse_raw(fp, start_tstamp, end_tstamp):
             data[tstamp]['mem']['cached'] = amount
         # We don't currently do anything with process data,
         # so don't bother parsing it.
-        elif False or line.startswith('proc:'):
+        elif False and line.startswith('proc:'):
             title_pid, rest = line.split(None, 1)
             title, pid = title_pid.split(':')
 
