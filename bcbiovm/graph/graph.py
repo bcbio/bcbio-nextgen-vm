@@ -29,12 +29,6 @@ def get_bcbio_timings(path):
             tstamp = matches.group(1)
             msg = matches.group(2)
 
-            # FIXME: have bcbio send a start event.
-            #if 'Using input YAML configuration:' in msg:
-            #    when = datetime.strptime(tstamp, '%Y-%m-%d %H:%M')
-            #    steps[when] = 'Starting'
-            #    continue
-
             if not msg.find('Timing: ') >= 0:
                 continue
 
