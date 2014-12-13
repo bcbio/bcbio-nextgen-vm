@@ -58,6 +58,14 @@
       when: "'{{ansible_distribution}}' in ['CentOS', 'Amazon']"
       sudo: true
 
+    - name: Work around for occasional build problems in conda packages (directory)
+      file: path=/opt/anaconda1anaconda2anaconda3/ssl state=directory
+      sudo: true
+
+    - name: Work around for occasional build problems in conda packages (symlink)
+      file: src=/etc/ssl/certs dest=/opt/anaconda1anaconda2anaconda3/ssl/certs state=link
+      sudo: true
+
     - name: Install helpful supplemental tools (deb)
       when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
       apt:
