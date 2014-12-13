@@ -1,9 +1,9 @@
 from __future__ import print_function
 
-import calendar
 from datetime import datetime
 import functools
 import os
+import pytz
 import re
 
 import matplotlib
@@ -38,7 +38,9 @@ def get_bcbio_timings(path):
             if not msg.find('Timing: ') >= 0:
                 continue
 
-            when = datetime.strptime(tstamp, '%Y-%m-%d %H:%M')
+            # FIXME: have bcbio include the time zone.
+            when = datetime.strptime(tstamp, '%Y-%m-%d %H:%M').replace(
+                tzinfo=pytz.timezone('UTC'))
             step = msg.split(":")[-1].strip()
             steps[when] = step
 
