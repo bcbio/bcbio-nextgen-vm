@@ -54,13 +54,16 @@ def this_and_prev(iterable):
         return
 
 
-def delta_from_prev(prev_values, value):
+def delta_from_prev(prev_values, tstamps, value):
     try:
         prev_val = next(prev_values)
+        cur_tstamp, prev_tstamp = next(tstamps)
     except StopIteration:
         return 0
 
-    return value - prev_val
+    # Take the difference from the previous value and divide by the interval
+    # since the previous sample, so we always return values in units/second.
+    return (value - prev_val) / (cur_tstamp - prev_tstamp).seconds
 
 
 def calc_deltas(df, series=[]):
@@ -73,10 +76,12 @@ def calc_deltas(df, series=[]):
     for s in series:
         prev_values = iter(df[s])
         # Burn the first value, so the first row we call delta_from_prev()
-        # for gets its previous value from the second row in the series.
+        # for gets its previous value from the second row in the series,
+        # and so on.
         next(prev_values)
-        df[s] = df[s].apply(
-            functools.partial(delta_from_prev, iter(prev_values)))
+        df[s] = df[s].apply(functools.partial(
+            delta_from_prev, iter(prev_values),
+            this_and_prev(iter(df.index))))
 
     return df
 
