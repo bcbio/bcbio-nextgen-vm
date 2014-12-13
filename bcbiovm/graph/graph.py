@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import calendar
 from datetime import datetime
+import functools
 import os
 import re
 
@@ -57,6 +58,15 @@ def this_and_prev(iterable):
         return
 
 
+def delta_from_prev(prev_values, value):
+    try:
+        prev_val = next(prev_values)
+    except StopIteration:
+        return 0
+
+    return value - prev_val
+
+
 def calc_deltas(df, series=[]):
     """Many of collectl's data values are cumulative (monotonically
     increasing), so subtract the previous value to determine the value
@@ -64,22 +74,13 @@ def calc_deltas(df, series=[]):
     """
     df = df.sort(ascending=False)
 
-    prev = 0
-    for this, prev in this_and_prev(iter(df.index)):
-        for s in series:
-            if df[s][this] < df[s][prev]:
-                # A data source that should be increasing
-                # monotonically has been reset, so the host
-                # must have rebooted.
-                # FIXME: trash this sample?
-                df[s][this] = 0
-                continue
-            # Take the difference from the previous value and
-            # divide by the interval since the previous sample,
-            # so we always return values in units/second.
-            df[s][this] = (df[s][this] - df[s][prev]) / (this - prev).seconds
     for s in series:
-        df[s][prev] = 0
+        prev_values = iter(df[s])
+        # Burn the first value, so the first row we call delta_from_prev()
+        # for gets its previous value from the second row in the series.
+        next(prev_values)
+        df[s] = df[s].apply(
+            functools.partial(delta_from_prev, iter(prev_values)))
 
     return df
 
