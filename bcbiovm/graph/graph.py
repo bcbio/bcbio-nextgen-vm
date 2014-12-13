@@ -231,18 +231,21 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
     if verbose:
         print('Reading timings from bcbio log...')
     steps = get_bcbio_timings(bcbio_log_path)
-    start_time = min(steps.keys()).strftime('%Y-%m-%d %H:%M:%S')
-    end_time = max(steps.keys()).strftime('%Y-%m-%d %H:%M:%S')
+    start_time = min(steps.keys())
+    end_time = max(steps.keys())
+
+    if verbose:
+        print('Parsing performance data...')
 
     dfs = {}
     for item in sorted(os.listdir(collectl_datadir)):
         if not item.endswith('.raw.gz'):
             continue
 
-        if verbose:
-            print('Loading performance data from {}...'.format(item))
-        df, hardware = load_collectl(os.path.join(collectl_datadir, item))
-        df = df[start_time:end_time]
+        df, hardware = load_collectl(
+            os.path.join(collectl_datadir, item), start_time, end_time)
+        if len(df) == 0:
+            continue
 
         host = item.split('-')[0]
         if host not in dfs:

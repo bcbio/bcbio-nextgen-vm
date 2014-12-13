@@ -1,3 +1,4 @@
+import calendar
 import glob
 import gzip
 import os.path
@@ -7,7 +8,7 @@ import pandas as pd
 import progressbar
 
 
-def _parse_raw(fp):
+def _parse_raw(fp, start_tstamp, end_tstamp):
     widgets = [
         os.path.basename(fp.name), ': ',
         progressbar.Bar(marker='-', left='[', right=']'), ' ',
@@ -21,6 +22,7 @@ def _parse_raw(fp):
     bar.start()
     bar.update(0)
 
+    tstamp = 0
     hardware = {}
     data = {}
     for line in fp:
@@ -31,20 +33,26 @@ def _parse_raw(fp):
 
         matches = re.search(r'^>>> (\d+).\d+ <<<', line)
         if matches:
-            tstamp = matches.group(1)
-            data[tstamp] = {
-                'disk': {},
-                'mem': {},
-                'net': {},
-                'proc': {},
-            }
+            tstamp = int(matches.group(1))
+            if (tstamp >= start_tstamp) or (tstamp <= end_tstamp):
+                data[tstamp] = {
+                    'disk': {},
+                    'mem': {},
+                    'net': {},
+                    'proc': {},
+                }
             continue
 
         if line.startswith('# SubSys: '):
             matches = re.search(r'\sNumCPUs: (\d+)\s+', line)
             if matches:
                 hardware['num_cpus'] = int(matches.group(1))
-        elif line.startswith('cpu '):
+            continue
+
+        if (tstamp < start_tstamp) or (tstamp > end_tstamp):
+            continue
+
+        if line.startswith('cpu '):
             # Don't know what the last two fields are, but they
             # always seem to be 0, and collectl doesn't parse them
             # in formatit::dataAnalyze().
@@ -159,12 +167,16 @@ class _CollectlGunzip(gzip.GzipFile):
         return
 
 
-def load_collectl(pattern):
+def load_collectl(pattern, start_time, end_time):
     """Read data from collectl data files into a pandas DataFrame."""
+    start_tstamp = calendar.timegm(start_time.utctimetuple())
+    end_tstamp = calendar.timegm(end_time.utctimetuple())
+
     cols = []
     rows = []
     for path in glob.glob(pattern):
-        hardware, raw = _parse_raw(_CollectlGunzip(path, 'r'))
+        hardware, raw = _parse_raw(
+            _CollectlGunzip(path, 'r'), start_tstamp, end_tstamp)
 
         if not cols:
             instances = {
@@ -279,6 +291,9 @@ def load_collectl(pattern):
                     ])
 
             rows.append(values)
+
+    if len(rows) == 0:
+        return pd.DataFrame(columns=cols), {}
 
     df = pd.DataFrame(rows, columns=cols)
     df = df.convert_objects(convert_numeric=True)
