@@ -1,14 +1,34 @@
 import glob
 import gzip
+import os.path
 import re
 
 import pandas as pd
+import progressbar
 
 
 def _parse_raw(fp):
+    widgets = [
+        os.path.basename(fp.name), ': ',
+        progressbar.Bar(marker='-', left='[', right=']'), ' ',
+        progressbar.Percentage(), ' ', progressbar.ETA(),
+    ]
+    # We don't know what the file's uncompressed size will wind up being,
+    # so take an educated guess and ignore the AssertionError later on
+    # if it winds up being bigger than we guess.
+    bar = progressbar.ProgressBar(
+        widgets=widgets, maxval=os.path.getsize(fp.name) * 15)
+    bar.start()
+    bar.update(0)
+
     hardware = {}
     data = {}
     for line in fp:
+        try:
+            bar.update(fp.tell())
+        except AssertionError:
+            pass
+
         matches = re.search(r'^>>> (\d+).\d+ <<<', line)
         if matches:
             tstamp = matches.group(1)
@@ -125,6 +145,7 @@ def _parse_raw(fp):
                 value = rest.split(':')[1].strip()
                 data[tstamp]['proc'][pid]['write_bytes'] = value
 
+    bar.finish()
     return hardware, data
 
 
