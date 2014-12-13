@@ -109,12 +109,12 @@ def add_common_plot_features(plot, steps):
     plot.yaxis.set_tick_params(labelright=True)
     plot.set_xlabel('')
 
-    ylim = plot.get_ylim()
+    ymax = plot.get_ylim()[1]
     ticks = {}
     for tstamp, step in steps.iteritems():
         if step == 'finished':
             continue
-        plot.vlines(tstamp, *ylim, linestyles='dashed')
+        plot.vlines(tstamp, 0, ymax, linestyles='dashed')
         ticks[tstamp] = step
     tick_kvs = sorted(ticks.iteritems())
     top_axis = plot.twiny()
