@@ -238,6 +238,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
         print('Parsing performance data...')
 
     dfs = {}
+    hardware_info = {}
     for item in sorted(os.listdir(collectl_datadir)):
         if not item.endswith('.raw.gz'):
             continue
@@ -248,6 +249,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
             continue
 
         host = item.split('-')[0]
+        hardware_info[host] = hardware
         if host not in dfs:
             dfs[host] = df
         else:
@@ -257,7 +259,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
     for host, df in dfs.iteritems():
         if verbose:
             print('Generating CPU graph for {}...'.format(host))
-        graph = graph_cpu(df, steps, hardware['num_cpus'])
+        graph = graph_cpu(df, steps, hardware_info[host]['num_cpus'])
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_cpu.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)
