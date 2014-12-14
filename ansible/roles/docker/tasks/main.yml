@@ -2,6 +2,10 @@
 - name: Docker installation
   hosts: all
   connection: paramiko
+  vars:
+    docker_mnt_loc: "/mnt"
+    docker_mnt_device: "/dev/xvdb"
+    docker_configfile: "/etc/default/docker"
   tasks:
     - name: Add docker apt key (deb)
       when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
@@ -22,6 +26,7 @@
         update_cache: True
       with_items:
         - lxc-docker
+        - btrfs-tools
       sudo: True
 
     - name: Install Docker (rpm)
@@ -30,6 +35,36 @@
         name: "{{ item }}"
       with_items:
         - docker
+        - btrfs-progs
+        - btrfs-progs-devel
+      sudo: True
+
+    - name: Check for mounted btrfs filesystem
+      shell: mount | grep '{{docker_mnt_loc}} type btrfs'
+      ignore_errors: True
+      register: btrfs_check
+      changed_when: btrfs_check.rc > 0
+      sudo: True
+
+    - name: Unmount docker filesystem to prep for btrfs
+      mount: name={{docker_mnt_loc}} fstype=btrfs src={{docker_mnt_device}} state=unmounted
+      when: btrfs_check.changed
+      sudo: True
+
+    - name: Create btrfs filesystem
+      filesystem: fstype=btrfs dev={{docker_mnt_device}} force=yes opts="-f"
+      when: btrfs_check.changed
+      sudo: True
+
+    - name: Mount btrfs filesystem on /mnt
+      mount: name={{docker_mnt_loc}} fstype=btrfs src={{docker_mnt_device}} state=mounted
+      sudo: True
+
+    - name: Adjust Docker to use btrfs filesystem
+      lineinfile:
+        dest: '{{docker_configfile}}'
+        line: 'DOCKER_OPTS="-s btrfs -g {{docker_mnt_loc}}/docker"'
+        regexp: '^DOCKER_OPTS'
       sudo: True
 
     - name: Add current user to the docker group 
