@@ -59,6 +59,11 @@ def setup_cmd(subparsers):
     dbparser = psub.add_parser("dockerbuild", help="Build docker image and export to S3")
     dbparser.add_argument("-b", "--bucket", default="bcbio_nextgen",
                           help="S3 bucket to upload the gzipped docker image to")
+    dbparser.add_argument("-t", "--buildtype", default="full", choices=["full", "code"],
+                          help=("Type of docker build to do. full is all code and third party tools. "
+                                "code is only bcbio-nextgen code."))
+    dbparser.add_argument("-d", "--rundir", default="/tmp/bcbio-docker-build",
+                          help="Directory to run docker build in")
     dbparser.add_argument("-v", "--verbose", action="count", default=0,
                           help="Emit verbose output when running Ansible playbooks")
     dbparser.set_defaults(func=_run_docker_build)
@@ -160,7 +165,8 @@ def _run_docker_build(args):
     playbook = os.path.join(common.ANSIBLE_BASE, "bcbio_vm_docker_local.yml")
     inventory_path = os.path.join(common.ANSIBLE_BASE, "standard_hosts.txt")
     def _setup_args(args, cluster_config):
-        return {"bcbio_bucket": args.bucket}
+        return {"bcbio_bucket": args.bucket, "docker_buildtype": args.buildtype,
+                "bcbio_dir": args.rundir}
     common.run_ansible_pb(inventory_path, playbook, args, _setup_args)
 
 # ## Upload pre-build biological data
