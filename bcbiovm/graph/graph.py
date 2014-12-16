@@ -32,8 +32,7 @@ def get_bcbio_timings(path):
             if not msg.find('Timing: ') >= 0:
                 continue
 
-            # FIXME: have bcbio include the time zone.
-            when = datetime.strptime(tstamp, '%Y-%m-%d %H:%M').replace(
+            when = datetime.strptime(tstamp, '%Y-%m-%dT%H:%MZ').replace(
                 tzinfo=pytz.timezone('UTC'))
             step = msg.split(":")[-1].strip()
             steps[when] = step
