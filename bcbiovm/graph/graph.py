@@ -249,7 +249,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
         if len(df) == 0:
             continue
 
-        host = item.split('-')[0]
+        host = re.sub(r'-\d{8}-\d{6}\.raw\.gz$', '', item)
         hardware_info[host] = hardware
         if host not in dfs:
             dfs[host] = df
