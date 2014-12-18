@@ -17,6 +17,7 @@ import time
 import boto.cloudformation
 import boto.ec2
 import boto.s3
+import elasticluster
 import requests
 
 from bcbiovm.aws import common
@@ -147,7 +148,13 @@ def create(args):
 
     config = common.ecluster_config(args.econfig)
     cluster_config = config.cluster_conf[args.cluster]
-    cluster = config.load_cluster(args.cluster)
+    try:
+        cluster = config.load_cluster(args.cluster)
+        cluster_storage_path = cluster.repository.storage_path
+    except elasticluster.exceptions.ClusterNotFound:
+        # Assume the default storage path if the cluster doesn't exist,
+        # so we can start an ICEL stack in parallel with cluster startup.
+        cluster_storage_path = elasticluster.conf.Configurator.default_storage_dir
 
     icel_param = {
         'oss_count': args.oss_count,
@@ -171,17 +178,17 @@ def create(args):
         sys.exit(1)
 
     ssh_config_path = os.path.join(
-        cluster.repository.storage_path,
-        'icel-{}.ssh_config'.format(args.stack_name))
+        cluster_storage_path, 'icel-{}.ssh_config'.format(args.stack_name))
     _write_ssh_config(ssh_config_path, args.stack_name, cluster_config)
 
     ansible_config_path = os.path.join(
-        cluster.repository.storage_path,
+        cluster_storage_path,
         'icel-{}.ansible_config'.format(args.stack_name))
-    _write_ansible_config(ansible_config_path, args.stack_name, cluster)
+    _write_ansible_config(
+        ansible_config_path, args.stack_name, cluster_storage_path)
 
     inventory_path = os.path.join(
-        cluster.repository.storage_path,
+        cluster_storage_path,
         'icel-{}.inventory'.format(args.stack_name))
     _write_inventory(inventory_path, args.stack_name, cluster_config['cloud'])
 
@@ -558,15 +565,14 @@ def _write_inventory(path, stack_name, aws_config):
                     name, instances[name]))
 
 
-def _write_ansible_config(path, stack_name, cluster):
+def _write_ansible_config(path, stack_name, storage_path):
     template_path = os.path.join(
         common.ANSIBLE_BASE, "ansible-icel.cfg.template")
     with open(template_path) as input:
         ssh_template = input.read()
 
     formatted = ssh_template.format(
-        cluster_storage_path=cluster.repository.storage_path,
-        stack_name=stack_name)
+        cluster_storage_path=storage_path, stack_name=stack_name)
 
     with open(path, 'w') as output:
         output.write(formatted)
