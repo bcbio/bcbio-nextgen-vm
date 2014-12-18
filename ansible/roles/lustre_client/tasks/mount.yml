@@ -31,23 +31,6 @@
       mount: name=/scratch src={{ lustre_fs_spec }} fstype=lustre
              opts=defaults,_netdev state=present
 
-    - name: upgrade to latest OS packages
-      apt: update_cache=yes cache_valid_time=3600 upgrade=dist
-      register: dist_upgrade
-
-    - name: restart instance
-      command: shutdown -r now 'applying bcbio cluster OS updates'
-      async: 0
-      poll: 0
-      ignore_errors: true
-      when: dist_upgrade.changed
-
     - name: mount Lustre volume
       mount: name=/scratch src={{ lustre_fs_spec }} fstype=lustre
              opts=defaults,_netdev state=mounted
-      when: not dist_upgrade.changed
-
-    - name: waiting for instance to come back
-      local_action: wait_for host={{ ansible_ssh_host }} port=22 state=started
-      sudo: false
-      when: dist_upgrade.changed

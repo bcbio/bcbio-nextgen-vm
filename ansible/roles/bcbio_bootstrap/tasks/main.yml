@@ -1,4 +1,31 @@
 ---
+- name: Upgrade the host OS
+  hosts: all
+  tasks:
+    - name: Upgrade to latest OS packages (apt)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      sudo: true
+      apt: update_cache=yes cache_valid_time=3600 upgrade=dist
+      register: os_upgrade_apt
+
+    - name: Upgrade to latest OS packages (yum)
+      when: "'{{ansible_distribution}}' in ['RedHat', 'Amazon']"
+      sudo: true
+      yum: update_cache=yes name=* state=latest
+      register: os_upgrade_yum
+
+    - name: Reboot
+      when: os_upgrade_apt.changed or os_upgrade_yum.changed
+      command: shutdown -r now 'Applying OS updates to bcbio cluster'
+      sudo: true
+      async: 0
+      poll: 0
+      ignore_errors: true
+
+    - name: Wait for instances to reboot
+      when: os_upgrade_apt.changed or os_upgrade_yum.changed
+      local_action: wait_for host={{ ansible_ssh_host }} port=22 state=started
+
 - name: Install bcbio_vm
   hosts: frontend*
   sudo: false
