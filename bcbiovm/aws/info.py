@@ -93,6 +93,10 @@ def _instance_info(cluster_config):
         for inst in res.instances:
             if vpcs_by_id.get(inst.vpc_id) != vpc_name:
                 continue
-            print("\tname: {} ({}, {}) in {}".format(
+
+            ip_address = inst.ip_address
+            if not inst.ip_address:
+                ip_address = inst.private_ip_address
+            print("\t{} ({}, {}) at {} in {}".format(
                 inst.tags.get("Name", "(none)"), inst.instance_type,
-                inst.state, inst.placement))
+                inst.state, ip_address, inst.placement))
