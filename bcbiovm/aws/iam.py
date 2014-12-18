@@ -2,6 +2,8 @@
 
 http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 """
+from __future__ import print_function
+
 import datetime
 import os
 import shutil

@@ -9,6 +9,7 @@ import ansible.utils
 import ansible.callbacks
 import ansible.playbook
 from elasticluster.conf import Configurator
+import elasticluster.main
 
 
 DEFAULT_EC_CONFIG = os.path.expanduser(
@@ -41,6 +42,43 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
 
     def on_stats(self, stats):
         pass
+
+
+def add_default_ec_args(parser):
+    parser.add_argument("--econfig", default=DEFAULT_EC_CONFIG,
+                        help="Elasticluster bcbio configuration file")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    return parser
+
+
+def wrap_elasticluster(args):
+    """Wrap elasticluster commands to avoid need to call separately.
+
+    - Uses .bcbio/elasticluster as default configuration location.
+    - Sets NFS client parameters for elasticluster Ansible playbook. Uses async
+      clients which provide better throughput on reads/writes:
+      http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
+    """
+    if "-s" not in args and "--storage" not in args:
+        # clean up old storage directory if starting a new cluster
+        # old pickle files will cause consistent errors when restarting
+        storage_dir = os.path.join(os.path.dirname(DEFAULT_EC_CONFIG), "storage")
+        std_args = [x for x in args if not x.startswith("-")]
+        if len(std_args) >= 3 and std_args[1] == "start":
+            cluster = std_args[2]
+            pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
+            if os.path.exists(pickle_file):
+                os.remove(pickle_file)
+        args = [args[0], "--storage", storage_dir] + args[1:]
+    if "-c" not in args and "--config" not in args:
+        args = [args[0]] + ["--config", DEFAULT_EC_CONFIG] + args[1:]
+    os.environ["nfsoptions"] = "rw,async,nfsvers=3"  # NFS tuning
+    sys.argv = args
+    try:
+        return elasticluster.main.main()
+    except SystemExit as exc:
+        return exc.args[0]
 
 
 def ecluster_config(econfig_file, name=None):
