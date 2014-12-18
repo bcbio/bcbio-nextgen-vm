@@ -15,6 +15,9 @@ def setup_cmd(awsparser):
                                  help="Update a bcbio AWS system with the latest code and tools",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = _add_default_ec_args(parser)
+    parser.add_argument("-R", "--no-reboot",
+                        default=False, action="store_true",
+                        help="Don't upgrade the cluster host OS and reboot")
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="Emit verbose output when running "
                              "Ansible playbooks")
@@ -86,7 +89,8 @@ def _bootstrap_bcbio(args, ansible_base):
     playbook_path = os.path.join(
         ansible_base, "roles", "bcbio_bootstrap", "tasks", "main.yml")
 
-    def _calculate_cores_mem(args, cluster_config):
+    def _extra_vars(args, cluster_config):
+        # Calculate cores and memory
         compute_nodes = int(
             tz.get_in(["nodes", "frontend", "compute_nodes"], cluster_config, 0))
         if compute_nodes > 0:
@@ -97,10 +101,12 @@ def _bootstrap_bcbio(args, ansible_base):
         # For small number of compute nodes, leave space for runner and controller
         if compute_nodes < 5 and compute_nodes > 0:
             cores = cores - 2
-        return {"target_cores": cores, "target_memory": mem}
+
+        return {"target_cores": cores, "target_memory": mem,
+                "upgrade_host_os_and_reboot": not args.no_reboot}
 
     common.run_ansible_pb(
-        inventory_path, playbook_path, args, _calculate_cores_mem)
+        inventory_path, playbook_path, args, _extra_vars)
 
 # ## Run a remote command
 
