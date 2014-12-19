@@ -270,7 +270,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
             series.split('_')[0]
             for series
              in df.keys()
-             if series.startswith('eth')
+             if series.startswith(('eth', 'ib'))
         ])
 
         if verbose:
