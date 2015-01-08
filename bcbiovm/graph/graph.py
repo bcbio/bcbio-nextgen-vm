@@ -212,16 +212,16 @@ def graph_disk_io(df, steps, disks):
     for disk in disks:
         old_series = '{}_sectors_read'.format(disk)
         new_series = '{}_read'.format(disk)
-        graph[new_series] = graph[old_series]
+        graph[new_series] = graph[old_series] * 512 / 1024 / 1024
         del graph[old_series]
 
         old_series = '{}_sectors_written'.format(disk)
         new_series = '{}_write'.format(disk)
-        graph[new_series] = graph[old_series]
+        graph[new_series] = graph[old_series] * 512 / 1024 / 1024
         del graph[old_series]
 
     plot = graph.plot()
-    plot.set_ylabel('sectors/s')
+    plot.set_ylabel('mbytes/s')
     add_common_plot_features(plot, steps)
 
     return plot
