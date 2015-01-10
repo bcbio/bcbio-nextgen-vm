@@ -26,13 +26,13 @@ def _parse_raw(fp, start_tstamp, end_tstamp):
     hardware = {}
     data = {}
     for line in fp:
-        try:
-            bar.update(fp.tell())
-        except AssertionError:
-            pass
-
         matches = re.search(r'^>>> (\d+).\d+ <<<', line)
         if matches:
+            try:
+                bar.update(fp.tell())
+            except AssertionError:
+                pass
+
             tstamp = int(matches.group(1))
             if (tstamp >= start_tstamp) or (tstamp <= end_tstamp):
                 data[tstamp] = {
