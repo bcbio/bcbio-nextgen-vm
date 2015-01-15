@@ -481,6 +481,11 @@ def get_instances(stack_name, aws_config):
     addrs = {}
     for resv in reservations:
         for inst in resv.instances:
+            # Instances might still be around for stopped stacks with
+            # the same stack name, so ignore them.
+            if inst.state in ['terminated', 'shutting-down']:
+                continue
+
             if inst.tags['Name'] == 'NATDevice':
                 addrs[inst.tags['Name']] = inst.ip_address
             else:
