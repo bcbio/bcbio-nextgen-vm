@@ -51,6 +51,14 @@ def add_default_ec_args(parser):
                         help="elasticluster cluster name")
     return parser
 
+def bcbio_args_to_ec(ec_args, args):
+    """Convert standard bcbio args into elasticluster inputs.
+    """
+    if args.verbose:
+        ec_args.append("-v")
+    if args.econfig:
+        ec_args = [ec_args[0]] + ["--config", args.econfig] + ec_args[1:]
+    return ec_args
 
 def wrap_elasticluster(args):
     """Wrap elasticluster commands to avoid need to call separately.

@@ -49,9 +49,8 @@ def setup_cmd(awsparser):
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the stack, "
                              "destroying all data stored on it")
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
 
     parser.add_argument("-s", "--size", type=int, default="2048",
                         help="Size of the Lustre filesystem, in gigabytes")
@@ -88,9 +87,8 @@ def setup_cmd(awsparser):
                                     help="Mount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
                         default="bcbiolustre",
                         help="CloudFormation name for the new stack")
@@ -102,9 +100,8 @@ def setup_cmd(awsparser):
                                     help="Unmount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
                         default="bcbiolustre",
                         help="CloudFormation name for the new stack")

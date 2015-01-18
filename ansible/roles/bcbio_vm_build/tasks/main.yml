@@ -40,7 +40,7 @@
   when: bcbio_docker_build|success
   register: bcbio_docker_gzip
   ignore_errors: true
-  shell: "DID=$(docker run -d {{image_name}} /bin/bash); docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz"
+  shell: "DID=$(docker run -d {{image_name}} /bin/bash) && docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz"
   args:
     chdir: "{{ bcbio_dir }}"
     creates: bcbio-nextgen-docker-image.gz

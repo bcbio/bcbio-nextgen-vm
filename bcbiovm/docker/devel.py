@@ -64,8 +64,8 @@ def setup_cmd(subparsers):
                                 "code is only bcbio-nextgen code."))
     dbparser.add_argument("-d", "--rundir", default="/tmp/bcbio-docker-build",
                           help="Directory to run docker build in")
-    dbparser.add_argument("-v", "--verbose", action="count", default=0,
-                          help="Emit verbose output when running Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     dbparser.set_defaults(func=_run_docker_build)
 
 # ## Install code to docker image

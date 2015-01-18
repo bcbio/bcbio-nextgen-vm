@@ -19,9 +19,8 @@ def setup_cmd(awsparser):
     parser.add_argument("-R", "--no-reboot",
                         default=False, action="store_true",
                         help="Don't upgrade the cluster host OS and reboot")
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.set_defaults(func=bootstrap_cluster)
 
     parser = parser_b.add_parser("command",
@@ -37,9 +36,8 @@ def setup_cmd(awsparser):
     parser = parser_b.add_parser("ssh", help="SSH to a bcbio cluster",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.add_argument("args", metavar="ARG", nargs="*",
                         help="Execute the following command on the remote "
                              "machine instead of opening an interactive shell.")
@@ -48,17 +46,22 @@ def setup_cmd(awsparser):
     parser = parser_b.add_parser("start", help="Start a bcbio cluster",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.set_defaults(func=start)
+
+    parser = parser_b.add_parser("setup", help="Rerun cluster configuration steps",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = common.add_default_ec_args(parser)
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
+    parser.set_defaults(func=setup)
 
     parser = parser_b.add_parser("stop", help="Stop a bcbio cluster",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
+    parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
+                        help="Quiet output when running Ansible playbooks")
     parser.set_defaults(func=stop)
 
 
@@ -98,30 +101,29 @@ def run_remote(args):
     print("Running {} on AWS in screen session {}".format(
         remote_file, screen_name))
 
-
 def ssh(args):
     """SSH to a cluster."""
     ec_args = ["elasticluster", "ssh", args.cluster]
-    if args.verbose:
-        ec_args.append("-{}".format(args.verbose * "v"))
-    ec_args.extend(args.args)
+    ec_args = common.bcbio_args_to_ec(ec_args, args)
     sys.exit(common.wrap_elasticluster(ec_args))
-
 
 def start(args):
     """Start and bootstrap a cluster."""
     ec_args = ["elasticluster", "start", args.cluster]
-    if args.verbose:
-        ec_args.append("-{}".format(args.verbose * "v"))
+    ec_args = common.bcbio_args_to_ec(ec_args, args)
     status = common.wrap_elasticluster(ec_args)
     if status != 0:
         sys.exit(status)
     bootstrap_cluster(args)
 
+def setup(args):
+    """Rerun cluster configuration commands."""
+    ec_args = ["elasticluster", "setup", args.cluster]
+    ec_args = common.bcbio_args_to_ec(ec_args, args)
+    sys.exit(common.wrap_elasticluster(ec_args))
 
 def stop(args):
     """Stop a cluster."""
     ec_args = ["elasticluster", "stop", args.cluster]
-    if args.verbose:
-        ec_args.append("-{}".format(args.verbose * "v"))
+    ec_args = common.bcbio_args_to_ec(ec_args, args)
     sys.exit(common.wrap_elasticluster(ec_args))
