@@ -21,7 +21,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, common, iam, icel, vpc, info
+from bcbiovm.aws import bootstrap, cluster, common, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -230,7 +230,7 @@ def _aws_cmd(subparsers):
     icel.setup_cmd(awssub)
     _aws_vpc_cmd(awssub)
     _aws_info_cmd(awssub)
-    bootstrap.setup_cmd(awssub)
+    cluster.setup_cmd(awssub)
 
 def _aws_info_cmd(awsparser):
     parser = awsparser.add_parser("info", help="Reports status of existing AWS cluster.")
@@ -268,32 +268,6 @@ def _aws_vpc_cmd(awsparser):
                              "in CIDR notation (a.b.c.d/e)")
     parser.set_defaults(func=vpc.bootstrap)
 
-def _run_elasticluster():
-    """Wrap elasticluster commands to avoid need to call separately.
-
-    - Uses .bcbio/elasticluster as default configuration location.
-    - Sets NFS client parameters for elasticluster Ansible playbook. Uses async
-      clients which provide better throughput on reads/writes:
-      http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
-    """
-    from elasticluster.main import main as ecmain
-    sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
-    if "-s" not in sys.argv and "--storage" not in sys.argv:
-        # clean up old storage directory if starting a new cluster
-        # old pickle files will cause consistent errors when restarting
-        storage_dir = os.path.join(os.path.dirname(common.DEFAULT_EC_CONFIG), "storage")
-        std_args = [x for x in sys.argv if not x.startswith("-")]
-        if len(std_args) >= 3 and std_args[1] == "start":
-            cluster = std_args[2]
-            pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
-            if os.path.exists(pickle_file):
-                os.remove(pickle_file)
-        sys.argv = [sys.argv[0], "--storage", storage_dir] + sys.argv[1:]
-    if "-c" not in sys.argv and "--config" not in sys.argv:
-        sys.argv = [sys.argv[0]] + ["--config", common.DEFAULT_EC_CONFIG] + sys.argv[1:]
-    os.environ["nfsoptions"] = "rw,async,nfsvers=3"  # NFS tuning
-    sys.exit(ecmain())
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines, with docker.")
@@ -318,7 +292,7 @@ if __name__ == "__main__":
         parser.print_help()
     else:
         if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
-            _run_elasticluster()
+            sys.exit(common.wrap_elasticluster(sys.argv[1:]))
         else:
             args = parser.parse_args()
             args.func(args)

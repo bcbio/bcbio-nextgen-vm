@@ -7,37 +7,6 @@ import toolz as tz
 
 from bcbiovm.aws import common
 
-def setup_cmd(awsparser):
-    parser_sub_b = awsparser.add_parser("bcbio", help="Manage bcbio on AWS systems")
-    parser_b = parser_sub_b.add_subparsers(title="[bcbio specific actions]")
-
-    parser = parser_b.add_parser("bootstrap",
-                                 help="Update a bcbio AWS system with the latest code and tools",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = _add_default_ec_args(parser)
-    parser.add_argument("-R", "--no-reboot",
-                        default=False, action="store_true",
-                        help="Don't upgrade the cluster host OS and reboot")
-    parser.add_argument("-v", "--verbose", action="count", default=0,
-                        help="Emit verbose output when running "
-                             "Ansible playbooks")
-    parser.set_defaults(func=bootstrap)
-
-    parser = parser_b.add_parser("run",
-                                 help="Run a script on the bcbio frontend node inside a screen session",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser = _add_default_ec_args(parser)
-    parser.add_argument("script", help=("Path to a script to run. "
-                                        "The screen session name is the basename of the script."))
-    parser.set_defaults(func=run_remote)
-
-def _add_default_ec_args(parser):
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
-    return parser
-
 # ## Bootstrap a new instance
 
 # Core and memory usage for AWS instances
@@ -107,33 +76,3 @@ def _bootstrap_bcbio(args, ansible_base):
 
     common.run_ansible_pb(
         inventory_path, playbook_path, args, _extra_vars)
-
-# ## Run a remote command
-
-def run_remote(args):
-    """Run a script on the frontend node inside a screen session.
-    """
-    config = common.ecluster_config(args.econfig)
-    cluster = config.load_cluster(args.cluster)
-
-    frontend = cluster.get_frontend_node()
-    client = frontend.connect(keyfile=cluster.known_hosts_file)
-
-    cmd = "echo $HOME"
-    stdin, stdout, stderr = client.exec_command(cmd)
-    remote_home = stdout.read().strip()
-    remote_file = os.path.join(remote_home, os.path.basename(args.script))
-    log_file = "%s.log" % os.path.splitext(remote_file)[0]
-    screen_name = os.path.splitext(os.path.basename(remote_file))[0]
-
-    sftp = client.open_sftp()
-    sftp.put(args.script, remote_file)
-    sftp.close()
-
-    cmd = "chmod a+x %s" % remote_file
-    client.exec_command(cmd)
-    cmd = "screen -d -m -S %s bash -c '%s &> %s'" % (screen_name, remote_file, log_file)
-    stdin, stdout, stderr = client.exec_command(cmd)
-    stdout.read()
-    client.close()
-    print("Running %s on AWS in screen session %s" % (remote_file, screen_name))

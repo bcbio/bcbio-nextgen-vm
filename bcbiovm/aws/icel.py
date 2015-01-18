@@ -45,13 +45,10 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("create",
                                     help="Create scratch filesystem using Intel Cloud Edition for Lustre",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
+    parser = common.add_default_ec_args(parser)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the stack, "
                              "destroying all data stored on it")
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="Emit verbose output when running "
                              "Ansible playbooks")
@@ -79,10 +76,7 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("fs_spec",
                                     help="Get the filesystem spec for a running filesystem",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
+    parser = common.add_default_ec_args(parser)
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
                         default="bcbiolustre",
                         help="CloudFormation name for the stack")
@@ -93,10 +87,7 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("mount",
                                     help="Mount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
+    parser = common.add_default_ec_args(parser)
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="Emit verbose output when running "
                              "Ansible playbooks")
@@ -110,10 +101,7 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("unmount",
                                     help="Unmount Lustre filesystem on all cluster nodes",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
+    parser = common.add_default_ec_args(parser)
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="Emit verbose output when running "
                              "Ansible playbooks")
@@ -127,10 +115,7 @@ def setup_cmd(awsparser):
     parser = icel_parser.add_parser("stop",
                                     help="Stop the running Lustre filesystem and clean up resources",
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
+    parser = common.add_default_ec_args(parser)
     parser.add_argument(metavar="STACK_NAME", dest="stack_name", nargs="?",
                         default="bcbiolustre",
                         help="CloudFormation name for the new stack")
