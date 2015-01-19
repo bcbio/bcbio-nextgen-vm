@@ -8,7 +8,7 @@ import sys
 from bcbiovm.aws import bootstrap, common
 
 def setup_cmd(awsparser):
-    parser_sub_b = awsparser.add_parser("cluster", help="Manage AWS clusters")
+    parser_sub_b = awsparser.add_parser("cluster", help="Run and manage AWS clusters")
     parser_b = parser_sub_b.add_subparsers(title="[cluster specific actions]")
 
     parser = parser_b.add_parser("bootstrap",

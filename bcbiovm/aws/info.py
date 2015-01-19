@@ -5,19 +5,42 @@ from __future__ import print_function
 import boto.ec2
 import boto.iam
 import boto.vpc
+import toolz as tz
 
-from common import ecluster_config
+from bcbiovm.aws import common
 
+def setup_cmd(awsparser):
+    parser = awsparser.add_parser("info", help="Information on existing AWS clusters")
+    parser.set_defaults(func=print_info)
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    parser.add_argument("-e", "--econfig",
+                        help="Elasticluster bcbio configuration file",
+                        default=common.DEFAULT_EC_CONFIG)
 
-def bootstrap(args):
-    cluster_config = ecluster_config(args.econfig, args.cluster)
-
+def print_info(args):
+    all_cc = common.ecluster_config(args.econfig)
+    print("Available clusters: %s" % ",".join(all_cc.cluster_conf.keys()))
+    print()
+    print("Configuration for cluster '%s':" % (args.cluster))
+    cluster_config = common.ecluster_config(args.econfig, args.cluster)
+    _cluster_info(cluster_config)
+    print()
+    print("AWS setup:")
     _iam_info()
     _sg_info(cluster_config)
     _vpc_info(cluster_config)
     print()
     _instance_info(cluster_config)
 
+def _cluster_info(config):
+    """Provide high level details about the setup of the current cluster.
+    """
+    compute_c = tz.get_in(["nodes", "compute"], config)
+    frontend_c = tz.get_in(["nodes", "frontend"], config)
+    print(" Frontend: %s with %sGb NFS storage" % (frontend_c["flavor"], frontend_c["root_volume_size"]))
+    if int(compute_c.get("compute_nodes", 0)) > 0:
+        print(" Cluster: %s %s machines" % (compute_c["compute_nodes"], compute_c["flavor"]))
 
 def _iam_info():
     conn = boto.iam.connection.IAMConnection()
@@ -31,9 +54,9 @@ def _iam_info():
     expect_iam_username = "bcbio"
 
     if any([user['user_name'] == expect_iam_username for user in users]):
-        print("OK: expected IAM user '{}' exists.".format(expect_iam_username))
+        print(" OK: expected IAM user '{}' exists.".format(expect_iam_username))
     else:
-        print("WARNING: IAM user '{}' does not exist.".format(
+        print(" WARNING: IAM user '{}' does not exist.".format(
             expect_iam_username))
 
 
@@ -42,16 +65,16 @@ def _sg_info(cluster_config):
 
     security_groups = conn.get_all_security_groups()
     if not security_groups:
-        print("WARNING: no security groups defined.")
+        print(" WARNING: no security groups defined.")
         return
 
     expected_sg_name = cluster_config['cluster']['security_group']
 
     if any([sg.name == expected_sg_name for sg in security_groups]):
-        print("OK: expected security group '{}' exists.".format(
+        print(" OK: expected security group '{}' exists.".format(
             expected_sg_name))
     else:
-        print("WARNING: security group '{}' does not exist.".format(
+        print(" WARNING: security group '{}' does not exist.".format(
             expected_sg_name))
 
 
@@ -60,15 +83,15 @@ def _vpc_info(cluster_config):
 
     vpcs = conn.get_all_vpcs()
     if not vpcs:
-        print("WARNING: no VPCs exist.")
+        print(" WARNING: no VPCs exist.")
         return
 
     expected_vpc_name = cluster_config['cloud']['vpc']
 
     if any([vpc.tags['Name'] == expected_vpc_name for vpc in vpcs]):
-        print("OK: VPC '{}' exists.".format(expected_vpc_name))
+        print(" OK: VPC '{}' exists.".format(expected_vpc_name))
     else:
-        print("WARNING: VPC '{}' does not exist.".format(expected_vpc_name))
+        print(" WARNING: VPC '{}' does not exist.".format(expected_vpc_name))
 
 
 def _instance_info(cluster_config):

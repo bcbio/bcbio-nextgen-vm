@@ -21,7 +21,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, cluster, common, iam, icel, vpc, info
+from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -226,20 +226,12 @@ def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
 
-    _aws_iam_cmd(awssub)
-    icel.setup_cmd(awssub)
-    _aws_vpc_cmd(awssub)
-    _aws_info_cmd(awssub)
     cluster.setup_cmd(awssub)
-
-def _aws_info_cmd(awsparser):
-    parser = awsparser.add_parser("info", help="Reports status of existing AWS cluster.")
-    parser.set_defaults(func=info.bootstrap)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
-    parser.add_argument("-e", "--econfig",
-                        help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
+    ecconfig.setup_cmd(awssub)
+    info.setup_cmd(awssub)
+    _aws_iam_cmd(awssub)
+    _aws_vpc_cmd(awssub)
+    icel.setup_cmd(awssub)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
@@ -284,7 +276,7 @@ if __name__ == "__main__":
     _elasticluster_cmd(subparsers)
     _graph_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
-    #_server_cmd(subparsers)
+    # _server_cmd(subparsers)
     _runfn_cmd(subparsers)
     devel.setup_cmd(subparsers)
     _config_cmd(subparsers)
