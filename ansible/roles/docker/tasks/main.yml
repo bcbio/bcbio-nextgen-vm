@@ -7,16 +7,21 @@
     docker_mnt_device: "/dev/xvdb"
     docker_configfile: "/etc/default/docker"
   tasks:
-    - name: Add docker apt key (deb)
+    - name: Install docker dependencies
       when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
-      apt_key:
-        url: https://get.docker.io/gpg
-        state: present
-      sudo: True
+      apt:
+        name: "{{ item }}"
+      with_items:
+        - apt-transport-https
 
     - name: Add docker apt repo (deb)
       when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
-      shell: echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list
+      shell: echo deb https://get.docker.com/ubuntu docker main > /etc/apt/sources.list.d/docker.list
+      sudo: True
+
+    - name: Add docker apt key (deb)
+      when: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+      shell: apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
       sudo: True
 
     - name: Install Docker (deb)

@@ -174,12 +174,17 @@ Creating docker image
 An `ansible <http://www.ansible.com>`_ playbook automates the process of
 creating the bcbio-nextgen docker images. To build on AWS and upload the latest
 image to S3, first use the elasticluster interface to start an AWS
-instance. Then ssh in, start a screen session, and run::
+instance. Then run the build script on the remote machine::
 
-    ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
-    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-    ssh-keyscan -t rsa localhost >> ~/.ssh/known_hosts
-    bcbio_vm.py devel dockerbuild -v
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen-vm/master/scripts/build_docker_image.sh
+    bcbio_vm.py aws cluster command build_docker_image.sh
+
+To monitor progress, ssh in to the machine and look at the general and docker
+specific build logs::
+
+    bcbio_vm.py aws cluster ssh
+    tail ~/build_docker_image.log
+    tail /tmp/bcbio/docker/build/build.log
 
 This requires permissions to write to the ``bcbio_nextgen`` bucket.
 
