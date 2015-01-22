@@ -12,11 +12,7 @@ from bcbiovm.aws import common
 def setup_cmd(awsparser):
     parser = awsparser.add_parser("info", help="Information on existing AWS clusters")
     parser.set_defaults(func=print_info)
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
-    parser.add_argument("-e", "--econfig",
-                        help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
+    common.add_default_ec_args(parser)
 
 def print_info(args):
     all_cc = common.ecluster_config(args.econfig)
