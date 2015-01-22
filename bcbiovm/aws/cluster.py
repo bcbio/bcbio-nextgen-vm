@@ -46,6 +46,9 @@ def setup_cmd(awsparser):
     parser = parser_b.add_parser("start", help="Start a bcbio cluster",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = common.add_default_ec_args(parser)
+    parser.add_argument("-R", "--no-reboot",
+                        default=False, action="store_true",
+                        help="Don't upgrade the cluster host OS and reboot")
     parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
                         help="Quiet output when running Ansible playbooks")
     parser.set_defaults(func=start)
