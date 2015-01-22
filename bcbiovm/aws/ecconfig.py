@@ -54,4 +54,4 @@ def run_edit(args):
         parser.write(out_handle)
     print()
     print("Updated configuration for cluster %s" % args.cluster)
-    print ("Run 'bcbio_vm.py aws info' to see full details for the cluster")
+    print("Run 'bcbio_vm.py aws info' to see full details for the cluster")
