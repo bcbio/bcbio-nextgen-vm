@@ -101,10 +101,6 @@ def _instance_info(cluster_config):
     conn = boto.ec2.connect_to_region(cluster_config['cloud']['ec2_region'])
 
     reservations = conn.get_all_reservations()
-    if not reservations:
-        print("WARNING: no instances.")
-        return
-
     vpc_name = cluster_config['cloud']['vpc']
 
     print("Instances in VPC '{}':".format(vpc_name))
@@ -119,3 +115,5 @@ def _instance_info(cluster_config):
             print("\t{} ({}, {}) at {} in {}".format(
                 inst.tags.get("Name", "(none)"), inst.instance_type,
                 inst.state, ip_address, inst.placement))
+    else:
+        print(" WARNING: no instances.")
