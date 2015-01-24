@@ -33,6 +33,7 @@ global_var_slurm_selecttypeparameters=CR_Core_Memory
 cloud=amazon-us-east-1
 login=ubuntu
 ssh_to=frontend
+ssh_hostkeys_from_console_output=True
 network_ids=bcbio_cluster
 security_group=bcbio_cluster_sg
 placement_group=bcbio_cluster_pg
