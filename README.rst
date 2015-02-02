@@ -2,7 +2,7 @@ bcbio-nextgen-vm
 ----------------
 
 Run `bcbio-nextgen`_ genomic sequencing analysis pipelines using code and tools
-isolated inside of lightweight containers. This enables:
+on cloud platforms or isolated inside of lightweight containers. This enables:
 
 - Improved installation: Pre-installing all required biological code, tools and
   system libraries inside a container removes the difficulties associated with
@@ -17,11 +17,15 @@ isolated inside of lightweight containers. This enables:
   environment indefinitely, providing the ability to re-run an older analysis
   by reverting to an archived snapshot.
 
-This currently supports lightweight `docker`_ containers. It is still a work in
-progress and we welcome feedback and problem reports.
-
+This currently supports running on `Amazon Web Services (AWS)
+http://aws.amazon.com/`_ and locally with lightweight `docker`_ containers.
 The bcbio documentation contains details on using `bcbio-vm to run analyses on AWS
 <https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_.
+
+We support using bcbio-vm for both AWS and local docker usage on Linux
+systems. On Mac OSX, only AWS usage currently works. Local docker support for
+Mac OSX is a work in progress and we have more details on the current status below.
+We welcome feedback and problem reports.
 
 .. _bcbio-nextgen: https://github.com/chapmanb/bcbio-nextgen
 .. _docker: http://www.docker.io/
@@ -29,18 +33,6 @@ The bcbio documentation contains details on using `bcbio-vm to run analyses on A
 
 Installation
 ------------
-
-- `Install docker`_ on your system. You will need root permissions.
-
-- `Setup a docker group`_ to provide the ability to run Docker without being
-  root. Some installations, like Debian/Ubuntu packages do this automatically.
-  You'll also want to add the trusted user who will be managing and
-  testing docker images to this group::
-
-    sudo groupadd docker
-    sudo service docker restart
-    sudo gpasswd -a ${USERNAME} docker
-    newgrp docker
 
 - Install bcbio-nextgen-vm using `conda`_ with an isolated Python::
 
@@ -53,6 +45,21 @@ Installation
 
     pip install conda
     conda install -c https://conda.binstar.org/bcbio bcbio-nextgen-vm
+
+  If you're using bcbio-vm to run on AWS this is all you need to get started. If
+  you'd like to run locally with docker, keep following the instructions.
+
+- `Install docker`_ on your system. You will need root permissions.
+
+- `Setup a docker group`_ to provide the ability to run Docker without being
+  root. Some installations, like Debian/Ubuntu packages do this automatically.
+  You'll also want to add the trusted user who will be managing and
+  testing docker images to this group::
+
+    sudo groupadd docker
+    sudo service docker restart
+    sudo gpasswd -a ${USERNAME} docker
+    newgrp docker
 
 - Ensure the driver script is `setgid`_ to the docker group. This allows users
   to run bcbio-nextgen without needing to be in the docker group or have root
@@ -144,6 +151,24 @@ Development Notes
 
 These notes are for building containers from scratch or developing on
 bcbio-nextgen.
+
+Mac OSX docker support
+======================
+
+Running Docker on Mac OSX requires using a virtual machine wrapper. The
+`recommended approach <https://docs.docker.com/installation/mac/>`_ is to use
+`boot2docker <https://github.com/boot2docker/boot2docker>`_ which wraps docker
+inside VirtualBox.
+
+The current issue is mounting external directories into boot2docker. The mounts
+work as of `Docker 1.3
+<http://blog.docker.com/2014/10/docker-1-3-signed-images-process-injection-security-options-mac-shared-directories/>`_,
+but do not maintain the original user ID and group ID, but rather get mounted as
+root. Since bcbio runs as the original user to avoid security issues, you don't have
+permissions to make modifications in the directories. There is an `open issue on
+the problem <https://github.com/boot2docker/boot2docker/issues/581>`_ and we're
+currently not sure about the best approach or workaround. We'd be happy to
+accept patches/suggestions from interested Mac OSX users.
 
 Docker image installation
 =========================
