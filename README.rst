@@ -18,7 +18,7 @@ on cloud platforms or isolated inside of lightweight containers. This enables:
   by reverting to an archived snapshot.
 
 This currently supports running on `Amazon Web Services (AWS)
-http://aws.amazon.com/`_ and locally with lightweight `docker`_ containers.
+<http://aws.amazon.com/>`_ and locally with lightweight `docker`_ containers.
 The bcbio documentation contains details on using `bcbio-vm to run analyses on AWS
 <https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_.
 
