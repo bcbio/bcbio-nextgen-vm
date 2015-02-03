@@ -1,0 +1,4 @@
+[ssh_connection]
+ssh_args = -o ControlPersist=15m -F {cluster_storage_path}/icel-{stack_name}.ssh_config -q
+scp_if_ssh = True
+control_path = ~/.ssh/mux-%%r@%%h:%%p

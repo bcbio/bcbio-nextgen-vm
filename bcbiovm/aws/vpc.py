@@ -11,11 +11,11 @@ from bcbiovm.aws import common
 
 
 def bootstrap(args):
-    _setup_placment_group(args)
-    _setup_vpc(args)
+    new_vpc = _setup_vpc(args)
+    _setup_placment_group(args, new_vpc)
 
 
-def _setup_placment_group(args):
+def _setup_placment_group(args, new_vpc):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
@@ -23,7 +23,10 @@ def _setup_placment_group(args):
 
     pgname = "{}_cluster_pg".format(args.cluster)
     pgs = conn.get_all_placement_groups()
-    if pgname not in [x.name for x in pgs]:
+    if new_vpc or pgname not in [x.name for x in pgs]:
+        if pgname in [x.name for x in pgs]:
+            print("Refreshing placement group %s." % pgname)
+            conn.delete_placement_group(pgname)
         conn.create_placement_group(pgname)
         print("Placement group %s created." % pgname)
     else:
@@ -52,55 +55,12 @@ def _setup_vpc(args):
     existing_vpcs = conn.get_all_vpcs(filters={'tag:Name': args.cluster})
     if existing_vpcs:
         if args.recreate:
-            # vpc.detele() alone doesn't automatically remove its
-            # dependency as the AWS management console does.
-            # So, we delete dependencies before deleting the vpc
-            # itself.
-
-            # collect ids for each
-            vpc_id = existing_vpcs[0].id
-
-            subnet_id = None
-            rte_table_id = None
-            igw_id = None
-            sg_id = None
-            sg_obj = None
-
-            # is there a subnet associated with this vpc?
-            for subnet in conn.get_all_subnets():
-                if vpc_id == subnet.vpc_id:
-                    subnet_id = subnet.id
-
-            # are there a routing tables to delete?
-            for rte_table in conn.get_all_route_tables():
-                if vpc_id == rte_table.vpc_id:
-                    rte_table_id = rte_table.id
-
-            # is there a gateway to delete?
-            for igw in conn.get_all_internet_gateways():
-                if igw.tags[u'Name'] == u'bcbio_gw':
-                    igw_id = igw.id
-
-            # is there a security group to delete?
-            for sg in conn.get_all_security_groups():
-                if vpc_id == sg.vpc_id:
-                    sg_id = sg.id
-                    sg_obj = sg
-
-            # delete subnet
-            conn.delete_subnet(subnet_id)
-            # delete route
-            conn.delete_route(rte_table_id, '0.0.0.0/0')
-            # delete route table
-            conn.delete_route_table(rte_table_id)
-            # detach gateway for vpc
-            conn.detach_internet_gateway(igw_id, vpc_id)
-            # delete gateway
-            conn.delete_internet_gateway(igw_id)
-            # delete security group
-            sg_obj.delete()
-            conn.delete_vpc(vpc_id)
-
+            raise NotImplementedError("bcbio does not currently remove VPCs. "
+                                      "The easiest way is to do this manually in the console: "
+                                      "https://console.aws.amazon.com/vpc/home")
+            # FIXME: this doesn't automatically remove resources in the VPC
+            # like the AWS management console does.
+            conn.delete_vpc(existing_vpcs[0].id)
         else:
             print('VPC {} already exists. Skipping. Use --recreate to re-create if needed.'.format(args.cluster))
             return
@@ -128,3 +88,4 @@ def _setup_vpc(args):
     conn.associate_route_table(rtb.id, subnet.id)
 
     print("Created VPC: %s" % args.cluster)
+    return args.cluster

@@ -2,6 +2,8 @@
 
 http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 """
+from __future__ import print_function
+
 import datetime
 import os
 import shutil
@@ -11,13 +13,33 @@ import sys
 import boto
 import toolz as tz
 
+NOIAM_MSG = """
+IAM users and instance profiles not created.
+Manually add the following items to your configuration file:
+  ec2_access_key    AWS Access Key ID, ideally generated for an IAM user with full AWS permissions
+                    http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/AboutAWSCredentials.html#AccessKeys
+                    http://docs.aws.amazon.com/IAM/latest/UserGuide/ManagingCredentials.html
+  ec2_secret_key    AWS Secret Key ID matching the ec2_access_key
+  instance_profile  Create an IAM Instance profile allowing access to S3 buckets for pushing/pulling data.
+                    Use 'InstanceProfileName' from aws iam list-instance-profiles after setting up.
+                    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+                    http://docs.aws.amazon.com/IAM/latest/UserGuide/role-usecase-ec2app.html
+                    http://j.mp/iams3ip
+
+The IAM user you create will need to have access permissions for:
+  - EC2 and VPC -- ec2:*
+  - IAM instance profiles -- iam:PassRole, iam:ListInstanceProfiles
+  - CloudFormation for launching a Lutre ICEL instance -- cloudformation:*
+"""
 def bootstrap(args):
     conn = boto.connect_iam()
     config = _create_keypair(args.econfig)
     config.update(_bcbio_iam_user(conn, args))
-    config.update(_bcbio_s3_instance_profile(conn))
+    config.update(_bcbio_s3_instance_profile(conn, args))
     econfig = _write_elasticluster_config(config, args.econfig)
     print("\nWrote elasticluster config file at: %s" % econfig)
+    if args.nocreate:
+        print(NOIAM_MSG)
 
 def _write_elasticluster_config(config, out_file):
     """Write Elasticluster configuration file with user and security information.
@@ -79,20 +101,23 @@ def _bcbio_iam_user(conn, args):
     """
     name = "bcbio"
     access_key_name = "full_admin_access"
-    try:
-        conn.get_user(name)
-        if args.recreate:
-            keys = conn.get_all_access_keys(name)
-            for access_key in tz.get_in(["list_access_keys_response", "list_access_keys_result",
-                                         "access_key_metadata"], keys, []):
-                conn.delete_access_key(access_key["access_key_id"], name)
+    if args.nocreate:
+        need_creds = False
+    else:
+        try:
+            conn.get_user(name)
+            if args.recreate:
+                keys = conn.get_all_access_keys(name)
+                for access_key in tz.get_in(["list_access_keys_response", "list_access_keys_result",
+                                             "access_key_metadata"], keys, []):
+                    conn.delete_access_key(access_key["access_key_id"], name)
+                need_creds = True
+            else:
+                need_creds = False
+        except boto.exception.BotoServerError:
+            conn.create_user(name)
+            conn.put_user_policy(name, access_key_name, IAM_POLICY)
             need_creds = True
-        else:
-            need_creds = False
-    except boto.exception.BotoServerError:
-        conn.create_user(name)
-        conn.put_user_policy(name, access_key_name, IAM_POLICY)
-        need_creds = True
     if need_creds:
         creds = conn.create_access_key(name)
     else:
@@ -106,6 +131,7 @@ def _bcbio_iam_user(conn, args):
                 "ec2_secret_key": creds.get("secret_access_key")}
     else:
         print("User %s already exists, no new credentials" % name)
+        print("Edit the configuration file to add existing user's access and secret keys")
         return {}
 
 S3_POLICY = """{
@@ -120,9 +146,11 @@ S3_POLICY = """{
 }
 """
 
-def _bcbio_s3_instance_profile(conn):
+def _bcbio_s3_instance_profile(conn, args):
     """Create an IAM instance profile with temporary S3 access to be applied to launched machines.
     """
+    if args.nocreate:
+        return {"instance_profile": ""}
     name = "bcbio_full_s3_access"
     try:
         ip = conn.get_instance_profile(name)

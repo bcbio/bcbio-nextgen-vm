@@ -16,7 +16,10 @@ def runfn(*args):
     cmd_args = args[2]
     parallel = args[3]
     fn_args = args[4:]
-    if parallel.get("checkpointed"):
+    # Do not run checkpointed jobs externally now, as need to be inside docker
+    # container even if slow. We need a way to run a batch of jobs together.
+    #if parallel.get("checkpointed"):
+    if False:
         fn = getattr(multitasks, fn_name)
         return fn(fn_args)
     else:

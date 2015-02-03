@@ -1,30 +1,58 @@
+import calendar
 import glob
 import gzip
+import os.path
 import re
 
 import pandas as pd
+import progressbar
 
 
-def _parse_raw(fp):
+def _parse_raw(fp, start_tstamp, end_tstamp):
+    widgets = [
+        os.path.basename(fp.name), ': ',
+        progressbar.Bar(marker='-', left='[', right=']'), ' ',
+        progressbar.Percentage(), ' ', progressbar.ETA(),
+    ]
+    # We don't know what the file's uncompressed size will wind up being,
+    # so take an educated guess and ignore the AssertionError later on
+    # if it winds up being bigger than we guess.
+    bar = progressbar.ProgressBar(
+        widgets=widgets, maxval=os.path.getsize(fp.name) * 15)
+    bar.start()
+    bar.update(0)
+
+    tstamp = 0
     hardware = {}
     data = {}
     for line in fp:
         matches = re.search(r'^>>> (\d+).\d+ <<<', line)
         if matches:
-            tstamp = matches.group(1)
-            data[tstamp] = {
-                'disk': {},
-                'mem': {},
-                'net': {},
-                'proc': {},
-            }
+            try:
+                bar.update(fp.tell())
+            except AssertionError:
+                pass
+
+            tstamp = int(matches.group(1))
+            if (tstamp >= start_tstamp) or (tstamp <= end_tstamp):
+                data[tstamp] = {
+                    'disk': {},
+                    'mem': {},
+                    'net': {},
+                    'proc': {},
+                }
             continue
 
         if line.startswith('# SubSys: '):
             matches = re.search(r'\sNumCPUs: (\d+)\s+', line)
             if matches:
                 hardware['num_cpus'] = int(matches.group(1))
-        elif line.startswith('cpu '):
+            continue
+
+        if (tstamp < start_tstamp) or (tstamp > end_tstamp):
+            continue
+
+        if line.startswith('cpu '):
             # Don't know what the last two fields are, but they
             # always seem to be 0, and collectl doesn't parse them
             # in formatit::dataAnalyze().
@@ -60,6 +88,16 @@ def _parse_raw(fp):
                 'weighted_msec_spent_on_iops': weighted_msec_spent_on_iops,
             }
         elif line.startswith('Net '):
+            # Older kernel versions don't have whitespace after
+            # the interface colon:
+            #
+            #   Net   eth0:70627391
+            #
+            # unlike newer kernels:
+            #
+            #   Net   eth0: 415699541
+            line = re.sub(r'^(Net\s+[^:]+):', r'\1: ', line)
+
             (title, iface,
              rbyte, rpkt, rerr, rdrop, rfifo,
              rframe, rcomp, rmulti,
@@ -98,7 +136,7 @@ def _parse_raw(fp):
             data[tstamp]['mem']['cached'] = amount
         # We don't currently do anything with process data,
         # so don't bother parsing it.
-        elif False or line.startswith('proc:'):
+        elif False and line.startswith('proc:'):
             title_pid, rest = line.split(None, 1)
             title, pid = title_pid.split(':')
 
@@ -115,6 +153,7 @@ def _parse_raw(fp):
                 value = rest.split(':')[1].strip()
                 data[tstamp]['proc'][pid]['write_bytes'] = value
 
+    bar.finish()
     return hardware, data
 
 
@@ -128,12 +167,16 @@ class _CollectlGunzip(gzip.GzipFile):
         return
 
 
-def load_collectl(pattern):
+def load_collectl(pattern, start_time, end_time):
     """Read data from collectl data files into a pandas DataFrame."""
+    start_tstamp = calendar.timegm(start_time.utctimetuple())
+    end_tstamp = calendar.timegm(end_time.utctimetuple())
+
     cols = []
     rows = []
     for path in glob.glob(pattern):
-        hardware, raw = _parse_raw(_CollectlGunzip(path, 'r'))
+        hardware, raw = _parse_raw(
+            _CollectlGunzip(path, 'r'), start_tstamp, end_tstamp)
 
         if not cols:
             instances = {
@@ -193,6 +236,13 @@ def load_collectl(pattern):
                      ])
 
         for tstamp, sample in raw.iteritems():
+            if ('cpu' not in sample or
+                'disk' not in sample or
+                'mem' not in sample):
+                # Skip incomplete samples; there might be a truncated
+                # sample on the end of the file.
+                continue
+
             values = [tstamp]
             values.extend([
                 sample['cpu']['user'], sample['cpu']['nice'],
@@ -242,9 +292,13 @@ def load_collectl(pattern):
 
             rows.append(values)
 
+    if len(rows) == 0:
+        return pd.DataFrame(columns=cols), {}
+
     df = pd.DataFrame(rows, columns=cols)
     df = df.convert_objects(convert_numeric=True)
     df['tstamp'] = df['tstamp'].astype('datetime64[s]')
     df.set_index('tstamp', inplace=True)
+    df = df.tz_localize('UTC')
 
     return df, hardware

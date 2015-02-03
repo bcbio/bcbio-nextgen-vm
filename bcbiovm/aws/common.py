@@ -9,10 +9,12 @@ import ansible.utils
 import ansible.callbacks
 import ansible.playbook
 from elasticluster.conf import Configurator
+import elasticluster.main
 
 
 DEFAULT_EC_CONFIG = os.path.expanduser(
     os.path.join("~", ".bcbio", "elasticluster", "config"))
+ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
 
 
 class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
@@ -42,6 +44,51 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
         pass
 
 
+def add_default_ec_args(parser):
+    parser.add_argument("--econfig", default=DEFAULT_EC_CONFIG,
+                        help="Elasticluster bcbio configuration file")
+    parser.add_argument("-c", "--cluster", default="bcbio",
+                        help="elasticluster cluster name")
+    return parser
+
+def bcbio_args_to_ec(ec_args, args):
+    """Convert standard bcbio args into elasticluster inputs.
+    """
+    if args.verbose:
+        ec_args.append("-v")
+    if args.econfig:
+        ec_args = [ec_args[0]] + ["--config", args.econfig] + ec_args[1:]
+    return ec_args
+
+def wrap_elasticluster(args):
+    """Wrap elasticluster commands to avoid need to call separately.
+
+    - Uses .bcbio/elasticluster as default configuration location.
+    - Sets NFS client parameters for elasticluster Ansible playbook. Uses async
+      clients which provide better throughput on reads/writes:
+      http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
+    """
+    if "-s" not in args and "--storage" not in args:
+        # clean up old storage directory if starting a new cluster
+        # old pickle files will cause consistent errors when restarting
+        storage_dir = os.path.join(os.path.dirname(DEFAULT_EC_CONFIG), "storage")
+        std_args = [x for x in args if not x.startswith("-")]
+        if len(std_args) >= 3 and std_args[1] == "start":
+            cluster = std_args[2]
+            pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
+            if os.path.exists(pickle_file):
+                os.remove(pickle_file)
+        args = [args[0], "--storage", storage_dir] + args[1:]
+    if "-c" not in args and "--config" not in args:
+        args = [args[0]] + ["--config", DEFAULT_EC_CONFIG] + args[1:]
+    os.environ["nfsoptions"] = "rw,async,nfsvers=3"  # NFS tuning
+    sys.argv = args
+    try:
+        return elasticluster.main.main()
+    except SystemExit as exc:
+        return exc.args[0]
+
+
 def ecluster_config(econfig_file, name=None):
     """Load the Elasticluster configuration."""
     storage_dir = os.path.join(os.path.dirname(econfig_file), "storage")
@@ -54,7 +101,8 @@ def ecluster_config(econfig_file, name=None):
     return config.cluster_conf[name]
 
 
-def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
+def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
+                   ansible_cfg=None):
     """Generalized functionality for running an ansible playbook on
     elasticluster.
 
@@ -70,14 +118,15 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         ansible.utils.VERBOSITY = args.verbose - 1
 
     if hasattr(args, "cluster") and hasattr(args, "econfig"):
-        inventory_path = os.path.join(os.path.dirname(args.econfig),
-                                      "storage",
-                                      "ansible-inventory.%s" % args.cluster)
         cluster_config = ecluster_config(args.econfig, args.cluster)
     else:
         cluster_config = {}
-        inventory_path = os.path.join(os.path.dirname(playbook_path), "standard_hosts.txt")
     extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
+
+    if ansible_cfg:
+        old_ansible_cfg = os.environ.get('ANSIBLE_CONFIG')
+        os.environ['ANSIBLE_CONFIG'] = ansible_cfg
+        reload(ansible.constants)
 
     pb = ansible.playbook.PlayBook(
         playbook=playbook_path,
@@ -89,6 +138,13 @@ def run_ansible_pb(playbook_path, args, calc_extra_vars=None):
         forks=10,
         stats=stats)
     status = pb.run()
+
+    if ansible_cfg:
+        if old_ansible_cfg:
+            os.environ['ANSIBLE_CONFIG'] = old_ansible_cfg
+        else:
+            del os.environ['ANSIBLE_CONFIG']
+        reload(ansible.constants)
 
     unreachable = []
     failures = {}

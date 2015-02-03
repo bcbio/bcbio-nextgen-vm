@@ -1,0 +1,46 @@
+---
+- name: Configure ICEL instances for bcbio
+  sudo: true
+  hosts:
+    - mds
+    - oss
+  vars:
+    collectl_lustre_opts: 'lustre{% if inventory_hostname.startswith("ost") %}OSS,sB{% else %}MDS,s{% endif %}'
+  tasks:
+    - name: Run collectl
+      service: name=collectl enabled=yes state=started
+
+    - name: download latest collectl-lustre LustreCommon.pm
+      get_url:
+        url=https://raw.githubusercontent.com/pcpiela/collectl-lustre/master/LustreCommon.pm
+        dest=/usr/share/collectl/LustreCommon.pm
+
+    - name: download latest collectl-lustre LustreSingleton.pm
+      get_url:
+        url=https://raw.githubusercontent.com/pcpiela/collectl-lustre/master/LustreSingleton.pm
+        dest=/usr/share/collectl/LustreSingleton.pm
+
+    - name: download latest collectl-lustre lustreClient.ph
+      get_url:
+        url=https://raw.githubusercontent.com/pcpiela/collectl-lustre/master/lustreClient.ph
+        dest=/usr/share/collectl/lustreClient.ph
+
+    - name: download latest collectl-lustre lustreMDS.ph
+      get_url:
+        url=https://raw.githubusercontent.com/pcpiela/collectl-lustre/master/lustreMDS.ph
+        dest=/usr/share/collectl/lustreMDS.ph
+
+    - name: download latest collectl-lustre lustreOSS.ph
+      get_url:
+        url=https://raw.githubusercontent.com/pcpiela/collectl-lustre/master/lustreOSS.ph
+        dest=/usr/share/collectl/lustreOSS.ph
+
+    - name: Enable collectl Lustre plugin
+      sudo: true
+      lineinfile:
+        dest: /etc/collectl.conf
+        line: 'DaemonCommands = -f /var/log/collectl -r00:00,7 -m -F60 -s-l+YZ --import {{ collectl_lustre_opts }}'
+        regexp: '^DaemonCommands'
+
+    - name: restart collectl
+      service: name=collectl state=restarted

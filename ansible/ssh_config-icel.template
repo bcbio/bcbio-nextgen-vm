@@ -1,0 +1,19 @@
+Host NATDevice
+	StrictHostKeyChecking no
+	User ec2-user
+	HostName {nat_device_ipaddr}
+	ProxyCommand none
+	IdentityFile {user_key_private}
+	BatchMode yes
+	PasswordAuthentication no
+
+Host *
+	StrictHostKeyChecking no
+	ServerAliveInterval 60
+	TCPKeepAlive yes
+	ProxyCommand ssh -qi {user_key_private} -o 'StrictHostKeyChecking no' -W %h:%p ec2-user@{nat_device_ipaddr}
+	ControlMaster auto
+	ControlPath ~/.ssh/mux-%r@%h:%p
+	ControlPersist 8h
+	User ec2-user
+	IdentityFile {user_key_private}

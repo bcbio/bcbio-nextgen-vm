@@ -1,8 +1,13 @@
 #!/usr/bin/env python -E
 """Run and install bcbio-nextgen, using code and tools isolated in a docker container.
 
-Work in progress script to explore the best ways to integrate docker isolated
-software with external data.
+See the bcbio documentation https://bcbio-nextgen.readthedocs.org for more details
+about running it for analysis.
+
+This script builds the command line options for bcbio_vm.py, which you can see by
+running `bcbio_vm.py -h`. For each specific command, like `install`, we'll have a function to
+prepare the command line arguments (`_install_cmd`) and a function to do the actual
+work (`cmd_install`).
 """
 from __future__ import print_function
 import argparse
@@ -16,7 +21,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import bootstrap, common, iam, icel, vpc, info
+from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -213,21 +218,20 @@ def _graph_cmd(subparsers):
     parser.add_argument("-e", "--econfig",
                         help="Elasticluster bcbio configuration file",
                         default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("-v", "--verbose", action="store_true", default=False,
+                        help="Emit verbose output")
     parser.set_defaults(func=graph.bootstrap)
 
 def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
 
+    cluster.setup_cmd(awssub)
+    ecconfig.setup_cmd(awssub)
+    info.setup_cmd(awssub)
     _aws_iam_cmd(awssub)
-    icel.setup_cmd(awssub)
     _aws_vpc_cmd(awssub)
-    _aws_info_cmd(awssub)
-    bootstrap.setup_cmd(awssub)
-
-def _aws_info_cmd(awsparser):
-    parser = awsparser.add_parser("info", help="Reports status of existing AWS cluster.")
-    parser.set_defaults(func=info.bootstrap)
+    icel.setup_cmd(awssub)
 
 def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
@@ -235,6 +239,9 @@ def _aws_iam_cmd(awsparser):
                         default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
+    parser.add_argument("--nocreate", action="store_true", default=False,
+                        help=("Do not create a new IAM user, just generate a configuration file. "
+                              "Useful for users without full permissions to IAM."))
     parser.set_defaults(func=iam.bootstrap)
 
 def _aws_vpc_cmd(awsparser):
@@ -253,32 +260,6 @@ def _aws_vpc_cmd(awsparser):
                              "in CIDR notation (a.b.c.d/e)")
     parser.set_defaults(func=vpc.bootstrap)
 
-def _run_elasticluster():
-    """Wrap elasticluster commands to avoid need to call separately.
-
-    - Uses .bcbio/elasticluster as default configuration location.
-    - Sets NFS client parameters for elasticluster Ansible playbook. Uses async
-      clients which provide better throughput on reads/writes:
-      http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
-    """
-    from elasticluster.main import main as ecmain
-    sys.argv = sys.argv[1:]  # chop off initial bcbio_vm.py to make it elasticluster ready
-    if "-s" not in sys.argv and "--storage" not in sys.argv:
-        # clean up old storage directory if starting a new cluster
-        # old pickle files will cause consistent errors when restarting
-        storage_dir = os.path.join(os.path.dirname(common.DEFAULT_EC_CONFIG), "storage")
-        std_args = [x for x in sys.argv if not x.startswith("-")]
-        if len(std_args) >= 3 and std_args[1] == "start":
-            cluster = std_args[2]
-            pickle_file = os.path.join(storage_dir, "%s.pickle" % cluster)
-            if os.path.exists(pickle_file):
-                os.remove(pickle_file)
-        sys.argv = [sys.argv[0], "--storage", storage_dir] + sys.argv[1:]
-    if "-c" not in sys.argv and "--config" not in sys.argv:
-        sys.argv = [sys.argv[0]] + ["--config", common.DEFAULT_EC_CONFIG] + sys.argv[1:]
-    os.environ["nfsoptions"] = "rw,async,nfsvers=3"  # NFS tuning
-    sys.exit(ecmain())
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines, with docker.")
@@ -295,7 +276,7 @@ if __name__ == "__main__":
     _elasticluster_cmd(subparsers)
     _graph_cmd(subparsers)
     _run_clusterk_cmd(subparsers)
-    #_server_cmd(subparsers)
+    # _server_cmd(subparsers)
     _runfn_cmd(subparsers)
     devel.setup_cmd(subparsers)
     _config_cmd(subparsers)
@@ -303,7 +284,7 @@ if __name__ == "__main__":
         parser.print_help()
     else:
         if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
-            _run_elasticluster()
+            sys.exit(common.wrap_elasticluster(sys.argv[1:]))
         else:
             args = parser.parse_args()
             args.func(args)

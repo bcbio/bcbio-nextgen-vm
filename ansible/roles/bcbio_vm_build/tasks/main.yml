@@ -5,26 +5,42 @@
     version: master
     dest: "{{ bcbio_dir }}"
 
-- name: Build bcbio docker container
-  shell: "docker build -t chapmanb/bcbio-nextgen-devel-work {{bcbio_dir}} >{{bcbio_dir}}/build.log 2>&1"
+- set_fact: image_name=chapmanb/bcbio-nextgen-devel-work
+  when: docker_buildtype == "full"
+
+- set_fact: image_name=chapmanb/bcbio-nextgen-devel
+  when: docker_buildtype == "code"
+
+- name: Update code in bcbio docker container
+  shell: "bcbio_vm.py devel setup_install"
+  register: bcbio_docker_build
+  args:
+    chdir: "{{ bcbio_dir }}"
+  when: docker_buildtype == "code"
+
+- name: Build full bcbio docker container
+  shell: "docker build -t {{image_name}} {{bcbio_dir}} >{{bcbio_dir}}/build.log 2>&1"
   args:
     executable: /bin/bash
   register: bcbio_docker_build
   ignore_errors: true
   async: 18000
   poll: 30
+  when: docker_buildtype == "full"
 
 - command: "tail -100 {{bcbio_dir}}/build.log"
   register: bcbio_docker_debug
   ignore_errors: true
+  when: docker_buildtype == "full"
 
 - debug: var=bcbio_docker_debug.stdout_lines
+  when: docker_buildtype == "full"
 
 - name: Create gzipped bcbio docker container
   when: bcbio_docker_build|success
   register: bcbio_docker_gzip
   ignore_errors: true
-  shell: "DID=$(docker run -d chapmanb/bcbio-nextgen-devel-work /bin/bash); docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz"
+  shell: "DID=$(docker run -d {{image_name}} /bin/bash) && docker export $DID | gzip -c > bcbio-nextgen-docker-image.gz"
   args:
     chdir: "{{ bcbio_dir }}"
     creates: bcbio-nextgen-docker-image.gz
