@@ -14,7 +14,6 @@ def bootstrap(args):
     new_vpc = _setup_vpc(args)
     _setup_placment_group(args, new_vpc)
 
-
 def _setup_placment_group(args, new_vpc):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
     conn = boto.connect_vpc(
@@ -31,7 +30,6 @@ def _setup_placment_group(args, new_vpc):
         print("Placement group %s created." % pgname)
     else:
         print("Placement group %s already exists. Skipping" % pgname)
-
 
 def _setup_vpc(args):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
@@ -69,8 +67,8 @@ def _setup_vpc(args):
     vpc.add_tag('Name', args.cluster)
 
     sg = conn.create_security_group(
-        '{}_cluster_sg'.format(args.cluster),
-        'bcbio cluster nodes', vpc.id)
+      '{}_cluster_sg'.format(args.cluster),
+      'bcbio cluster nodes', vpc.id)
     sg.authorize(ip_protocol='tcp', from_port=22, to_port=22,
                  cidr_ip='0.0.0.0/0')
     sg.authorize(ip_protocol='-1', src_group=sg)
