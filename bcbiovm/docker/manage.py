@@ -4,6 +4,7 @@ from __future__ import print_function
 import grp
 import operator
 import os
+import platform
 import pwd
 import subprocess
 
@@ -21,10 +22,18 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     user = pwd.getpwuid(os.getuid())
     group = grp.getgrgid(os.getgid())
 
-    cmd = ["docker", "run", "-d", "-i"] + networking + ports + mounts + envs + [image] + \
-          ["/sbin/createsetuser", user.pw_name, str(user.pw_uid), group.gr_name, str(group.gr_gid)] + \
-          ["bcbio_nextgen.py"] + bcbio_nextgen_args
-    logger.info(" ".join(cmd))
+    cmd = ["docker", "run", "-d", "-i"] + networking + ports + mounts + envs + [image]
+    # On Mac OSX boot2docker runs the docker server inside VirtualBox, which maps
+    # the root user there to the external user. In this case we want to run the job
+    # as root so it will have permission to access user directories. Since the Docker server
+    # is sandboxed inside VirtualBox this doesn't have the same security worries as
+    # on a Linux system.
+    # On Linux systems, we run commands as the original calling user so they have the
+    # same permissions inside the Docker container as they do externally.
+    if platform.system() != "Darwin":
+        cmd += ["/sbin/createsetuser", user.pw_name, str(user.pw_uid), group.gr_name, str(group.gr_gid)]
+    cmd += ["bcbio_nextgen.py"] + bcbio_nextgen_args
+    # logger.info(" ".join(cmd))
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     cid = process.communicate()[0].strip()
     try:
