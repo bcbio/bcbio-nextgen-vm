@@ -15,6 +15,7 @@ import elasticluster.main
 DEFAULT_EC_CONFIG = os.path.expanduser(
     os.path.join("~", ".bcbio", "elasticluster", "config"))
 ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
+EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share/elasticluster/providers/ansible-playbooks/library")
 
 
 class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
@@ -123,13 +124,15 @@ def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
         cluster_config = {}
     extra_vars = calc_extra_vars(args, cluster_config) if calc_extra_vars else {}
 
+    os.environ["ANSIBLE_HOST_KEY_CHECKING"] = "False"
     if ansible_cfg:
         old_ansible_cfg = os.environ.get('ANSIBLE_CONFIG')
         os.environ['ANSIBLE_CONFIG'] = ansible_cfg
-        reload(ansible.constants)
+    reload(ansible.constants)
 
     pb = ansible.playbook.PlayBook(
         playbook=playbook_path,
+        module_path=EC_ANSIBLE_LIBRARY,
         extra_vars=extra_vars,
         host_list=inventory_path,
         private_key_file=cluster_config['login']['user_key_private'] if cluster_config else None,

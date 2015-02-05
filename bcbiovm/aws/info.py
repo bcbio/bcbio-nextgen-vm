@@ -34,7 +34,7 @@ def _cluster_info(config):
     """
     compute_c = tz.get_in(["nodes", "compute"], config)
     frontend_c = tz.get_in(["nodes", "frontend"], config)
-    print(" Frontend: %s with %sGb NFS storage" % (frontend_c["flavor"], frontend_c["root_volume_size"]))
+    print(" Frontend: %s with %sGb NFS storage" % (frontend_c["flavor"], frontend_c["encrypted_volume_size"]))
     if int(compute_c.get("compute_nodes", 0)) > 0:
         print(" Cluster: %s %s machines" % (compute_c["compute_nodes"], compute_c["flavor"]))
 
@@ -115,5 +115,3 @@ def _instance_info(cluster_config):
             print("\t{} ({}, {}) at {} in {}".format(
                 inst.tags.get("Name", "(none)"), inst.instance_type,
                 inst.state, ip_address, inst.placement))
-    else:
-        print(" WARNING: no instances.")

@@ -1,0 +1,42 @@
+# Format and mount attached encrypted EBS storage on head node, and
+# make available to compute nodes via NFS.
+# Uses async clients which provide better throughput on reads/writes:
+# http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
+---
+- name: Mount encrypted filesystem on NFS server
+  hosts: frontend*
+  sudo: true
+  tasks:
+    - name: Ensure {{encrypted_mount}} directory exists
+      action: file path={{encrypted_mount}} state=directory
+
+    - name: Format encrypted filesystem
+      filesystem: fstype=ext4 dev={{encrypted_device}}
+      with_items: ansible_mounts
+      when: item.device != '{{encrypted_mount}}'
+      register: do_format
+
+    - name: Mount encrypted filesystem
+      action: mount name={{encrypted_mount}} src={{encrypted_device}} fstype=ext4 opts=noatime,nodiratime state=mounted
+      when: do_format.changed
+
+    - name: Ensure user can write to encrypted directory mount
+      shell: chown -R {{login_user}} {{encrypted_mount}}
+      when: do_format.changed
+
+    - name: Add encrypted filesystem to exports
+      action: nfsexport path={{encrypted_mount}} dest=/etc/exports clients={{nfs_clients}} options=rw,no_root_squash,sync state=exported
+
+
+- name: Mount NFS encrypted filesystem on compute nodes
+  hosts: compute*
+  sudo: true
+  tasks:
+   - name: Ensure {{encrypted_mount}} directory exists
+     action: file path={{encrypted_mount}} state=directory
+
+   - name: configure /etc/fstab on clients for NFS encrypted directory
+     action: mount name={{encrypted_mount}} src={{nfs_server}}:{{encrypted_mount}} fstype=nfs opts="rw,async,nfsvers=3" state=mounted
+
+   - name: Ensure encrypted directory is mounted
+     shell: mount -a

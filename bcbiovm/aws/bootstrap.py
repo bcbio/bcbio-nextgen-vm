@@ -1,6 +1,5 @@
 """Manage installation and updates of bcbio_vm on AWS systems.
 """
-import argparse
 import os
 
 import toolz as tz
@@ -30,6 +29,7 @@ def bootstrap(args):
     """Bootstrap base machines to get bcbio-vm ready to run.
     """
     _bootstrap_baseline(args, common.ANSIBLE_BASE)
+    _bootstrap_nfs(args, common.ANSIBLE_BASE)
     _bootstrap_bcbio(args, common.ANSIBLE_BASE)
 
 def _bootstrap_baseline(args, ansible_base):
@@ -76,3 +76,26 @@ def _bootstrap_bcbio(args, ansible_base):
 
     common.run_ansible_pb(
         inventory_path, playbook_path, args, _extra_vars)
+
+def _bootstrap_nfs(args, ansible_base):
+    """Mount encrypted NFS volume on master node and expose across worker nodes.
+    """
+    cluster = common.ecluster_config(args.econfig).load_cluster(args.cluster)
+    inventory_path = os.path.join(cluster.repository.storage_path,
+                                  'ansible-inventory.{}'.format(args.cluster))
+    nfs_clients = []
+    with open(inventory_path) as in_handle:
+        for line in in_handle:
+            if line.startswith("frontend"):
+                nfs_server = line.split()[0]
+            elif line.startswith("compute"):
+                nfs_clients.append(line.split()[0])
+    playbook_path = os.path.join(ansible_base, "roles", "encrypted_nfs", "tasks", "main.yml")
+    def _extra_vars(args, cluster_config):
+        return {"encrypted_mount": "/encrypted",
+                "nfs_server": nfs_server,
+                "nfs_clients": nfs_clients,
+                "login_user": tz.get_in(["nodes", "frontend", "login"], cluster_config),
+                "encrypted_device": tz.get_in(["nodes", "frontend", "encrypted_volume_device"],
+                                              cluster_config, "/dev/xvdf")}
+    common.run_ansible_pb(inventory_path, playbook_path, args, _extra_vars)

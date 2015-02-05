@@ -116,6 +116,10 @@
         - awscli
       sudo: True
 
+    - name: Ensure NFS directories are mounted
+      shell: mount -a
+      sudo: True
+
     - name: Add bcbio_vm.py to PATH
       file:
         src: "{{anaconda_dir}}/bin/bcbio_vm.py"

@@ -28,7 +28,7 @@ def run_edit(args):
     vals = {"frontend": {k: v for k, v in parser.items("cluster/%s/frontend" % (args.cluster))},
             "cluster": {k: v for k, v in parser.items("cluster/%s" % (args.cluster))}}
     print("Changing configuration for cluster %s\n" % args.cluster)
-    nfs_size = _ask(vals, "Size of NFS mounted filesystem, in Gb", ["frontend", "root_volume_size"])
+    nfs_size = _ask(vals, "Size of encrypted NFS mounted filesystem, in Gb", ["frontend", "encrypted_volume_size"])
     compute_nodes = _ask(vals, "Number of cluster worker nodes (0 starts a single machine instead of a cluster)",
                          ["cluster", "compute_nodes"])
     # single machine
@@ -42,7 +42,7 @@ def run_edit(args):
         frontend_flavor = "c3.large"
         compute_flavor = _ask(vals, "Machine type for compute nodes", ["cluster", "flavor"])
     parser.set("cluster/%s/frontend" % args.cluster, "flavor", frontend_flavor)
-    parser.set("cluster/%s/frontend" % args.cluster, "root_volume_size", nfs_size)
+    parser.set("cluster/%s/frontend" % args.cluster, "encrypted_volume_size", nfs_size)
     parser.set("cluster/%s" % args.cluster, "setup_provider", setup_provider)
     parser.set("cluster/%s" % args.cluster, "compute_nodes", compute_nodes)
     if compute_flavor:
