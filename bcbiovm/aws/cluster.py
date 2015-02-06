@@ -81,7 +81,7 @@ def run_remote(args):
     cluster = config.load_cluster(args.cluster)
 
     frontend = cluster.get_frontend_node()
-    client = frontend.connect(keyfile=cluster.known_hosts_file)
+    client = frontend.connect(known_hosts_file=cluster.known_hosts_file)
 
     cmd = "echo $HOME"
     stdin, stdout, stderr = client.exec_command(cmd)

@@ -24,8 +24,14 @@
       shell: chown -R {{login_user}} {{encrypted_mount}}
       when: do_format.changed
 
+    - name: Check if exportfs installed
+      command: exportfs -h
+      register: has_exportfs
+      ignore_errors: True
+
     - name: Add encrypted filesystem to exports
       action: nfsexport path={{encrypted_mount}} dest=/etc/exports clients={{nfs_clients}} options=rw,no_root_squash,sync state=exported
+      when: has_exportfs|success
 
 
 - name: Mount NFS encrypted filesystem on compute nodes
