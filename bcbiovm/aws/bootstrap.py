@@ -94,7 +94,7 @@ def _bootstrap_nfs(args, ansible_base):
     def _extra_vars(args, cluster_config):
         return {"encrypted_mount": "/encrypted",
                 "nfs_server": nfs_server,
-                "nfs_clients": nfs_clients,
+                "nfs_clients": ",".join(nfs_clients),
                 "login_user": tz.get_in(["nodes", "frontend", "login"], cluster_config),
                 "encrypted_device": tz.get_in(["nodes", "frontend", "encrypted_volume_device"],
                                               cluster_config, "/dev/xvdf")}

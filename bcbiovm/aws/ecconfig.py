@@ -41,8 +41,12 @@ def run_edit(args):
         setup_provider = "ansible-slurm"
         frontend_flavor = "c3.large"
         compute_flavor = _ask(vals, "Machine type for compute nodes", ["cluster", "flavor"])
+    # 30 IOPS/Gb, maximum 4000 IOPS http://aws.amazon.com/ebs/details/
+    iops = min(int(nfs_size) * 30, 4000)
     parser.set("cluster/%s/frontend" % args.cluster, "flavor", frontend_flavor)
     parser.set("cluster/%s/frontend" % args.cluster, "encrypted_volume_size", nfs_size)
+    parser.set("cluster/%s/frontend" % args.cluster, "encrypted_volume_type", "io1")
+    parser.set("cluster/%s/frontend" % args.cluster, "encrypted_volume_iops", iops)
     parser.set("cluster/%s" % args.cluster, "setup_provider", setup_provider)
     parser.set("cluster/%s" % args.cluster, "compute_nodes", compute_nodes)
     if compute_flavor:
