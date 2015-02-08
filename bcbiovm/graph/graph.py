@@ -124,7 +124,7 @@ def add_common_plot_features(plot, steps):
     top_axis = plot.twiny()
     top_axis.set_xlim(*plot.get_xlim())
     top_axis.set_xticks([k for k, v in tick_kvs])
-    top_axis.set_xticklabels([v for k, v in tick_kvs], rotation=45, ha='left')
+    top_axis.set_xticklabels([v for k, v in tick_kvs], rotation=45, ha='left', size=16)
     plot.set_ylim(0)
 
     return plot
@@ -134,12 +134,13 @@ def graph_cpu(df, steps, num_cpus):
     graph = prep_for_graph(
         df, delta_series=['cpu_user', 'cpu_sys', 'cpu_wait'])
 
-    graph['cpu_user'] /= num_cpus
-    graph['cpu_sys'] /= num_cpus
-    graph['cpu_wait'] /= num_cpus
+    graph['cpu_user'] /= 100.0
+    graph['cpu_sys'] /= 100.0
+    graph['cpu_wait'] /= 100.0
 
     plot = graph.plot()
-    plot.set_ylabel('% CPU')
+    plot.set_ylabel('CPU core usage')
+    plot.set_ylim(0, num_cpus)
     add_common_plot_features(plot, steps)
 
     return plot
@@ -184,7 +185,7 @@ def graph_net_pkts(df, steps, ifaces):
     return plot
 
 
-def graph_memory(df, steps):
+def graph_memory(df, steps, total_mem):
     graph = prep_for_graph(
         df, series=['mem_total', 'mem_free', 'mem_buffers', 'mem_cached'])
 
@@ -194,6 +195,7 @@ def graph_memory(df, steps):
 
     plot = graph.plot()
     plot.set_ylabel('gbytes')
+    plot.set_ylim(0, total_mem)
     add_common_plot_features(plot, steps)
 
     return plot
@@ -289,7 +291,7 @@ def generate_graphs(collectl_datadir, bcbio_log_path, outdir, verbose=False):
 
         if verbose:
             print('Generating memory graph for {}...'.format(host))
-        graph = graph_memory(df, steps)
+        graph = graph_memory(df, steps, hardware_info[host]["memory"])
         graph.get_figure().savefig(
             os.path.join(outdir, '{}_memory.png'.format(host)),
             bbox_inches='tight', pad_inches=0.25)

@@ -1,6 +1,7 @@
 import calendar
 import glob
 import gzip
+import math
 import os.path
 import re
 
@@ -47,6 +48,11 @@ def _parse_raw(fp, start_tstamp, end_tstamp):
             matches = re.search(r'\sNumCPUs: (\d+)\s+', line)
             if matches:
                 hardware['num_cpus'] = int(matches.group(1))
+            continue
+        if line.startswith('# Kernel: '):
+            matches = re.search(r'\sMemory: (\d+)\s+kB', line)
+            if matches:
+                hardware['memory'] = int(math.ceil(float(matches.group(1)) / math.pow(1024.0, 2.0)))
             continue
 
         if (tstamp < start_tstamp) or (tstamp > end_tstamp):
