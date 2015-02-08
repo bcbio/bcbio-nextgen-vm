@@ -53,6 +53,7 @@ def setup_cmd(subparsers):
     sparser.set_defaults(func=_run_system_update)
 
     dparser = psub.add_parser("biodata", help="Upload pre-prepared biological data to cache")
+    dparser.add_argument("--prepped", help="Start with an existing set of cached data to output directory.")
     dparser = add_biodata_args(dparser)
     dparser.set_defaults(func=_run_biodata_upload)
 
@@ -178,6 +179,12 @@ def _run_biodata_upload(args):
     args = install.docker_image_arg(args)
     for gbuild in args.genomes:
         print("Preparing %s" % gbuild)
+        if args.prepped:
+            for target in ["samtools"] + args.aligners:
+                genome.download_prepped_genome(gbuild, {}, target, False, args.prepped)
+            print("Downloaded prepped %s to %s. Edit and re-run without --prepped to upload"
+                  % (gbuild, args.prepped))
+            return
         cl = ["upgrade", "--genomes", gbuild]
         for a in args.aligners:
             cl += ["--aligners", a]
