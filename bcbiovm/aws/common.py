@@ -89,11 +89,12 @@ def wrap_elasticluster(args):
     except SystemExit as exc:
         return exc.args[0]
 
+def get_storage_dir(econfig_file):
+    return os.path.join(os.path.dirname(econfig_file), "storage")
 
 def ecluster_config(econfig_file, name=None):
     """Load the Elasticluster configuration."""
-    storage_dir = os.path.join(os.path.dirname(econfig_file), "storage")
-    config = Configurator.fromConfig(econfig_file, storage_dir)
+    config = Configurator.fromConfig(econfig_file, get_storage_dir(econfig_file))
     if not name:
         return config
     if name not in config.cluster_conf:

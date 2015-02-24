@@ -136,7 +136,9 @@ def create(args):
     except elasticluster.exceptions.ClusterNotFound:
         # Assume the default storage path if the cluster doesn't exist,
         # so we can start an ICEL stack in parallel with cluster startup.
-        cluster_storage_path = elasticluster.conf.Configurator.default_storage_dir
+        cluster_storage_path = common.get_storage_dir(args.econfig)
+        if not os.path.exists(cluster_storage_path):
+            os.makedirs(cluster_storage_path)
 
     icel_param = {
         'oss_count': args.oss_count,

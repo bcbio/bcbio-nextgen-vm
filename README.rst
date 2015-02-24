@@ -209,7 +209,7 @@ specific build logs::
 
     bcbio_vm.py aws cluster ssh
     tail ~/build_docker_image.log
-    tail /tmp/bcbio/docker/build/build.log
+    tail /tmp/bcbio-docker-build/build.log
 
 This requires permissions to write to the ``bcbio_nextgen`` bucket.
 
