@@ -84,7 +84,7 @@ def _vpc_info(cluster_config):
 
     expected_vpc_name = cluster_config['cloud']['vpc']
 
-    if any([vpc.tags['Name'] == expected_vpc_name for vpc in vpcs]):
+    if any([vpc.tags.get('Name', "") == expected_vpc_name for vpc in vpcs]):
         print(" OK: VPC '{}' exists.".format(expected_vpc_name))
     else:
         print(" WARNING: VPC '{}' does not exist.".format(expected_vpc_name))
@@ -96,7 +96,7 @@ def _instance_info(cluster_config):
 
     vpcs_by_id = {}
     for vpc in vpcs:
-        vpcs_by_id[vpc.id] = vpc.tags['Name']
+        vpcs_by_id[vpc.id] = vpc.tags.get('Name', "")
 
     conn = boto.ec2.connect_to_region(cluster_config['cloud']['ec2_region'])
 
