@@ -49,6 +49,8 @@ def setup_cmd(awsparser):
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the stack, "
                              "destroying all data stored on it")
+    parser.add_argument("--setup", action="store_true", default=False,
+                        help="Rerun  configuration steps")
     parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
                         help="Quiet output when running Ansible playbooks")
 
@@ -140,26 +142,26 @@ def create(args):
         if not os.path.exists(cluster_storage_path):
             os.makedirs(cluster_storage_path)
 
-    icel_param = {
-        'oss_count': args.oss_count,
-        'ost_vol_size': args.size / args.oss_count / args.lun_count,
-        'ost_vol_count': args.lun_count,
-    }
-    template_url = _upload_icel_cf_template(
-        icel_param, args.bucket, cluster_config['cloud'])
-
-    _create_stack(
-        args.stack_name, template_url, args.network,
-        args.cluster, cluster_config, args.recreate)
-    try:
-        sys.stdout.write('Waiting for stack to launch (this will take '
-                         'a few minutes)')
-        sys.stdout.flush()
-        _wait_for_stack(args.stack_name, 'CREATE_COMPLETE',
-                        15 * 60, cluster_config['cloud'])
-    except Exception as e:
-        sys.stderr.write('{}\n'.format(str(e)))
-        sys.exit(1)
+    if not args.setup:
+        icel_param = {
+            'oss_count': args.oss_count,
+            'ost_vol_size': args.size / args.oss_count / args.lun_count,
+            'ost_vol_count': args.lun_count,
+        }
+        template_url = _upload_icel_cf_template(
+            icel_param, args.bucket, cluster_config['cloud'])
+        _create_stack(
+            args.stack_name, template_url, args.network,
+            args.cluster, cluster_config, args.recreate)
+        try:
+            sys.stdout.write('Waiting for stack to launch (this will take '
+                             'a few minutes)')
+            sys.stdout.flush()
+            _wait_for_stack(args.stack_name, 'CREATE_COMPLETE',
+                            15 * 60, cluster_config['cloud'])
+        except Exception as e:
+            sys.stderr.write('{}\n'.format(str(e)))
+            sys.exit(1)
 
     ssh_config_path = os.path.join(
         cluster_storage_path, 'icel-{}.ssh_config'.format(args.stack_name))
