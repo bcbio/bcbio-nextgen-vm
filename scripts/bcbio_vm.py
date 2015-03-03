@@ -170,6 +170,8 @@ def _template_cmd(subparsers):
     parser = subparsers.add_parser("template",
                                    help="Create a bcbio sample.yaml file from a standard template and inputs")
     parser = template.setup_args(parser)
+    parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
+                        action='store_true', default=False)
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
