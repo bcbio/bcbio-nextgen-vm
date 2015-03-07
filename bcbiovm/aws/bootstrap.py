@@ -4,6 +4,7 @@ import os
 
 import toolz as tz
 
+from bcbio.distributed import ipython
 from bcbiovm.aws import common
 
 # ## Bootstrap a new instance
@@ -71,10 +72,7 @@ def _bootstrap_bcbio(args, ansible_base):
         else:
             machine = tz.get_in(["nodes", "frontend", "flavor"], cluster_config)
         cores, mem = AWS_INFO[machine]
-        # For small number of compute nodes, leave space for runner and controller
-        if compute_nodes < 5 and compute_nodes > 0:
-            cores = cores - 2
-
+        cores = ipython.per_machine_target_cores(cores, compute_nodes)
         return {"target_cores": cores, "target_memory": mem,
                 "upgrade_host_os_and_reboot": not args.no_reboot}
 
