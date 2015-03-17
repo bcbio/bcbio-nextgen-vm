@@ -6,7 +6,7 @@ import sys
 
 import yaml
 
-from bcbio import utils
+from bcbio.distributed import objectstore
 from bcbiovm.aws import config as awsconfig
 
 TOSAVE_DEFAULTS = {"datadir": None}
@@ -27,7 +27,7 @@ def _handle_remotes(args):
     """Retrieve supported remote inputs specified on the command line.
     """
     if hasattr(args, "sample_config"):
-        if args.sample_config.startswith(utils.SUPPORTED_REMOTES):
+        if objectstore.is_remote(args.sample_config):
             if args.sample_config.startswith("s3://"):
                 args.sample_config = awsconfig.load_s3(args.sample_config)
             else:
