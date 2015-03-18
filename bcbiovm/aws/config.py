@@ -40,7 +40,7 @@ def _add_jar_resources(config, sample_config):
     for downstream processing. Searches for them in the specific project folder
     and also a global jar directory for a bucket.
     """
-    base, rest = config.split("//", 1)
+    base, rest = sample_config.split("//", 1)
     for dirname in [os.path.join("%s//%s" % (base, rest.split("/")[0]), "jars"),
                     os.path.join(os.path.dirname(sample_config), "jars")]:
         for fname in objectstore.list(dirname):
@@ -55,5 +55,5 @@ def _add_jar_resources(config, sample_config):
                     config["resources"] = {}
                 if prog not in config["resources"]:
                     config["resources"][prog] = {}
-                config["resources"][prog]["jar"] = fname
+                config["resources"][prog]["jar"] = str(fname)
     return config
