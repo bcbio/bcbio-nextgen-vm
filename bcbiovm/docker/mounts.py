@@ -23,10 +23,6 @@ def update_config(config, fcdir=None):
     """
     config, directories = normalize_config(config, fcdir)
     if config.get("upload", {}).get("dir"):
-        config["upload"]["dir"] = os.path.normpath(os.path.realpath(
-            os.path.join(os.getcwd(), config["upload"]["dir"])))
-        if not os.path.exists(config["upload"]["dir"]):
-            os.makedirs(config["upload"]["dir"])
         directories.append(config["upload"]["dir"])
     mounts = {}
     for i, d in enumerate(sorted(set(directories))):
@@ -51,6 +47,11 @@ def normalize_config(config, fcdir=None):
                                         ignore=ignore)
         absdetails.append(d)
         directories.extend(_get_directories(d, ignore))
+    if config.get("upload", {}).get("dir"):
+        config["upload"]["dir"] = os.path.normpath(os.path.realpath(
+            os.path.join(os.getcwd(), config["upload"]["dir"])))
+        if not os.path.exists(config["upload"]["dir"]):
+            os.makedirs(config["upload"]["dir"])
     config["details"] = absdetails
     return config, directories
 
