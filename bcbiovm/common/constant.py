@@ -6,7 +6,14 @@ import os
 NFS_OPTIONS = "rw,async,nfsvers=3"  # NFS tuning
 
 
+class MISC:
+
+    ATTEMPTS = 3
+    RETRY_INTERVAL = 0.1
+
+
 class PATH:
+
     BCBIO = os.path.join(os.path.expanduser("~"), '.bcbio')
     EC = os.path.join(BCBIO, "elasticluster")
     EC_CONFIG = os.path.join(EC, "config")
