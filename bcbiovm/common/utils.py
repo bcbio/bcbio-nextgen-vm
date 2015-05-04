@@ -3,11 +3,12 @@
 
 import logging
 import os
-import sys
 import subprocess
+import sys
 import time
 
 import elasticluster
+import paramiko
 import six
 import voluptuous
 
@@ -211,6 +212,94 @@ class SSHAgent(object):
         execute(['ssh-agent', '-k'])
 
 
+class SSHClient(object):
+
+    """Wrapper over paramiko SHH client."""
+
+    def __init__(self, host=constant.SSH.HOST, port=constant.SSH.PORT,
+                 user=constant.SSH.USER):
+        """
+        :param host:    the server to connect to
+        :param port:    the server port to connect to
+        :param user:    the username to authenticate as (defaults to
+                        the current local username)
+        """
+        self._host = host
+        self._port = port
+        self._user = user
+        self._ssh_client = paramiko.client.SSHClient()
+
+    @property
+    def ssh_client(self):
+        """SSH Client."""
+        return self._ssh_client
+
+    def connect(self, bastion_host=None, user='ec2-user'):
+        """Connect to an SSH server and authenticate to it.
+        :param bastion_host:  the bastion host to connect to
+
+        Note:
+            In order to connect from the bastion host to another instance
+            without storing the private key on the bastion SSH tunneling
+            will be used. More information can be found on the following
+            link: http://goo.gl/wqkHEk
+        """
+        proxy_command = None
+        if bastion_host:
+            proxy_command = paramiko.ProxyCommand(
+                constant.SSH.PROXY % {"host": self._host,
+                                      "port": self._port,
+                                      "user": user,
+                                      "bastion": bastion_host}
+            )
+
+        try:
+            self._ssh_client.connect(self._host, username=self._user,
+                                     allow_agent=True, sock=proxy_command)
+        except paramiko.SSHException:
+            # FIXME(alexandrucoman): Raise custom exception
+            pass
+
+    def execute(self, command):
+        """Execute a command on the SSH server.
+
+        :param command:   the command to execute
+        """
+        command = " ".join([str(argument) for argument in command])
+        try:
+            _, stdout, _ = self._ssh_client.exec_command(command)
+        except paramiko.SSHException:
+            # FIXME(alexandrucoman): Treat properly this exception
+            return
+
+        return stdout.read()
+
+    def download_file(self, source, destination):
+        """Download the source file to the received destination."""
+        output = self.execute(['cat', source])
+        write_file(destination, output)
+
+    def stat(self, path, stat_format=("%s", "%Y", "%n")):
+        """Return the detailed status of a particular file or a file system.
+
+        :param path:          path to a file or a file system
+        :param stat_format:   a valid format sequences
+        """
+        file_status = []
+        format_string = '"%(format)s"' % {"format": '|'.join(stat_format)}
+        output = self.execute(['stat', '--format', format_string, path])
+        if not output:
+            # FIXME(alexandrucoman): Treat properly this branch
+            return None
+
+        for line in output.splitlines():
+            if '|' not in line:
+                continue
+            file_status.append(output.split('|'))
+
+        return file_status
+
+
 def get_logger(name=constant.LOG.NAME, format_string=None):
     """Obtain a new logger object.
 
@@ -239,6 +328,34 @@ def get_logger(name=constant.LOG.NAME, format_string=None):
 
     logger.setLevel(constant.LOG.LEVEL)
     return logger
+
+
+def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
+               open_mode="wb"):
+    """Writes a file with the given content.
+
+    Also the function sets the file mode as specified.
+
+    :param path:        The absolute path to the location on the filesystem
+                        wherethe file should be written.
+    :param content:     The content that should be placed in the file.
+    :param permissions: The octal permissions set that should be given for
+                        this file.
+    :param open_mode:   The open mode used when opening the file.
+    """
+    dirname = os.path.dirname(path)
+    if not os.path.isdir(dirname):
+        try:
+            os.makedirs(dirname)
+        except OSError:
+            return False
+
+    with open(path, open_mode) as file_handle:
+        file_handle.write(content)
+        file_handle.flush()
+
+    os.chmod(path, permissions)
+    return True
 
 
 def execute(*command, **kwargs):

@@ -4,6 +4,7 @@ Shared constants across the bcbio-nextgen-vm project.
 import os
 
 NFS_OPTIONS = "rw,async,nfsvers=3"  # NFS tuning
+DEFAULT_PERMISSIONS = 0o644
 
 
 class MISC:
@@ -19,6 +20,15 @@ class PATH:
     EC_CONFIG = os.path.join(EC, "config")
     EC_STORAGE = os.path.join(EC, "storage")
     PICKLE_FILE = os.path.join(EC_STORAGE, "%(cluster)s.pickle")
+
+
+class SSH:
+
+    HOST = '127.0.0.1'
+    PORT = 22
+    USER = 'root'
+    PROXY = ('ssh -o VisualHostKey=no -W %(host)s:%(port)d '
+             '%(user)s@%(bastion)s')
 
 
 class LOG:
