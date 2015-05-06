@@ -95,7 +95,6 @@ class BaseCloudProvider(object):
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param rawdir:    directory where to copy raw collectl data files.
-        :param log:       local path to bcbio log file written by the run
         :param verbose:   if is `False` the output will be suppressed
 
         Notes:
@@ -108,12 +107,25 @@ class BaseCloudProvider(object):
             from bcbio runs. The statistics will contain information regarding
             CPU, memory, network, disk I/O usage.
         """
-        # TODO(alexandrucoman): Add a tool in common.utils in order to ease
-        #                       getting those files.
+        pass
 
-        # Note(alexandrucoman): Those files will be parsed and the information
-        #                       will be used to generate a graph with resource
-        #                       usage.
+    @abc.abstractmethod
+    def resource_usage(self, bcbio_log, rawdir, verbose):
+        """Generate system statistics from bcbio runs.
+
+        Parse the files obtained by the :meth colect_data: and put the
+        information in :class pandas.DataFrame:.
+
+        :param bcbio_log:   local path to bcbio log file written by the run
+        :param rawdir:      directory to put raw data files
+        :param verbose:     if is `False` the output will be suppressed
+
+        :return: a tuple with two dictionaries, the first contains
+                 an instance of :pandas.DataFrame: for each host and
+                 the second one contains information regarding the
+                 hardware configuration
+        :type return: tuple
+        """
         pass
 
     def flavors(self, machine=None):

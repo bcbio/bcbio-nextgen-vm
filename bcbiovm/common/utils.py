@@ -1,6 +1,7 @@
 """Utilities and helper functions."""
 # pylint: disable=too-many-arguments
 
+import collections
 import logging
 import os
 import subprocess
@@ -37,6 +38,11 @@ class ElastiCluster(object):
 
         self._load_config()
 
+    @property
+    def config(self):
+        """Instance of :class Configurator:."""
+        return self._config
+
     def _load_config(self):
         """Load the Elasticluster configuration."""
         # TODO(alexandrucoman): Change `storage` with a constant
@@ -59,6 +65,14 @@ class ElastiCluster(object):
 
         # FIXME(alexandrucoman): Raise InvalidCluster exception
         return None
+
+    def get_cluster(self, cluster_name):
+        """Loads a cluster from the cluster repository.
+
+        :param cluster_name: name of the cluster
+        :return: :class elasticluster.cluster.cluster: instance
+        """
+        return self._config.load_cluster(cluster_name)
 
     @classmethod
     def _add_common_options(cls, command, config=None, verbose=None):
@@ -230,7 +244,7 @@ class SSHClient(object):
         self._ssh_client = paramiko.client.SSHClient()
 
     @property
-    def ssh_client(self):
+    def client(self):
         """SSH Client."""
         return self._ssh_client
 
@@ -260,6 +274,10 @@ class SSHClient(object):
             # FIXME(alexandrucoman): Raise custom exception
             pass
 
+    def close(self):
+        """Close this SSHClient and its underlying Transport."""
+        self._ssh_client.close()
+
     def execute(self, command):
         """Execute a command on the SSH server.
 
@@ -274,10 +292,19 @@ class SSHClient(object):
 
         return stdout.read()
 
-    def download_file(self, source, destination):
-        """Download the source file to the received destination."""
+    def download_file(self, source, destination, **kwargs):
+        """Download the source file to the received destination.
+
+        :param source:      the path of the file which should be downloaded
+        :param destination: the path where the file should be written
+        :param permissions: The octal permissions set that should be given for
+                            this file.
+        :param open_mode:   The open mode used when opening the file.
+        :param utime:       2-tuple of numbers, of the form (atime, mtime)
+                            which is used to set the access and modified times
+        """
         output = self.execute(['cat', source])
-        write_file(destination, output)
+        write_file(destination, output, *kwargs)
 
     def stat(self, path, stat_format=("%s", "%Y", "%n")):
         """Return the detailed status of a particular file or a file system.
@@ -298,6 +325,37 @@ class SSHClient(object):
             file_status.append(output.split('|'))
 
         return file_status
+
+    def disk_space(self, path, ftype=None):
+        """Return the amount of disk space available on the file system
+        containing the received file.
+
+        :param ftype:   limit listing to file systems of the received type.
+        :path path:     the path of the file
+
+        :return:        a namedtuple which contains the following fields:
+                        filesystem, total, used, available, percentage and
+                        mount_point
+        """
+        output = []
+        df_output = collections.namedtuple(
+            "DiskSpace", ["filesystem", "total", "used", "available",
+                          "percentage", "mount_point"])
+        command = ["df"]
+        if ftype:
+            command.extend(["-t", ftype])
+        command.extend(path)
+
+        output = self.execute(command)
+        if not output:
+            # FIXME(alexandrucoman): Treat properly this branch
+            return None
+
+        # Ignore the first row from df output (the table header)
+        for file_system in output.splitlines()[:1]:
+            output.append(df_output(file_system.split()))
+
+        return output
 
 
 def get_logger(name=constant.LOG.NAME, format_string=None):
@@ -331,7 +389,7 @@ def get_logger(name=constant.LOG.NAME, format_string=None):
 
 
 def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
-               open_mode="wb"):
+               open_mode="wb", utime=None):
     """Writes a file with the given content.
 
     Also the function sets the file mode as specified.
@@ -342,6 +400,8 @@ def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
     :param permissions: The octal permissions set that should be given for
                         this file.
     :param open_mode:   The open mode used when opening the file.
+    :param utime:       2-tuple of numbers, of the form (atime, mtime) which
+                        is used to set the access and modified times
     """
     dirname = os.path.dirname(path)
     if not os.path.isdir(dirname):
@@ -355,6 +415,7 @@ def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
         file_handle.flush()
 
     os.chmod(path, permissions)
+    os.utime(utime)
     return True
 
 
