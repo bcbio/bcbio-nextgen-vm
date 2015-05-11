@@ -1,6 +1,7 @@
 """AWS Cloud Provider for bcbiovm."""
 
 from bcbiovm.provider import base
+from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources
 
 
@@ -49,3 +50,20 @@ class AWSProvider(base.BaseCloudProvider):
         """
         parser = resources.Parser(bcbio_log, rawdir, verbose)
         return parser.run()
+
+    def bootstrap(self, config, cluster, reboot, verbose):
+        """Install or update the bcbio-nextgen code and the tools
+        with the latest version available.
+
+        :param config:    elasticluster config file
+        :param cluster:   cluster name
+        :param reboot:    whether to upgrade and restart the host OS
+        :param verbose:   increase verbosity
+        """
+        install = aws_bootstrap.Bootstrap(provider=self, config=config,
+                                          cluster_name=cluster, reboot=reboot,
+                                          verbose=verbose)
+        for playbook in (install.docker, install.gof3r, install.nfs,
+                         install.bcbio):
+            # TODO(alexandrucoman): Check the results
+            playbook()

@@ -250,18 +250,22 @@ class AnsiblePlaybook(object):
     TEMP_CONFIG = 'ANSIBLE_TEMP_CONFIG'
     HOST_KEY_CHECKING = 'ANSIBLE_HOST_KEY_CHECKING'
 
-    def __init__(self, inventory_path, playbook_path, args, extra_vars=None,
+    def __init__(self, inventory_path, playbook_path, config=None,
+                 cluster=None, verbose=True, extra_vars=None,
                  ansible_cfg=None):
         """
         :param inventory_path:  the path to the inventory hosts file
         :param playbook_path:   the path to a playbook file
-        :param args:            arguments received from the client
+        :param config:          elasticluster config file
+        :param cluster_name:    cluster name
+        :param verbose:         increase verbosity
         :param extra_args:      is an option function that should return
                                 extra variables to pass to ansible given
                                 the arguments and cluster configuration
         """
         self._host_list = inventory_path
         self._playbook = playbook_path
+        self._verbose = verbose
         self._ansible_cfg = ansible_cfg
 
         self._callbacks = None
@@ -269,29 +273,29 @@ class AnsiblePlaybook(object):
         self._stats = None
         self._runner_cb = None
 
-        if hasattr(args, "econfig") and hasattr(args, "cluster"):
-            ecluster = ElastiCluster(args.econfig)
-            self._cluster = ecluster.get_config(args.cluster)
+        if config and cluster:
+            ecluster = ElastiCluster(config)
+            self._cluster = ecluster.get_config(cluster)
 
-        self._extra_vars = self._get_extra_vars(args, extra_vars)
-        self._setup(args)
+        self._extra_vars = self._get_extra_vars(extra_vars)
+        self._setup()
 
-    def _setup(self, args):
+    def _setup(self):
         """Setup all the requirements for the playbook.
 
         :param args:        arguments received from the client
         """
         self._stats = ansible.callbacks.AggregateStats()
-        if args.verbose:
+        if self._verbose:
             self._callbacks = ansible.callbacks.PlaybookCallbacks()
             self._runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(
                 self._stats)
-            ansible.utils.VERBOSITY = args.verbose - 1
+            ansible.utils.VERBOSITY = self._verbose - 1
         else:
             self._callbacks = SilentPlaybook()
             self._runner_cb = ansible.callbacks.DefaultRunnerCallbacks()
 
-    def _get_extra_vars(self, args, extra_vars):
+    def _get_extra_vars(self, extra_vars):
         """Return variables which need to be injected into playbook
         if they exist.
 
@@ -301,7 +305,7 @@ class AnsiblePlaybook(object):
                             the arguments and cluster configuration
         """
         if extra_vars and self._cluster:
-            return extra_vars(args, self._cluster)
+            return extra_vars(self._cluster)
 
         return {}
 

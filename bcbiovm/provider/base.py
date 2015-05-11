@@ -128,6 +128,17 @@ class BaseCloudProvider(object):
         """
         pass
 
+    @abc.abstractmethod
+    def bootstrap(self, config, cluster, verbose):
+        """Install or update the the bcbio code and the tools with
+        the latest version available.
+
+        :param config:    elasticluster config file
+        :param cluster:   cluster name
+        :param verbose:   increase verbosity
+        """
+        pass
+
     def flavors(self, machine=None):
         if not machine:
             return self._flavor.keys()

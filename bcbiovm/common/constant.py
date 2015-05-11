@@ -22,6 +22,7 @@ class MISC:
 
 class PATH:
 
+    ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
     BCBIO = os.path.join(os.path.expanduser("~"), '.bcbio')
     EC = os.path.join(BCBIO, "elasticluster")
     EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share", "elasticluster",
@@ -30,6 +31,18 @@ class PATH:
     EC_CONFIG = os.path.join(EC, "config")
     EC_STORAGE = os.path.join(EC, "storage")
     PICKLE_FILE = os.path.join(EC_STORAGE, "%(cluster)s.pickle")
+
+
+class PLAYBOOK:
+
+    BCBIO = os.path.join(PATH.ANSIBLE_BASE, "roles", "bcbio_bootstrap",
+                         "tasks", "main.yml")
+    DOCKER = os.path.join(PATH.ANSIBLE_BASE, "roles", "docker", "tasks",
+                          "main.yml")
+    GOF3R = os.path.join(PATH.ANSIBLE_BASE, "roles", "gof3r", "tasks",
+                         "main.yml")
+    NFS = os.path.join(PATH.ANSIBLE_BASE, "roles", "encrypted_nfs", "tasks",
+                       "main.yml")
 
 
 class SSH:
