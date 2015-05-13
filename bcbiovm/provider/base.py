@@ -23,15 +23,15 @@ class BaseCloudProvider(object):
         Example:
         ::
             return {
-                "m3.large": Flavor(name="m3.large", cpus=2, memory=3500),
-                "m3.xlarge": Flavor(name="m3.xlarge", cpus=4, memory=3500),
-                "m3.2xlarge": Flavor(name="m3.2xlarge", cpus=8, memory=3500),
+                "m3.large": Flavor(cpus=2, memory=3500),
+                "m3.xlarge": Flavor(cpus=4, memory=3500),
+                "m3.2xlarge": Flavor(cpus=8, memory=3500),
             }
         """
         pass
 
     @abc.abstractmethod
-    def information(self, config, cluster):
+    def information(self, config, cluster, verbose=False):
         """
         Get all the information available for this provider.
 
@@ -40,51 +40,10 @@ class BaseCloudProvider(object):
 
         :config:    elasticluster config file
         :cluster:   cluster name
+        :param verbose:   increase verbosity
 
-        The proposed structure for the returned information is the following:
-        ::
-            {
-                # General information regarding the cloud provider
-                "meta": {
-                    "available_clusters": [],
-                    # ...
-                }
-
-                # Information regarding the received cluster
-                "cluster": {
-                    "frontend_node": {
-                        "count": 1,
-                        "flavor": "m3.2xlarge",
-                    },
-                    "compute_node": {
-                        "count": 1024,
-                        "flavor": "m3.2xlarge",
-                    },
-                    # List of security groups
-                    "security_group": []
-                    # Private network / Virtual Private Cloud information
-                    "private_network": {
-                        # ...
-                    }
-                    # Information regarding instance
-                    "instances" : {
-                        # instance_name: {
-                        #     "instance_state": instance_state
-                        #     "ip_address": ip_address,
-                        #     [...]
-                        # }
-                    }
-                }
-
-            }
+        :return:    an instance of :class bcbio.common.objects.Report:
         """
-        # NOTE(alexandrucoman): In the current implementation of
-        #                       bcbio-nextgen-vm all the information is
-        #                       directly printed.
-
-        # TODO(alexandrucoman): Add a custom container for the information.
-        # TODO(alexandrucoman): Add a formatter for the container in order
-        #                       to display the information
         pass
 
     @abc.abstractmethod
@@ -129,12 +88,13 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def bootstrap(self, config, cluster, verbose):
+    def bootstrap(self, config, cluster, reboot, verbose):
         """Install or update the the bcbio code and the tools with
         the latest version available.
 
         :param config:    elasticluster config file
         :param cluster:   cluster name
+        :param reboot:    whether to upgrade and restart the host OS
         :param verbose:   increase verbosity
         """
         pass

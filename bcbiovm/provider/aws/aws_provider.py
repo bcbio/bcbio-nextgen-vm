@@ -1,14 +1,60 @@
 """AWS Cloud Provider for bcbiovm."""
 
+from bcbiovm.common import objects
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
-from bcbiovm.provider.aws import resources
+from bcbiovm.provider.aws import resources as aws_resources
 
 
 class AWSProvider(base.BaseCloudProvider):
 
+    """AWS Provider for bcbiovm."""
+
     def __init__(self):
         super(AWSProvider, self).__init__()
+
+    def _set_flavors(self):
+        """Returns a dictionary with all the flavors available for the current
+        cloud provider.
+        """
+        return {
+            "m3.large": objects.Flavor(cpus=2, memory=3500),
+            "m3.xlarge": objects.Flavor(cpus=4, memory=3500),
+            "m3.2xlarge": objects.Flavor(cpus=8, memory=3500),
+            "c3.large": objects.Flavor(cpus=2, memory=1750),
+            "c3.xlarge": objects.Flavor(cpus=4, memory=1750),
+            "c3.2xlarge": objects.Flavor(cpus=8, memory=1750),
+            "c3.4xlarge": objects.Flavor(cpus=16, memory=1750),
+            "c3.8xlarge": objects.Flavor(cpus=32, memory=1750),
+            "c4.xlarge": objects.Flavor(cpus=4, memory=1750),
+            "c4.2xlarge": objects.Flavor(cpus=8, memory=1750),
+            "c4.4xlarge": objects.Flavor(cpus=16, memory=1750),
+            "c4.8xlarge": objects.Flavor(cpus=36, memory=1600),
+            "r3.large": objects.Flavor(cpus=2, memory=7000),
+            "r3.xlarge": objects.Flavor(cpus=4, memory=7000),
+            "r3.2xlarge": objects.Flavor(cpus=8, memory=7000),
+            "r3.4xlarge": objects.Flavor(cpus=16, memory=7000),
+            "r3.8xlarge": objects.Flavor(cpus=32, memory=7000),
+        }
+
+    def information(self, config, cluster, verbose=False):
+        """
+        Get all the information available for this provider.
+
+        The returned information will be used to create a status report
+        regarding the bcbio instances.
+
+        :config:          elasticluster config file
+        :cluster:         cluster name
+        :param verbose:   increase verbosity
+        """
+        report = aws_resources.Report(config, cluster, verbose)
+        report.add_cluster_info()
+        report.add_iam_info()
+        report.add_security_groups_info()
+        report.add_vpc_info()
+        report.add_instance_info()
+        return report.digest()
 
     def colect_data(self, config, cluster, rawdir, verbose):
         """Collect from the each instances the files which contains
@@ -29,7 +75,7 @@ class AWSProvider(base.BaseCloudProvider):
             from bcbio runs. The statistics will contain information regarding
             CPU, memory, network, disk I/O usage.
         """
-        collector = resources.Collector(config, cluster, rawdir, verbose)
+        collector = aws_resources.Collector(config, cluster, rawdir, verbose)
         collector.run()
 
     def resource_usage(self, bcbio_log, rawdir, verbose):
@@ -48,7 +94,7 @@ class AWSProvider(base.BaseCloudProvider):
                  hardware configuration
         :type return: tuple
         """
-        parser = resources.Parser(bcbio_log, rawdir, verbose)
+        parser = aws_resources.Parser(bcbio_log, rawdir, verbose)
         return parser.run()
 
     def bootstrap(self, config, cluster, reboot, verbose):

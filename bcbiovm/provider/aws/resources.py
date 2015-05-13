@@ -6,12 +6,17 @@ import collections
 import os
 import re
 
+from bcbio.graph import graph
+import boto.ec2
+import boto.iam
+import boto.vpc
 import pandas
 import paramiko
-from bcbio.graph import graph
+import toolz
 
 from bcbiovm.aws import icel
 from bcbiovm.common import utils
+from bcbiovm.common import objects
 
 LOG = utils.get_logger(__name__)
 
@@ -247,3 +252,158 @@ class Parser(object):
                 data_frames[host] = pandas.concat([data_frames[host], data])
 
         return (data_frames, hardware_info)
+
+
+class Report(object):
+
+    """
+    Collect information from the cluster and create a container
+    with them.
+    """
+
+    def __init__(self, config, cluster, verbose=True):
+        """
+        :param config:    elasticluster config file
+        :param cluster:   cluster name
+        :param verbose:   increase verbosity
+        """
+        self._information = objects.Report()
+        self._elasticluster = utils.ElastiCluster(config)
+        self._cluster_config = self._elasticluster.get_config(cluster)
+
+    def add_cluster_info(self):
+        """Add information regarding the cluster."""
+        frontend_c = toolz.get_in(["nodes", "frontend"], self._cluster_config)
+        compute_c = toolz.get_in(["nodes", "compute"], self._cluster_config)
+
+        cluster = self._information.add_section(
+            name="cluster", title="Cluster configuration",
+            description="Provide high level details about the setup of the "
+                        "current cluster.",
+            fields=[{"name": "name"}, {"name": "value"}])
+        cluster.add_item([
+            "Frontend node",
+            {"flavor": frontend_c["flavor"],
+             "NFS storage": frontend_c["encrypted_volume_size"]}
+        ])
+        cluster.add_item([
+            "Compute nodes",
+            {"count": compute_c["compute_nodes"],
+             "flavor": compute_c["flavor"]}
+        ])
+
+    def add_iam_info(self):
+        """Add information regarding AWS Identity and Access Management."""
+        expect_iam_username = "bcbio"
+        iam = self._information.add_section(
+            name="iam", title="AWS Identity and Access Management")
+        iam.add_field("iam", "IAM Users")
+
+        iam_connection = boto.iam.connection.IAMConnection()
+        all_users = iam_connection.get_all_users()
+        users = toolz.get_in([u"list_users_response", u"list_users_result",
+                              "users"], all_users, None)
+        if not users:
+            LOG.warning("No Identity and Access Management(IAM) users exists.")
+            return
+
+        if expect_iam_username in users:
+            LOG.info("Expected IAM user %(user)s exists",
+                     {"user": expect_iam_username})
+        else:
+            LOG.warning("IAM user %(user)s does not exist.",
+                        {"user": expect_iam_username})
+
+        iam.add_items(users)
+
+    def add_security_groups_info(self):
+        """Add information regarding security groups."""
+        sg_section = self._information.add_section(
+            name="sg", title="Security groups")
+        sg_section.add_field("sg", "Security Group")
+
+        region = toolz.get_in(["cloud", "ec2_region"], self._cluster_config)
+        expected_sg_name = toolz.get_in(["cluster", "security_group"],
+                                        self._cluster_config)
+
+        conn = boto.ec2.connect_to_region(region)
+        security_groups = conn.get_all_security_groups()
+
+        if not security_groups:
+            LOG.warning("No security groups defined.")
+            return
+
+        if expected_sg_name in security_groups:
+            LOG.info("Expected security group %(sg_name)s exists.",
+                     {"sg_name": expected_sg_name})
+        else:
+            LOG.warning("Security group %(sg_name)s does not exist.",
+                        {"sg_name": expected_sg_name})
+
+        sg_section.add_items(security_groups)
+
+    def add_vpc_info(self):
+        """Add information regarding Amazon Virtual Private Cloud."""
+        vpc_section = self._information.add_section(
+            name="vpc", title="Amazon Virtual Private Cloud.")
+        vpc_section.add_field("vpc", "Virtual Private Cloud")
+
+        expected_vpc_name = toolz.get_in(["cloud", "vpc"],
+                                         self._cluster_config)
+        vpc_connection = boto.vpc.VPCConnection()
+        all_vpcs = vpc_connection.get_all_vpcs()
+        if not all_vpcs:
+            LOG.warning("No VPCs exists.")
+            return
+
+        vpc_names = [vpc.tags.get('Name', "") for vpc in all_vpcs]
+        if expected_vpc_name in vpc_names:
+            LOG.info("VPC %(vpc_name)s exists.",
+                     {"vpc_name": expected_vpc_name})
+        else:
+            LOG.warning("VPC %(vpc_name)s does not exist.",
+                        {"vpc_name": expected_vpc_name})
+        vpc_section.add_items(vpc_names)
+
+    def add_instance_info(self):
+        """Add information regarding each instance from cluster."""
+        instance_section = self._information.add_section(
+            name="instance", title="Instances from current cluster"
+        )
+        instance_section.add_field("name", "Name")
+        instance_section.add_field("type", "Type")
+        instance_section.add_field("state", "State")
+        instance_section.add_field("ip", "IP Address")
+        instance_section.add_field("placement", "Placement")
+
+        vpcs_by_id = {}
+        region = toolz.get_in(["cloud", "ec2_region"], self._cluster_config)
+        vpc_name = toolz.get_in(["cloud", "vpc"], self._cluster_config)
+
+        vpc_connection = boto.vpc.VPCConnection()
+        ec2_connection = boto.ec2.connect_to_region(region)
+
+        all_vpcs = vpc_connection.get_all_vpcs()
+        reservations = ec2_connection.get_all_reservations()
+
+        for vpc in all_vpcs:
+            vpcs_by_id[vpc.id] = vpc.tags.get('Name', "")
+
+        for res in reservations:
+            for instance in res.instances:
+                if vpcs_by_id.get(instance.vpc_id) != vpc_name:
+                    continue
+
+                ip_address = instance.ip_address
+                if not instance.ip_address:
+                    ip_address = instance.private_ip_address
+
+                instance_section.add_item([
+                    instance.tags.get("Name", None),
+                    instance.instance_type,
+                    instance.state, ip_address, instance.placement
+                ])
+
+    def digest(self):
+        """Return the report."""
+        return self._information
