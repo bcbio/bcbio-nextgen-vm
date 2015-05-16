@@ -4,12 +4,20 @@ Provider base-classes:
     types that support that contract.
 """
 import abc
+import os
 
+import paramiko
 import six
+
+from bcbiovm.common import cluster as clusterops
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseCloudProvider(object):
+
+    _CHMOD = "chmod %(mode)s %(file)s"
+    _HOME_DIR = "echo $HOME"
+    _SCREEN = "screen -d -m -S %(name)s bash -c '%(script)s &> %(output)s'"
 
     def __init__(self, name=None):
         self._name = name or self.__class__.__name__
@@ -31,7 +39,7 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def information(self, config, cluster, verbose=False):
+    def information(self, cluster, config, verbose=False):
         """
         Get all the information available for this provider.
 
@@ -47,7 +55,7 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def colect_data(self, config, cluster, rawdir, verbose):
+    def colect_data(self, cluster, config, rawdir, verbose):
         """Collect from the each instances the files which contains
         information regarding resources consumption.
 
@@ -88,7 +96,7 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def bootstrap(self, config, cluster, reboot, verbose):
+    def bootstrap(self, cluster, config, reboot, verbose):
         """Install or update the the bcbio code and the tools with
         the latest version available.
 
@@ -104,3 +112,96 @@ class BaseCloudProvider(object):
             return self._flavor.keys()
         else:
             return self._flavor.get(machine)
+
+    def start(self, cluster, config=None, no_setup=False, verbose=False):
+        """Create a cluster using the supplied configuration.
+
+        :param cluster:   Type of cluster. It refers to a
+                          configuration stanza [cluster/<name>].
+        :param config:    Elasticluster config file
+        :param no_setup:  Only start the cluster, do not configure it.
+        :param verbose:   Increase verbosity.
+        """
+        return clusterops.ElastiCluster.start(cluster, config, no_setup,
+                                              verbose)
+
+    def stop(self, cluster, config=None, force=False, use_default=False,
+             verbose=False):
+        """Stop a cluster and all associated VM instances.
+
+        :param cluster:     Type of cluster. It refers to a
+                            configuration stanza [cluster/<name>].
+        :param config:      Elasticluster config file
+        :param force:       Remove the cluster even if not all the nodes
+                            have been terminated properly.
+        :param use_default: Assume `yes` to all queries and do not prompt.
+        :param verbose:     Increase verbosity.
+        """
+        return clusterops.ElastiCluster(cluster, config, force, use_default,
+                                        verbose)
+
+    def setup(self, cluster, config=None, verbose=False):
+        """Configure the cluster.
+
+        :param cluster:     Type of cluster. It refers to a
+                            configuration stanza [cluster/<name>].
+        :param config:      Elasticluster config file
+        :param verbose:     Increase verbosity.
+        """
+        return clusterops.ElastiCluster(cluster, config, verbose)
+
+    def ssh(self, cluster, config=None, ssh_args=None, verbose=False):
+        """Connect to the frontend of the cluster using the `ssh` command.
+
+        :param cluster:     Type of cluster. It refers to a
+                            configuration stanza [cluster/<name>].
+        :param config:      Elasticluster config file
+        :ssh_args:          SSH command.
+        :param verbose:     Increase verbosity.
+
+        Note:
+            If the ssh_args are provided the command will be executed on
+            the remote machine instead of opening an interactive shell.
+        """
+        return clusterops.ElastiCluster(cluster, config, ssh_args, verbose)
+
+    def _execute_remote(self, connection, command):
+        """Execute command on frontend node."""
+        try:
+            _, stdout, stderr = connection.exec_command(command)
+        except paramiko.SSHException as exc:
+            return (None, exc)
+
+        return (stdout.read(), stderr.read())
+
+    def run_script(self, cluster, config, script):
+        """Run a script on the frontend node inside a screen session.
+
+        :param cluster:     Type of cluster. It refers to a
+                            configuration stanza [cluster/<name>].
+        :param config:      Elasticluster config file
+        :param script:      The path of the script.
+        """
+        ecluster = clusterops.ElastiCluster(config)
+        cluster = ecluster.get_cluster(cluster)
+
+        frontend = cluster.get_frontend_node()
+        client = frontend.connect(known_hosts_file=cluster.known_hosts_file)
+
+        home_dir, _ = self._execute_remote(client, self._HOME_DIR)
+        script_name = os.path.basename(script)
+        remote_file = os.path.join(home_dir.strip(), script_name)
+        ouput_file = ("%(name)s.log" %
+                      {"name": os.path.splitext(remote_file)[0]})
+        screen_name = os.path.splitext(script_name)[0]
+
+        sftp = client.open_sftp()
+        sftp.put(script, remote_file)
+        sftp.close()
+
+        self._execute_remote(self._CHMOD %
+                             {"mode": "a+x", "file": remote_file})
+        self._execute_remote(self._SCREEN %
+                             {"name": screen_name, "script": remote_file,
+                              "output": ouput_file})
+        client.close()

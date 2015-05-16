@@ -6,6 +6,7 @@ import sys
 
 NFS_OPTIONS = "rw,async,nfsvers=3"  # NFS tuning
 DEFAULT_PERMISSIONS = 0o644
+DEFAULT_PROVIDER = 'aws'
 
 
 class ANSIBLE:

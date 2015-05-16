@@ -1,5 +1,6 @@
 """Cloud provider factory."""
-from bcbio.provider.aws import aws_provider
+from bcbiovm.common import constant
+from bcbiovm.provider.aws import aws_provider
 
 __all__ = ['get']
 CLOUD_PROVIDER = {
@@ -7,7 +8,7 @@ CLOUD_PROVIDER = {
 }
 
 
-def get(cloud_provider):
+def get(cloud_provider=constant.DEFAULT_PROVIDER):
     """Return the required cloud provider."""
     # TODO(alexandrucoman): Check if received name is valid
     return CLOUD_PROVIDER.get(cloud_provider)
