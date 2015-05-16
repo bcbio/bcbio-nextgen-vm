@@ -10,35 +10,56 @@ import six
 
 from bcbiovm.common import exception
 
-__all__ = ['BaseCommand', 'BaseCommand']
+__all__ = ['BaseCommand', 'BaseParser']
 
 
-SubCommand = collections.namedtuple("SubCommand",
-                                    ["name", "group", "instance"])
+SubCommand = collections.namedtuple("SubCommand", ["name", "instance"])
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseCommand(object):
 
-    """Abstract base class for command."""
+    """Abstract base class for command.
 
-    groups = None
+    :ivar: sub_commands: A list which contains (command, parser_name) tuples
+
+    ::
+    Example:
+    ::
+        class Example(BaseCommand):
+
+            sub_command = [
+                (ExampleOne, "main_parser"),
+                (ExampleTwo, "main_parser),
+                (ExampleThree, "second_parser")
+            ]
+
+            # ...
+    """
+
     sub_commands = None
 
-    def __init__(self, parrent, name=None):
+    def __init__(self, parent, parser, name=None):
+        """
+        :param parent:  the parent of the current instance
+        :param parser:  the parser asigned to this command
+        :param name:    the name of the command
+        """
         self._name = name or self.__class__.__name__.lower()
-        self._parent = parrent
-        self._groups = {}
+        self._parent = parent
+        self._main_parser = parser
+
+        self._parsers = {}
         self._commands = {}
 
-        for group, title in self.groups or ():
-            self._add_group(group, title)
+        self.setup()
 
-        for command, group in self.sub_commands or ():
-            self._bind(command, group)
-
-        # TODO(alexandrucoman): Check if the parser was set properly
-        self._parser = self._get_parser()
+        for command, parser_name in self.sub_commands or ():
+            parser = self._get_parser(parser_name)
+            if not parser:
+                raise ValueError("Invalid parser name %(name)s",
+                                 {"name": parser_name})
+            self._bind(command, parser)
 
     @property
     def args(self):
@@ -56,45 +77,30 @@ class BaseCommand(object):
         return self._name
 
     @property
-    def subcommands(self):
-        """Subcommands generator.
+    def commands(self):
+        """Generator for all the commands bonded to the current command.
 
         Each subcommand is an namedtuple with the following fields:
             :name:      the command name
-            :group:     the name of the group to which it belongs
             :instance:  an instance of a subclass of BaseCommand
         """
-        for group_name, container in self._commands.items():
-            for command_name, command in container.items():
-                yield SubCommand(command_name, group_name, command)
+        for command_name, command in self._commands.items():
+            yield SubCommand(command_name, command)
 
-    def _add_group(self, name, title):
-        """Create a container for another commands."""
-        subparser = self._parser.add_subparsers(title=title)
-        self._groups[name] = subparser
+    def _bind(self, command, parser):
+        """Bind another command to the current command and provide
+        it a parser.
+        """
+        subcommand = command(self, parser)
+        self._commands[subcommand.name] = subcommand
 
-    def _bind(self, command, group_name):
-        """Bind another command to one of the created groups."""
-        subcommand = command(self)
-        command_group = self._commands.setdefault(group_name, {})
-        command_group[subcommand.name] = subcommand
-
-    def _get_parser(self):
+    def _get_parser(self, name):
         """Get the parser for the current command."""
-        if isinstance(self._parent, self.__class__):
-            # The current command is bonded to another command
-            return self._parent.get_group(self.name)
-        else:
-            # The current command is directly bonded to the parser
-            # FIXME(alexandrucoman): Expose the subparser in BaseParser
-            pass
+        return self._parsers.get(name)
 
-    def get_group(self, command_name):
-        """Return the group for the received command name."""
-        for command in self.subcommands:
-            if command.name == command_name:
-                return command.group
-        return None
+    def _register_parser(self, name, parser):
+        """Register a new parser."""
+        self._parsers[name] = parser
 
     def command_done(self, result):
         """What to execute after successfully finished processing a command."""
@@ -106,6 +112,10 @@ class BaseCommand(object):
 
     def interrupted(self):
         """What to execute when keyboard interrupts arrive."""
+        pass
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
         pass
 
     @abc.abstractmethod
@@ -144,10 +154,10 @@ class BaseParser(object):
         self._command_line = command_line
         self._parser = None
 
-        for command_cls in self.commands:
-            self.register_command(command_cls(self))
-
         self.setup()
+
+        for command_cls in self.commands:
+            self.register_command(command_cls(self, self._parser))
 
     @property
     def args(self):
@@ -196,8 +206,9 @@ class BaseParser(object):
         pass
 
     @abc.abstractmethod
-    def setup_parser(self):
-        """Setup the argument parser.
+    def setup(self):
+        """Extend the parser configuration in order to expose all
+        the received commands.
 
         Exemple:
         ::
@@ -206,15 +217,6 @@ class BaseParser(object):
             self._parser.add_argument("--example", help="just an example")
             # ...
         """
-        pass
-
-    def setup(self):
-        """Extend the parser configuration in order to expose all
-        the received commands.
-        """
-        self.setup_parser()
-        for command in self._commands:
-            command.setup()
 
     def run(self):
         """Parse the command line."""
@@ -224,8 +226,4 @@ class BaseParser(object):
 
         # Parse the command line
         self._args = self._parser.parse_args(self.command_line)
-        # TODO(alexandrucoman): Execute the command
-
-        # Call epilogue handle for all the registered commands
-        for command in self._commands:
-            command.epilogue()
+        return self._args.funct()
