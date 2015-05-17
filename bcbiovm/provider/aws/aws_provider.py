@@ -4,6 +4,7 @@ from bcbiovm.common import objects
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources as aws_resources
+from bcbiovm.provider.aws import vpc as aws_vpc
 
 
 class AWSProvider(base.BaseCloudProvider):
@@ -113,3 +114,16 @@ class AWSProvider(base.BaseCloudProvider):
                          install.bcbio):
             # TODO(alexandrucoman): Check the results
             playbook()
+
+    def bootstrap_vpc(self, cluster, config, network, recreate):
+        """
+        Create VPC and associated resources.
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param network:     network to use for the VPC, in CIDR
+                            notation (a.b.c.d/e)
+        :param recreate:    whether to recreate the VPC if exists
+        """
+        vpc = aws_vpc.VirtualPrivateCloud(cluster, config, network, recreate)
+        return vpc.run()

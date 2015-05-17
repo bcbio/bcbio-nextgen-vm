@@ -199,9 +199,9 @@ class BaseCloudProvider(object):
         sftp.put(script, remote_file)
         sftp.close()
 
-        self._execute_remote(self._CHMOD %
+        self._execute_remote(client, self._CHMOD %
                              {"mode": "a+x", "file": remote_file})
-        self._execute_remote(self._SCREEN %
+        self._execute_remote(client, self._SCREEN %
                              {"name": screen_name, "script": remote_file,
                               "output": ouput_file})
         client.close()

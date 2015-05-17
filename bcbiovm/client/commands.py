@@ -288,3 +288,38 @@ class Graph(base.BaseCommand):
             #                       do not recognise this argument
             #                       configuration.
             graph.generate_graphs(data_frames, hardware_info, self.args.outdir)
+
+
+class BoostrapVPC(base.BaseCommand):
+
+    """Create VPC and associated resources."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "vpc",
+            help="Create VPC and associated resources",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser.add_argument(
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG)
+        parser.add_argument(
+            "--recreate", action="store_true", default=False,
+            help=("Remove and recreate the VPC, destroying all "
+                  "AWS resources contained in it."))
+        parser.add_argument(
+            "-c", "--cluster", default="bcbio",
+            help="elasticluster cluster name")
+        parser.add_argument(
+            "-n", "--network", default="10.0.0.0/16",
+            help="network to use for the VPC, in CIDR notation (a.b.c.d/e)")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        # NOTE(alexandrucoman): Command available only for AWS Provider
+        provider = cloud_factory.get('aws')
+        return provider.bootstrap_vpc(cluster=self.args.cluster,
+                                      config=self.args.econfig,
+                                      network=self.args.network,
+                                      recreate=self.args.recreate)
