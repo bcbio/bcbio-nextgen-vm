@@ -4,6 +4,7 @@ from bcbiovm.common import objects
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources as aws_resources
+from bcbiovm.provider.aws import icel as aws_icel
 from bcbiovm.provider.aws import vpc as aws_vpc
 
 
@@ -127,3 +128,66 @@ class AWSProvider(base.BaseCloudProvider):
         """
         vpc = aws_vpc.VirtualPrivateCloud(cluster, config, network, recreate)
         return vpc.run()
+
+    def create_icel(self, cluster, config, **kwargs):
+        """Create scratch filesystem using Intel Cloud Edition for Lustre
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param network:     network (in CIDR notation, a.b.c.d/e)
+                            to place Lustre servers in
+        :param bucket:      bucket to store generated ICEL template
+                            for CloudFormation
+        :param stack_name:  CloudFormation name for the new stack
+        :param size:        size of the Lustre filesystem, in gigabytes
+        :param oss_count:   number of OSS node
+        :param lun_count:   number of EBS LUNs per OSS
+        :param recreate:    whether to remove and recreate the stack,
+                            destroying all data stored on it
+        :param setup:       whether to run again the configuration steps
+        :param verbose:     increase verbosity
+        """
+        icel = aws_icel.ICELOps(cluster, config)
+        return icel.create(**kwargs)
+
+    def mount_lustre(self, cluster, config, stack_name, verbose):
+        """Mount Lustre filesystem on all cluster nodes.
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param stack_name:  CloudFormation name for the new stack
+        :param verbose:     increase verbosity
+        """
+        icel = aws_icel.ICELOps(cluster, config)
+        return icel.mount(stack_name, verbose)
+
+    def unmount_lustre(self, cluster, config, stack_name, verbose):
+        """Unmount Lustre filesystem on all cluster nodes.
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param stack_name:  CloudFormation name for the new stack
+        :param verbose:     increase verbosity
+        """
+        icel = aws_icel.ICELOps(cluster, config)
+        return icel.unmount(stack_name, verbose)
+
+    def stop_lustre(self, cluster, config, stack_name):
+        """Stop the running Lustre filesystem and clean up resources.
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param stack_name:  CloudFormation name for the new stack
+        """
+        icel = aws_icel.ICELOps(cluster, config)
+        return icel.stop(stack_name)
+
+    def lustre_spec(self, cluster, config, stack_name):
+        """Get the filesystem spec for a running filesystem.
+
+        :param config:      elasticluster config file
+        :param cluster:     cluster name
+        :param stack_name:  CloudFormation name for the new stack
+        """
+        icel = aws_icel.ICELOps(cluster, config)
+        return icel.fs_spec(stack_name)

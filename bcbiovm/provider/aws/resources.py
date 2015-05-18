@@ -14,9 +14,10 @@ import pandas
 import paramiko
 import toolz
 
-from bcbiovm.aws import icel
+from bcbiovm.common import cluster as cluster_ops
 from bcbiovm.common import utils
 from bcbiovm.common import objects
+from bcbiovm.provider.aws import icel
 
 LOG = utils.get_logger(__name__)
 
@@ -48,9 +49,10 @@ class Collector(object):
         """
         self._output = rawdir
         self._verbose = verbose
-        self._elasticluster = utils.ElastiCluster(config)
+        self._elasticluster = cluster_ops.ElastiCluster(config)
         self._cluster = self._elasticluster.get_cluster(cluster)
         self._aws_config = self._elasticluster.get_config(cluster)
+        self._icel = icel.ICELOps(cluster, config)
 
         self._private_keys = set()
         self._nodes = []
@@ -148,13 +150,12 @@ class Collector(object):
     def _fetch_collectl_lustre(self):
         """Get information from the lustre file system."""
         management_target = self._management_target()
-        stack_name = icel.get_stack_name(management_target,
-                                         self._aws_config['cloud'])
+        stack_name = self._icel.stack_name(management_target)
         if not stack_name:
             # FIXME(alexandrucoman): Raise a custom exception
             return
 
-        icel_hosts = icel.get_instances(stack_name, self._aws_config['cloud'])
+        icel_hosts = self._icel.instances(stack_name)
         for name, host in icel_hosts.items():
             if name == self.NATDevice:
                 continue
@@ -268,8 +269,9 @@ class Report(object):
         :param verbose:   increase verbosity
         """
         self._information = objects.Report()
-        self._elasticluster = utils.ElastiCluster(config)
+        self._elasticluster = cluster_ops.ElastiCluster(config)
         self._cluster_config = self._elasticluster.get_config(cluster)
+        self._verbose = verbose
 
     def add_cluster_info(self):
         """Add information regarding the cluster."""
