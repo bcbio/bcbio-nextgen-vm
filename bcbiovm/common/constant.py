@@ -30,6 +30,30 @@ AWS_ICEL_TEMPLATES = {
                  '/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
 }
 
+IAM_POLICY = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "*",
+      "Resource": "*"
+    }
+  ]
+}
+"""
+
+S3_POLICY = """{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+              "Effect": "Allow",
+              "Action": "s3:*",
+              "Resource": "*"
+            }
+      ]
+}
+"""
+
 
 class ANSIBLE:
 
@@ -55,8 +79,10 @@ class PATH:
     EC_STORAGE = os.path.join(EC, "storage")
     PICKLE_FILE = os.path.join(EC_STORAGE, "%(cluster)s.pickle")
 
-    SSH_TEMPLATE = os.path.join(ANSIBLE_BASE, "ssh_config-icel.template")
     ANSIBLE_TEMPLATE = os.path.join(ANSIBLE_BASE, "ansible-icel.cfg.template")
+    EC_CONFIG_TEMPLATE = os.path.join(sys.prefix, "share", "bcbio-vm",
+                                      "elasticluster", "config")
+    SSH_TEMPLATE = os.path.join(ANSIBLE_BASE, "ssh_config-icel.template")
 
 
 class PLAYBOOK:

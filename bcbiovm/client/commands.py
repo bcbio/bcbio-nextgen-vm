@@ -1,5 +1,6 @@
 """The commands used by the command line parser."""
 import argparse
+import textwrap
 
 import getpass
 from bcbio.graph import graph
@@ -227,6 +228,62 @@ class ElastiCluster(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         pass
+
+
+class IAMBootstrap(base.BaseCommand):
+
+    """Create IAM user and policies."""
+
+    NOIAM_MSG = """
+        IAM users and instance profiles not created.
+        Manually add the following items to your configuration file:
+            ec2_access_key    AWS Access Key ID, ideally generated for an IAM
+                              user with full AWS permissions:
+                                - http://goo.gl/oe70TE
+                                - http://goo.gl/dAJORA
+            ec2_secret_key    AWS Secret Key ID matching the ec2_access_key.
+            instance_profile  Create an IAM Instance profile allowing access
+                              to S3 buckets for pushing/pulling data.
+                              Use 'InstanceProfileName' from aws iam
+                              list-instance-profiles after setting up:
+                                - http://goo.gl/Oa92Y8
+                                - http://goo.gl/fhnq5S
+                                - http://j.mp/iams3ip
+
+        The IAM user you create will need to have access permissions for:
+            - EC2 and VPC
+                -- ec2:*
+            - IAM instance profiles
+                -- iam:PassRole, iam:ListInstanceProfiles
+            - CloudFormation for launching a Lutre ICEL instance:
+                -- cloudformation:*
+        """
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "iam", help="Create IAM user and policies")
+        parser.add_argument(
+            "--econfig", default=constant.PATH.EC_CONFIG,
+            help="Elasticluster bcbio configuration file")
+        parser.add_argument(
+            "--recreate", action="store_true", default=False,
+            help="Recreate current IAM user access keys")
+        parser.add_argument(
+            "--nocreate", action="store_true", default=False,
+            help=("Do not create a new IAM user, just generate a configuration"
+                  " file. Useful for users without full permissions to IAM."))
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        # NOTE(alexandrucoman): Command available only for AWS Provider
+        provider = cloud_factory.get('aws')
+        provider.bootstrap_iam(config=self.args.econfig,
+                               create=not self.args.nocreate,
+                               recreate=self.args.recreate)
+        if self.args.nocreate:
+            print(textwrap.dedent(self.NOIAM_MSG))
 
 
 class ICELCreate(base.BaseCommand):

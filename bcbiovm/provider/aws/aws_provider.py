@@ -1,9 +1,11 @@
 """AWS Cloud Provider for bcbiovm."""
 
 from bcbiovm.common import objects
+from bcbiovm.common import utils
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources as aws_resources
+from bcbiovm.provider.aws import iam as aws_iam
 from bcbiovm.provider.aws import icel as aws_icel
 from bcbiovm.provider.aws import vpc as aws_vpc
 
@@ -115,6 +117,23 @@ class AWSProvider(base.BaseCloudProvider):
                          install.bcbio):
             # TODO(alexandrucoman): Check the results
             playbook()
+
+    def bootstrap_iam(self, config, create, recreate):
+        """Create IAM users and instance profiles for running bcbio on AWS.
+
+        :param config:      elasticluster bcbio configuration file
+        :param create:      whether to create a new IAM user or just generate
+                            a configuration file. Useful for users without
+                            full permissions to IAM.
+        :param recreate:    Recreate current IAM user access keys
+        """
+        configuration = {}
+        iam = aws_iam.IAMOps(config)
+        configuration.update(iam.create_keypair(config))
+        configuration.update(iam.bcbio_iam_user(create, recreate))
+        configuration.update(iam.bcbio_s3_instance_profile(create))
+        utils.write_elasticluster_config(configuration, config)
+        return configuration
 
     def bootstrap_vpc(self, cluster, config, network, recreate):
         """
