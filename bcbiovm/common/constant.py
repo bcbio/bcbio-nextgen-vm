@@ -57,11 +57,26 @@ S3_POLICY = """{
 
 class ANSIBLE:
 
+    """Ansible specific settings."""
+
     FORKS = 10
     KEY_CHECKING = "False"
 
 
+class DOCKER:
+
+    """Default information about docker container."""
+
+    PORT = 8085
+    BIODATA_DIR = "/usr/local/share/bcbio-nextgen"
+    WORK_DIR = "/mnt/work"
+    IMAGE_URL = ("https://s3.amazonaws.com/bcbio_nextgen/"
+                 "bcbio-nextgen-docker-image.gz")
+
+
 class MISC:
+
+    """Miscellaneous settings."""
 
     ATTEMPTS = 3
     RETRY_INTERVAL = 0.1
@@ -69,8 +84,13 @@ class MISC:
 
 class PATH:
 
+    """Default paths used across the project."""
+
     ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
     BCBIO = os.path.join(os.path.expanduser("~"), '.bcbio')
+    DATADIR = os.path.realpath(os.path.normpath(
+        os.path.join(os.path.dirname(sys.executable), os.pardir, os.pardir,
+                     "data")))
     EC = os.path.join(BCBIO, "elasticluster")
     EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share", "elasticluster",
                                       "providers", "ansible-playbooks",
@@ -84,13 +104,19 @@ class PATH:
                                       "elasticluster", "config")
     SSH_TEMPLATE = os.path.join(ANSIBLE_BASE, "ssh_config-icel.template")
 
+    INSTALL_PARAMS = os.path.join(DATADIR, "config", "install-params.yaml")
+    BCBIO_SYSTEM = os.path.join(DATADIR, "galaxy", "bcbio_system.yaml")
+
 
 class PLAYBOOK:
+
+    """Default paths for Ansible playbooks."""
 
     BCBIO = os.path.join(PATH.ANSIBLE_BASE, "roles", "bcbio_bootstrap",
                          "tasks", "main.yml")
     DOCKER = os.path.join(PATH.ANSIBLE_BASE, "roles", "docker", "tasks",
                           "main.yml")
+    DOCKER_LOCAl = os.path.join(PATH.ANSIBLE_BASE, "bcbio_vm_docker_local.yml")
     GOF3R = os.path.join(PATH.ANSIBLE_BASE, "roles", "gof3r", "tasks",
                          "main.yml")
     NFS = os.path.join(PATH.ANSIBLE_BASE, "roles", "encrypted_nfs", "tasks",
@@ -105,6 +131,8 @@ class PLAYBOOK:
 
 class SSH:
 
+    """SSH specific settings."""
+
     HOST = '127.0.0.1'
     PORT = 22
     USER = 'root'
@@ -113,6 +141,8 @@ class SSH:
 
 
 class LOG:
+
+    """Logging default values."""
 
     NAME = "bcbiovm"
     LEVEL = 10
