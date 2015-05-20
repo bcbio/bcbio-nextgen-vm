@@ -30,6 +30,14 @@ AWS_ICEL_TEMPLATES = {
                  '/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template',
 }
 
+DOCKER = {
+    "port": 8085,
+    "biodata_dir": "/usr/local/share/bcbio-nextgen",
+    "work_dir": "/mnt/work",
+    "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
+                  "bcbio-nextgen-docker-image.gz")
+}
+
 IAM_POLICY = """{
   "Version": "2012-10-17",
   "Statement": [
@@ -61,17 +69,6 @@ class ANSIBLE:
 
     FORKS = 10
     KEY_CHECKING = "False"
-
-
-class DOCKER:
-
-    """Default information about docker container."""
-
-    PORT = 8085
-    BIODATA_DIR = "/usr/local/share/bcbio-nextgen"
-    WORK_DIR = "/mnt/work"
-    IMAGE_URL = ("https://s3.amazonaws.com/bcbio_nextgen/"
-                 "bcbio-nextgen-docker-image.gz")
 
 
 class MISC:
