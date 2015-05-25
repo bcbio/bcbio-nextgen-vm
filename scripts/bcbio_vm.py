@@ -224,43 +224,6 @@ def _graph_cmd(subparsers):
                         help="Emit verbose output")
     parser.set_defaults(func=graph.bootstrap)
 
-def _aws_cmd(subparsers):
-    parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
-    awssub = parser_c.add_subparsers(title="[aws commands]")
-
-    cluster.setup_cmd(awssub)
-    ecconfig.setup_cmd(awssub)
-    info.setup_cmd(awssub)
-    _aws_iam_cmd(awssub)
-    _aws_vpc_cmd(awssub)
-    icel.setup_cmd(awssub)
-
-def _aws_iam_cmd(awsparser):
-    parser = awsparser.add_parser("iam", help="Create IAM user and policies")
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("--recreate", action="store_true", default=False,
-                        help="Recreate current IAM user access keys")
-    parser.add_argument("--nocreate", action="store_true", default=False,
-                        help=("Do not create a new IAM user, just generate a configuration file. "
-                              "Useful for users without full permissions to IAM."))
-    parser.set_defaults(func=iam.bootstrap)
-
-def _aws_vpc_cmd(awsparser):
-    parser = awsparser.add_parser("vpc",
-                                  help="Create VPC and associated resources",
-                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("--recreate", action="store_true", default=False,
-                        help="Remove and recreate the VPC, destroying all "
-                             "AWS resources contained in it")
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
-    parser.add_argument("-n", "--network", default="10.0.0.0/16",
-                        help="network to use for the VPC, "
-                             "in CIDR notation (a.b.c.d/e)")
-    parser.set_defaults(func=vpc.bootstrap)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

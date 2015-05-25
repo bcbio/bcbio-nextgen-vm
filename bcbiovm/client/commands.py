@@ -119,30 +119,6 @@ class ConfigEdit(base.BaseCommand):
         self._save()
 
 
-class Config(base.BaseCommand):
-
-    """Manipulate elasticluster configuration files, providing easy
-    ways to edit in place.
-    """
-
-    sub_commands = [
-        (ConfigEdit, "actions"),
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
-            "config",
-            help="Define configuration details for running a cluster")
-        actions = parser.add_subparsers(
-            title="[configuration specific actions]")
-        self._register_parser(actions, "actions")
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
-
-
 class ClusterBootstrap(base.BaseCommand):
 
     """Update a bcbio AWS system with the latest code and tools."""
@@ -478,31 +454,9 @@ class DockerDevel(base.BaseCommand):
         pass
 
 
-class ElastiCluster(base.BaseCommand):
-
-    """Run and manage a cluster using elasticluster."""
-
-    sub_commands = [
-        (ClusterStart, "actions"),
-        (ClusterStop, "actions"),
-        (ClusterSetup, "actions"),
-        (ClusterSSH, "actions"),
-        (ClusterCommand, "actions"),
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
-            "cluster", help="Run and manage AWS clusters")
-        actions = parser.add_subparsers(title="[cluster specific actions]")
-        self._register_parser(actions, "actions")
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
-
-
 class ClusterK(base.BaseCommand):
+
+    """Run on Amazon web services using Clusterk."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -855,7 +809,7 @@ class Graph(base.BaseCommand):
             graph.generate_graphs(data_frames, hardware_info, self.args.outdir)
 
 
-class BoostrapVPC(base.BaseCommand):
+class VPCBoostrap(base.BaseCommand):
 
     """Create VPC and associated resources."""
 
@@ -888,3 +842,103 @@ class BoostrapVPC(base.BaseCommand):
                                       config=self.args.econfig,
                                       network=self.args.network,
                                       recreate=self.args.recreate)
+
+
+class ICELCommand(base.BaseCommand):
+
+    """Create scratch filesystem using Intel Cloud Edition for Lustre."""
+
+    sub_commands = [
+        (ICELCreate, "actions"),
+        (ICELSpec, "actions"),
+        (ICELMount, "actions"),
+        (ICELUnmount, "actions"),
+        (ICELStop, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "icel",
+            help=("Create scratch filesystem using Intel Cloud Edition"
+                  "for Lustre"))
+        actions = parser.add_subparsers(title="[icel create]")
+        self._register_parser(actions, "actions")
+
+    def process(self):
+        """Run the command with the received information."""
+        pass
+
+
+class ElastiCluster(base.BaseCommand):
+
+    """Run and manage a cluster using elasticluster."""
+
+    sub_commands = [
+        (ClusterStart, "actions"),
+        (ClusterStop, "actions"),
+        (ClusterSetup, "actions"),
+        (ClusterSSH, "actions"),
+        (ClusterCommand, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "cluster", help="Run and manage AWS clusters")
+        actions = parser.add_subparsers(title="[cluster specific actions]")
+        self._register_parser(actions, "actions")
+
+    def process(self):
+        """Run the command with the received information."""
+        pass
+
+
+class Config(base.BaseCommand):
+
+    """Manipulate elasticluster configuration files, providing easy
+    ways to edit in place.
+    """
+
+    sub_commands = [
+        (ConfigEdit, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "config",
+            help="Define configuration details for running a cluster")
+        actions = parser.add_subparsers(
+            title="[configuration specific actions]")
+        self._register_parser(actions, "actions")
+
+    def process(self):
+        """Run the command with the received information."""
+        pass
+
+
+class AWSCommand(base.BaseCommand):
+
+    """Automate resources for running bcbio on AWS."""
+
+    sub_commands = [
+        (ElastiCluster, "actions"),
+        (Config, "actions"),
+        # TODO(alexandrucoman): Add `info` command
+        (IAMBootstrap, "actions"),
+        (VPCBoostrap, "actions"),
+        (ICELCommand, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "aws",
+            help="Automate resources for running bcbio on AWS")
+        actions = parser.add_subparsers(title="[aws commands]")
+        self._register_parser(actions, "actions")
+
+    def process(self):
+        """Run the command with the received information."""
+        pass
