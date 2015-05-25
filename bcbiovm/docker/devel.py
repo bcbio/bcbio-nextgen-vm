@@ -43,14 +43,6 @@ def setup_cmd(subparsers):
         help="Utilities to help with develping using bcbion inside of docker")
     psub = parser.add_subparsers(title="[devel commands]")
 
-    iparser = psub.add_parser(
-        "setup_install",
-        help="Run a python setup.py install inside of the current directory")
-    iparser.add_argument(
-        "-i", "--image", help="Image name to write updates to",
-        default=install.DEFAULT_IMAGE)
-    iparser.set_defaults(func=_run_setup_install)
-
     sparser = psub.add_parser(
         "system",
         help=("Update bcbio system file with a given core "
@@ -91,7 +83,7 @@ def setup_cmd(subparsers):
     dbparser.set_defaults(func=_run_docker_build)
 
 
-def _run_setup_install(args):
+def run_setup_install(args):
     """Install python code from a bcbio-nextgen development tree
     inside of docker.
     """
@@ -242,7 +234,7 @@ def _run_biodata_upload(args):
         for aligner in args.aligners:
             cmdline += ["--aligners", aligner]
         dmounts = mounts.prepare_system(args.datadir,
-                                        constant.DOCKER.BIODATA_DIR)
+                                        constant.DOCKER['biodata_dir'])
         manage.run_bcbio_cmd(args.image, dmounts, cmdline)
         print("Uploading %s" % gbuild)
         gdir = _get_basedir(args.datadir, gbuild)

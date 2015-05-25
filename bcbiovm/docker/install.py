@@ -3,14 +3,14 @@
 from __future__ import print_function
 
 import os
-import subprocess
 import sys
 
 import yaml
 
+from bcbiovm.common import constant
+from bcbiovm.common import utils
 from bcbiovm.docker import manage, mounts
 
-DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
 
 def full(args, dockerconf):
     """Full installaction of docker image and data.
@@ -29,21 +29,27 @@ def full(args, dockerconf):
         manage.run_bcbio_cmd(args.image, dmounts, ["upgrade"])
     if args.install_data:
         if len(args.genomes) == 0:
-            print("Data not installed, no genomes provided with `--genomes` flag")
+            print("Data not installed, no genomes provided with "
+                  "`--genomes` flag")
             sys.exit(1)
         elif len(args.aligners) == 0:
-            print("Data not installed, no aligners provided with `--aligners` flag")
+            print("Data not installed, no aligners provided with "
+                  "`--aligners` flag")
             sys.exit(1)
         else:
             updates.append("biological data")
         _check_docker_image(args)
         manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
     _save_install_defaults(args)
+    print()
     if updates:
-        print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
+        print("bcbio-nextgen-vm updated with latest %s" %
+              " and ".join(updates))
     else:
-        print("\nNo update targets specified, need '--wrapper', '--tools' or '--data'\n"
-              "See 'bcbio_vm.py upgrade -h' for more details.")
+        print("No update targets specified, need '--wrapper', '--tools' "
+              "or '--data'")
+        print("See 'bcbio_vm.py upgrade -h' for more details.")
+
 
 def _get_cl(args):
     clargs = ["upgrade"]
@@ -55,16 +61,20 @@ def _get_cl(args):
             clargs.extend(["--aligners", a])
     return clargs
 
+
 def upgrade_bcbio_vm():
     """Upgrade bcbio-nextgen-vm wrapper code.
     """
-    conda_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "conda")
+    conda_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)),
+                             "conda")
     if not os.path.exists(conda_bin):
         print("Cannot update bcbio-nextgen-vm; not installed with conda")
     else:
-        subprocess.check_call([conda_bin, "install", "--yes",
-                               "-c", "https://conda.binstar.org/bcbio",
-                               "bcbio-nextgen-vm"])
+        utils.execute(
+            conda_bin, "install", "--yes",
+            "-c", "https://conda.binstar.org/bcbio", "bcbio-nextgen-vm",
+            check_exit_code=0)
+
 
 def pull(args, dockerconf):
     """Pull down latest docker image, using export uploaded to S3 bucket.
@@ -75,7 +85,9 @@ def pull(args, dockerconf):
     print("Retrieving bcbio-nextgen docker image with code and tools")
     # subprocess.check_call(["docker", "pull", image])
     assert args.image, "Unspecified image name for docker import"
-    subprocess.check_call(["docker", "import", dockerconf["image_url"], args.image])
+    utils.execute("docker", "import", dockerconf["image_url"], args.image,
+                  check_exit_code=0)
+
 
 def _save_install_defaults(args):
     """Save arguments passed to installation to be used on subsequent upgrades.
@@ -95,25 +107,30 @@ def _save_install_defaults(args):
         for x in getattr(args, attr):
             if x not in cur_config[attr]:
                 cur_config[attr].append(str(x))
-    if args.image != DEFAULT_IMAGE and args.image:
+    if args.image != constant.DOCKER_DEFAULT_IMAGE and args.image:
         cur_config["image"] = args.image
     with open(install_config, "w") as out_handle:
-        yaml.dump(cur_config, out_handle, default_flow_style=False, allow_unicode=False)
+        yaml.dump(cur_config, out_handle, default_flow_style=False,
+                  allow_unicode=False)
+
 
 def _get_install_defaults(args):
     install_config = _get_config_file(args)
-    if install_config and os.path.exists(install_config) and os.path.getsize(install_config) > 0:
+    if (install_config and os.path.exists(install_config)
+            and os.path.getsize(install_config) > 0):
         with open(install_config) as in_handle:
             return yaml.load(in_handle)
     return {}
 
+
 def _add_docker_defaults(args, default_args):
     if not hasattr(args, "image") or not args.image:
-        if default_args.get("image") and not default_args.get("images") == "None":
+        if default_args["image"] and not default_args.get("images") == "None":
             args.image = default_args["image"]
         else:
-            args.image = DEFAULT_IMAGE
+            args.image = constant.DOCKER_DEFAULT_IMAGE
     return args
+
 
 def add_install_defaults(args):
     """Add previously saved installation defaults to command line arguments.
@@ -128,14 +145,18 @@ def add_install_defaults(args):
     args = _add_docker_defaults(args, default_args)
     return args
 
+
 def _check_docker_image(args):
     """Ensure docker image exists.
     """
-    for image in subprocess.check_output(["docker", "images"]).split("\n"):
+    output, _ = utils.execute("docker", "images", check_exit_code=0)
+    for image in output.splitlines():
         parts = image.split()
         if len(parts) > 1 and parts[0] == args.image:
             return
-    raise ValueError("Could not find docker image %s in local repository" % args.image)
+    raise ValueError("Could not find docker image %s in local repository" %
+                     args.image)
+
 
 def docker_image_arg(args):
     if not hasattr(args, "image") or not args.image:
@@ -143,6 +164,7 @@ def docker_image_arg(args):
         args = _add_docker_defaults(args, default_args)
     _check_docker_image(args)
     return args
+
 
 def _get_config_file(args):
     config_dir = os.path.join(args.datadir, "config")

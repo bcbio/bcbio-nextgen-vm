@@ -37,6 +37,7 @@ DOCKER = {
     "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
                   "bcbio-nextgen-docker-image.gz")
 }
+DOCKER_DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
 
 IAM_POLICY = """{
   "Version": "2012-10-17",
