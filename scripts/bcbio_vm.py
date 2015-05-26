@@ -21,22 +21,11 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 
 from bcbio.distributed import clargs
 from bcbio.workflow import template
-from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
-from bcbiovm.clusterk import main as clusterk_main
+from bcbiovm.aws import common
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
-from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep
 from bcbiovm.ship import pack
 
-def cmd_install(args):
-    args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.",
-                                      need_datadir=args.install_data)
-    install.full(args, devel.DOCKER)
-
-def cmd_run(args):
-    args = defaults.update_check_args(args, "Could not run analysis.")
-    args = install.docker_image_arg(args)
-    run.do_analysis(args, devel.DOCKER)
 
 def cmd_ipython(args):
     args = defaults.update_check_args(args, "Could not run IPython parallel analysis.")
@@ -75,11 +64,6 @@ def cmd_ipython(args):
     # main_args = [work_dir, ready_config_file, systemconfig, args.fcdir, parallel]
     # run.do_runfn("run_main", main_args, cmd_args, parallel, devel.DOCKER)
 
-def cmd_clusterk(args):
-    args = defaults.update_check_args(args, "Could not run Clusterk parallel analysis.")
-    args = install.docker_image_arg(args)
-    clusterk_main.run(args, devel.DOCKER)
-
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
@@ -89,21 +73,10 @@ def cmd_server(args):
     manage.run_bcbio_cmd(args.image, [], ["server", "--port", str(devel.DOCKER["port"])],
                          ports)
 
+
 def cmd_save_defaults(args):
     defaults.save(args)
 
-def _install_cmd(subparsers, name):
-    parser_i = subparsers.add_parser(name, help="Install or upgrade bcbio-nextgen docker container and data.")
-    parser_i = devel.add_biodata_args(parser_i)
-    parser_i.add_argument("--data", help="Install or upgrade data dependencies",
-                          dest="install_data", action="store_true", default=False)
-    parser_i.add_argument("--tools", help="Install or upgrade tool dependencies",
-                          dest="install_tools", action="store_true", default=False)
-    parser_i.add_argument("--wrapper", help="Update wrapper bcbio-nextgen-vm code",
-                          action="store_true", default=False)
-    parser_i.add_argument("--image", help="Docker image name to use, could point to compatible pre-installed image.",
-                          default=None)
-    parser_i.set_defaults(func=cmd_install)
 
 def _std_config_args(parser):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
@@ -112,6 +85,7 @@ def _std_config_args(parser):
                         type=int, default=1)
     return parser
 
+
 def _std_run_args(parser):
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process",
@@ -119,10 +93,6 @@ def _std_run_args(parser):
     parser = _std_config_args(parser)
     return parser
 
-def _run_cmd(subparsers):
-    parser_r = subparsers.add_parser("run", help="Run an automated analysis on the local machine.")
-    parser_r = _std_run_args(parser_r)
-    parser_r.set_defaults(func=cmd_run)
 
 def _add_ipython_args(parser):
     parser = _std_run_args(parser)
@@ -143,15 +113,18 @@ def _add_ipython_args(parser):
     parser.add_argument("--tmpdir", help="Path of local on-machine temporary directory to process in.")
     return parser
 
+
 def _run_ipython_cmd(subparsers):
     parser = subparsers.add_parser("ipython", help="Run on a cluster using IPython parallel.")
     parser = _add_ipython_args(parser)
     parser.set_defaults(func=cmd_ipython)
 
+
 def _run_ipythonprep_cmd(subparsers):
     parser = subparsers.add_parser("ipythonprep", help="Prepare a batch script to run bcbio on a scheduler.")
     parser = _add_ipython_args(parser)
     parser.set_defaults(func=batchprep.submit_script)
+
 
 def _template_cmd(subparsers):
     parser = subparsers.add_parser("template",
@@ -162,48 +135,20 @@ def _template_cmd(subparsers):
     parser.set_defaults(func=template.setup)
 
 
-
-def _run_clusterk_cmd(subparsers):
-    parser = subparsers.add_parser("clusterk", help="Run on Amazon web services using Clusterk.")
-    parser = _std_run_args(parser)
-    parser.add_argument("run_bucket", help="Name of the S3 bucket to use for storing run information")
-    parser.add_argument("biodata_bucket", help="Name of the S3 bucket to use for storing biodata like genomes")
-    parser.add_argument("-q", "--queue", help="Clusterk queue to run jobs on.", default="default")
-    parser.set_defaults(func=cmd_clusterk)
-
 def _server_cmd(subparsers):
     parser_s = subparsers.add_parser("server", help="Persistent REST server receiving requests via the specified port.")
     parser_s.add_argument("--port", default=8085, help="External port to connect to docker image.")
     parser_s.set_defaults(func=cmd_server)
+
 
 def _config_cmd(subparsers):
     parser_c = subparsers.add_parser("saveconfig", help="Save standard configuration variables for current user. "
                                      "Avoids need to specify on the command line in future runs.")
     parser_c.set_defaults(func=cmd_save_defaults)
 
+
 def _elasticluster_cmd(subparsers):
     subparsers.add_parser("elasticluster", help="Interface to standard elasticluster commands")
-
-def _graph_cmd(subparsers):
-    parser = subparsers.add_parser("graph",
-                                   help="Generate system graphs "
-                                        "(CPU/memory/network/disk I/O "
-                                        "consumption) from bcbio runs",
-                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("log",
-                        help="Local path to bcbio log file written by the run.")
-    parser.add_argument("-o", "--outdir", default="monitoring/graphs",
-                        help="Directory to write graphs to.")
-    parser.add_argument("-r", "--rawdir", default="monitoring/collectl",
-                        help="Directory to put raw collectl data files.")
-    parser.add_argument("-c", "--cluster", default="bcbio",
-                        help="elasticluster cluster name")
-    parser.add_argument("-e", "--econfig",
-                        help="Elasticluster bcbio configuration file",
-                        default=common.DEFAULT_EC_CONFIG)
-    parser.add_argument("-v", "--verbose", action="store_true", default=False,
-                        help="Emit verbose output")
-    parser.set_defaults(func=graph.bootstrap)
 
 
 if __name__ == "__main__":
@@ -213,17 +158,11 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     subparsers = parser.add_subparsers(title="[sub-commands]")
     _run_cmd(subparsers)
-    _install_cmd(subparsers, name="install")
-    _install_cmd(subparsers, name="upgrade")
     _run_ipython_cmd(subparsers)
     _run_ipythonprep_cmd(subparsers)
     _template_cmd(subparsers)
-    _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
-    _graph_cmd(subparsers)
-    _run_clusterk_cmd(subparsers)
     # _server_cmd(subparsers)
-    _runfn_cmd(subparsers)
     devel.setup_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
