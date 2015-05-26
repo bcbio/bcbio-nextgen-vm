@@ -19,11 +19,15 @@ _SUBCOMMANDS = {
         'Edit': config.Edit,
     },
     'docker': {
-        'Build': docker.Build,
         'BiodataUpload': docker.BiodataUpload,
-        'SystemUpdate': docker.SystemUpdate,
+        'Build': docker.Build,
+        'Install': docker.Install,
+        'Server': docker.Server,
         'SetupInstall': docker.SetupInstall,
+        'SystemUpdate': docker.SystemUpdate,
+        'Run': docker.Run,
         'RunFunction': docker.RunFunction,
+        'Upgrade': docker.Upgrade,
     },
     'icel': {
         'Create': icel.Create,

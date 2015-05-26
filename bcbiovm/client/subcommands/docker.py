@@ -8,8 +8,48 @@ from bcbiovm.common import constant
 from bcbiovm.docker import defaults as docker_defaults
 from bcbiovm.docker import devel as docker_devel
 from bcbiovm.docker import install as docker_install
+from bcbiovm.docker import manage as docker_manage
 from bcbiovm.docker import run as docker_run
 from bcbiovm.ship import pack as ship_pack
+
+
+def _install_or_upgrade(main_parser, callback, install=True):
+    """Add to the received parser the install or the upgrade
+    command.
+    """
+    action = "Install" if install else "Upgrade"
+    parser = main_parser.add_parser(
+        action.lower(),
+        help="{action} bcbio-nextgen docker container and data.".format(
+            action=action))
+    parser.add_argument(
+        "sample_config",
+        help="YAML file with details about samples to process.")
+    parser.add_argument(
+        "--fcdir",
+        help="A directory of Illumina output or fastq files to process",
+        type=lambda path: (os.path.abspath(os.path.expanduser(path))))
+    parser.add_argument(
+        "--systemconfig",
+        help=("Global YAML configuration file specifying system details. "
+              "Defaults to installed bcbio_system.yaml."))
+    parser.add_argument(
+        "-n", "--numcores", type=int, default=1,
+        help="Total cores to use for processing")
+    parser.add_argument(
+        "--data", help="Install or upgrade data dependencies",
+        dest="install_data", action="store_true", default=False)
+    parser.add_argument(
+        "--tools", help="Install or upgrade tool dependencies",
+        dest="install_tools", action="store_true", default=False)
+    parser.add_argument(
+        "--wrapper", help="Update wrapper bcbio-nextgen-vm code",
+        action="store_true", default=False)
+    parser.add_argument(
+        "--image", default=None,
+        help=("Docker image name to use, could point to compatible "
+              "pre-installed image."))
+    parser.set_defaults(func=callback)
 
 
 class Build(base.BaseCommand):
@@ -128,6 +168,39 @@ class SetupInstall(base.BaseCommand):
         return docker_devel.run_setup_install(self.args)
 
 
+class Run(base.BaseCommand):
+
+    """Run an automated analysis on the local machine."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "run",
+            help="Run an automated analysis on the local machine.")
+        parser.add_argument(
+            "sample_config",
+            help="YAML file with details about samples to process.")
+        parser.add_argument(
+            "--fcdir",
+            help="A directory of Illumina output or fastq files to process",
+            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
+        parser.add_argument(
+            "--systemconfig",
+            help=("Global YAML configuration file specifying system details. "
+                  "Defaults to installed bcbio_system.yaml."))
+        parser.add_argument(
+            "-n", "--numcores", type=int, default=1,
+            help="Total cores to use for processing")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        args = docker_defaults.update_check_args(self.args,
+                                                 "Could not run analysis.")
+        args = docker_install.docker_image_arg(args)
+        docker_run.do_analysis(args, constant.DOCKER)
+
+
 class RunFunction(base.BaseCommand):
 
     """Run a specific bcbio-nextgen function with provided arguments."""
@@ -184,3 +257,68 @@ class RunFunction(base.BaseCommand):
             yaml.safe_dump(out, out_handle, default_flow_style=False,
                            allow_unicode=False)
         ship_pack.send_output(parallel["pack"], out_file)
+
+
+class Install(base.BaseCommand):
+
+    """Install bcbio-nextgen docker container and data."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        _install_or_upgrade(main_parser=self._main_parser,
+                            callback=self.run,
+                            install=True)
+
+    def process(self):
+        """Run the command with the received information."""
+        args = docker_defaults.update_check_args(
+            self.args, "bcbio-nextgen not upgraded.",
+            need_datadir=self.args.install_data)
+        docker_install.full(args, constant.DOCKER)
+
+
+class Upgrade(base.BaseCommand):
+
+    """Upgrade bcbio-nextgen docker container and data."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        _install_or_upgrade(main_parser=self._main_parser,
+                            callback=self.run,
+                            install=False)
+
+    def process(self):
+        """Run the command with the received information."""
+        args = docker_defaults.update_check_args(
+            self.args, "bcbio-nextgen not upgraded.",
+            need_datadir=self.args.install_data)
+        docker_install.full(args, constant.DOCKER)
+
+
+class Server(base.BaseCommand):
+
+    """Persistent REST server receiving requests via the specified port."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "server",
+            help=("Persistent REST server receiving requests "
+                  "via the specified port."))
+        parser.add_argument(
+            "--port", default=8085,
+            help="External port to connect to docker image.")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        args = docker_defaults.update_check_args(self.args,
+                                                 "Could not run server.")
+        args = docker_install.docker_image_arg(args)
+        ports = ["%s:%s" % (args.port, constant.DOCKER["port"])]
+        print("Running server on port %s. Press ctrl-c to exit." % args.port)
+        docker_manage.run_bcbio_cmd(
+            image=args.image, mounts=[], ports=ports,
+            bcbio_nextgen_args=["server", "--port",
+                                str(constant.DOCKER["port"])],
+        )
