@@ -4,26 +4,31 @@ Handles copying or linking files into a work directory, running an analysis,
 then handing off outputs to ship back to subsequent processing steps.
 """
 import os
-import uuid
 import shutil
 import subprocess
+import uuid
 
 import toolz as tz
 import yaml
 
-from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
+from bcbio import utils
 from bcbiovm.docker import remap
 from bcbiovm.ship import pack as ship_n_pack
 
+
 def prep_workdir(pack, parallel, args):
-    """Unpack necessary files and directories into a temporary structure for processing
+    """Unpack necessary files and directories into a temporary structure
+    for processing.
     """
     if pack["type"] == "shared":
-        workdir, remap_dict, new_args = _create_workdir_shared(pack["workdir"], args, parallel, pack["tmpdir"])
-        return workdir, new_args, _shared_finalizer(new_args, workdir, remap_dict, parallel)
+        workdir, remap_dict, new_args = _create_workdir_shared(
+            pack["workdir"], args, parallel, pack["tmpdir"])
+        return workdir, new_args, _shared_finalizer(new_args, workdir,
+                                                    remap_dict, parallel)
+
     elif pack["type"] == "S3":
         workdir, new_args = _unpack_s3(pack["buckets"]["run"], args)
         datai, data = config_utils.get_dataarg(new_args)
@@ -33,7 +38,9 @@ def prep_workdir(pack, parallel, args):
         new_args[datai] = data
         return workdir, new_args, ship_n_pack.send_run_integrated(pack)
     else:
-        raise ValueError("Cannot handle work directory preparation type: %s" % pack)
+        raise ValueError("Cannot handle work directory "
+                         "preparation type: %s" % pack)
+
 
 def prep_datadir(pack, args):
     if "datadir" in pack:
@@ -41,7 +48,9 @@ def prep_datadir(pack, args):
     elif pack["type"] == "S3":
         return _unpack_s3(pack["buckets"]["biodata"], args)
     else:
-        raise ValueError("Cannot handle biodata directory preparation type: %s" % pack)
+        raise ValueError("Cannot handle biodata directory "
+                         "preparation type: %s" % pack)
+
 
 def prep_systemconfig(datadir, args):
     """Prepare system configuration files on bare systems if not present.
@@ -51,19 +60,23 @@ def prep_systemconfig(datadir, args):
         with open(default_system, "w") as out_handle:
             _, data = config_utils.get_dataarg(args)
             out = {"resources": tz.get_in(["config", "resources"], data, {})}
-            yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+            yaml.safe_dump(out, out_handle, default_flow_style=False,
+                           allow_unicode=False)
+
 
 def get_output(target_file, pconfig):
     """Retrieve an output file from pack configuration.
     """
     if pconfig["type"] == "S3":
-        keyname = "%s/%s" % (tz.get_in(["folders", "output"], pconfig), os.path.basename(target_file))
-        _transfer_s3(target_file, keyname, tz.get_in(["buckets", "run"], pconfig))
+        keyname = "%s/%s" % (tz.get_in(["folders", "output"], pconfig),
+                             os.path.basename(target_file))
+        _transfer_s3(target_file, keyname, tz.get_in(["buckets", "run"],
+                                                     pconfig))
         return target_file
     else:
-        raise NotImplementedError("Unexpected pack information for fetchign output: %s" % pconfig)
+        raise NotImplementedError("Unexpected pack information for "
+                                  "fetchign output: %s" % pconfig)
 
-# ## S3
 
 def _transfer_s3(out_fname, keyname, bucket):
     if not os.path.exists(out_fname):
@@ -72,11 +85,13 @@ def _transfer_s3(out_fname, keyname, bucket):
             subprocess.check_call(["gof3r", "get", "-p", tx_out_fname,
                                    "-k", keyname, "-b", bucket])
 
+
 def _unpack_s3(bucket, args):
     """Create local directory in current directory with pulldowns from S3.
     """
     local_dir = utils.safe_makedir(os.path.join(os.getcwd(), bucket))
     remote_key = "s3://%s" % bucket
+
     def _get_s3(orig_fname, context, remap_dict):
         """Pull down s3 published data locally for processing.
         """
@@ -92,25 +107,31 @@ def _unpack_s3(bucket, args):
             return orig_fname.replace(remote_key, cur_dir)
         else:
             return orig_fname
+
     new_args = remap.walk_files(args, _get_s3, {remote_key: local_dir})
     return local_dir, new_args
 
-# ## Shared filesystem
 
 def _remap_dict_shared(workdir, new_workdir, args):
-    """Prepare a remap dictionary with directories we should potential copy files from.
+    """Prepare a remap dictionary with directories we should potential
+    copy files from.
     """
     ignore_keys = set(["algorithm"])
     out = {workdir: new_workdir}
+
     def _update_remap(fname, context, remap_dict):
         """Updated list of directories we should potentially be remapping in.
         """
-        if not fname.startswith(tuple(out.keys())) and context and context[0] not in ignore_keys:
-            dirname = os.path.normpath(os.path.dirname(fname))
-            local_dir = utils.safe_makedir(os.path.join(new_workdir, "external", str(len(out))))
-            out[dirname] = local_dir
+        if not fname.startswith(tuple(out.keys())):
+            if context and context[0] not in ignore_keys:
+                dirname = os.path.normpath(os.path.dirname(fname))
+                local_dir = utils.safe_makedir(
+                    os.path.join(new_workdir, "external", str(len(out))))
+                out[dirname] = local_dir
+
     remap.walk_files(args, _update_remap, {})
     return out
+
 
 def _create_workdir_shared(workdir, args, parallel, tmpdir=None):
     """Create a work directory given inputs from the shared filesystem.
@@ -122,10 +143,13 @@ def _create_workdir_shared(workdir, args, parallel, tmpdir=None):
     if not tmpdir:
         return workdir, {}, args
     else:
-        new_workdir = utils.safe_makedir(os.path.join(tmpdir, "bcbio-work-%s" % uuid.uuid1()))
+        new_workdir = utils.safe_makedir(os.path.join(
+            tmpdir, "bcbio-work-%s" % uuid.uuid1()))
         remap_dict = _remap_dict_shared(workdir, new_workdir, args)
-        new_args = remap.walk_files(args, _remap_copy_file(parallel), remap_dict)
+        new_args = remap.walk_files(args, _remap_copy_file(parallel),
+                                    remap_dict)
         return new_workdir, remap_dict, new_args
+
 
 def is_required_resource(context, parallel):
     fresources = parallel.get("fresources")
@@ -135,6 +159,7 @@ def is_required_resource(context, parallel):
         if context[:len(fresource)] == fresource:
             return True
     return False
+
 
 def _remap_copy_file(parallel):
     """Remap file names and copy into temporary directory as needed.
@@ -158,14 +183,16 @@ def _remap_copy_file(parallel):
         return new_fname
     return _do
 
+
 def _shared_finalizer(args, workdir, remap_dict, parallel):
-    """Cleanup temporary working directory, copying missing files back to the shared workdir.
+    """Cleanup temporary working directory, copying missing files back
+    to the shared workdir.
     """
     def _do(out):
         if remap_dict:
             new_remap_dict = {v: k for k, v in remap_dict.items()}
-            new_out = (remap.walk_files(out, _remap_copy_file(parallel), new_remap_dict)
-                       if out else None)
+            new_out = (remap.walk_files(out, _remap_copy_file(parallel),
+                                        new_remap_dict) if out else None)
             if os.path.exists(workdir):
                 shutil.rmtree(workdir)
             return new_out

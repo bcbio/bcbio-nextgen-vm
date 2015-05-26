@@ -1,5 +1,8 @@
-"""Prepare a running process to execute remotely, moving files as necessary to shared infrastructure.
 """
+Prepare a running process to execute remotely, moving files as necessary
+to shared infrastructure.
+"""
+
 import os
 import subprocess
 
@@ -7,9 +10,10 @@ import boto
 from boto.exception import S3ResponseError
 import toolz as tz
 
+from bcbio.pipeline import config_utils
 from bcbio import utils
 from bcbiovm.docker import remap
-from bcbio.pipeline import config_utils
+
 
 def shared_filesystem(workdir, datadir, tmpdir=None):
     """Enable running processing within an optional temporary directory.
@@ -17,19 +21,35 @@ def shared_filesystem(workdir, datadir, tmpdir=None):
     workdir is assumed to be available on a shared filesystem, so we don't
     require any work to prepare.
     """
-    return {"type": "shared", "workdir": workdir, "tmpdir": tmpdir, "datadir": datadir}
+    return {
+        "type": "shared",
+        "workdir": workdir,
+        "tmpdir": tmpdir,
+        "datadir": datadir
+    }
+
 
 def prep_s3(biodata_bucket, run_bucket, output_folder):
     """Prepare configuration for shipping to S3.
     """
-    return {"type": "S3", "buckets": {"run": run_bucket, "biodata": biodata_bucket},
-            "folders": {"output": output_folder}}
+    return {
+        "type": "S3",
+        "buckets": {
+            "run": run_bucket,
+            "biodata": biodata_bucket,
+        },
+        "folders": {
+            "output": output_folder,
+        }
+    }
+
 
 def send_run(args, config):
     if config.get("type") == "S3":
         return to_s3(args, config)
     else:
         raise NotImplementedError("Do not yet support pack type: %s", config)
+
 
 def send_run_integrated(config):
     """Integrated implementation sending run results back to central store.
@@ -42,26 +62,32 @@ def send_run_integrated(config):
         return out
     return _do
 
+
 def send_output(config, out_file):
-    """Send an output file with state information from a run.
-    """
+    """Send an output file with state information from a run."""
     if config.get("type") == "S3":
-        keyname = "%s/%s" % (tz.get_in(["folders", "output"], config), os.path.basename(out_file))
+        keyname = "%s/%s" % (tz.get_in(["folders", "output"], config),
+                             os.path.basename(out_file))
         bucket = tz.get_in(["buckets", "run"], config)
         _put_s3(out_file, keyname, bucket)
     else:
         pass
 
+
 def to_s3(args, config):
-    """Ship required processing files to S3 for running on non-shared filesystem Amazon instances.
+    """Ship required processing files to S3 for running on non-shared
+    filesystem Amazon instances.
     """
     dir_to_s3 = _prep_s3_directories(args, config["buckets"])
     conn = boto.connect_s3()
-    args = _remove_empty(remap.walk_files(args, _remap_and_ship(conn), dir_to_s3, pass_dirs=True))
+    args = _remove_empty(remap.walk_files(args, _remap_and_ship(conn),
+                                          dir_to_s3, pass_dirs=True))
     return args
 
+
 def _remove_empty(xs):
-    """Remove null values in a nested set of arguments, eliminates unpassed values in S3.
+    """Remove null values in a nested set of arguments, eliminates unpassed
+    values in S3.
     """
     if isinstance(xs, (list, tuple)):
         return filter(lambda x: x is not None, [_remove_empty(x) for x in xs])
@@ -75,30 +101,36 @@ def _remove_empty(xs):
     else:
         return xs
 
+
 def _put_s3(fname, keyname, bucket):
-    subprocess.check_call(["gof3r", "put", "-p", fname, "-k", keyname,
-                           "-b", bucket, "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
-                           "-m", "x-amz-server-side-encryption:AES256"])
+    subprocess.check_call([
+        "gof3r", "put", "-p", fname, "-k", keyname,
+        "-b", bucket, "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
+        "-m", "x-amz-server-side-encryption:AES256"])
+
 
 def _get_s3_bucket(conn, bucket_name):
     try:
         bucket = conn.get_bucket(bucket_name)
-    except S3ResponseError, e:
-        if e.status == 404:
+    except S3ResponseError as exc:
+        if exc.status == 404:
             bucket = conn.create_bucket(bucket_name)
         else:
             raise
     return bucket
 
+
 def _remap_and_ship(conn):
     """Remap a file into an S3 bucket and key, shipping if not present.
 
-    Uploads files if not present in the specified bucket, using server side encryption.
+    Uploads files if not present in the specified bucket, using server
+    side encryption.
     Uses gof3r for parallel multipart upload.
     """
     def _work(orig_fname, context, remap_dict):
         if os.path.isfile(orig_fname):
-            dirname = os.path.normpath(os.path.dirname(os.path.abspath(orig_fname)))
+            dirname = os.path.normpath(os.path.dirname(
+                os.path.abspath(orig_fname)))
             store = remap_dict[dirname]
             bucket = _get_s3_bucket(conn, store["bucket"])
             for fname in utils.file_plus_index(orig_fname):
@@ -106,19 +138,24 @@ def _remap_and_ship(conn):
                 key = bucket.get_key(keyname)
                 if not key:
                     _put_s3(fname, keyname, store["bucket"])
-            s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"], os.path.basename(orig_fname))
+            s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"],
+                                         os.path.basename(orig_fname))
         # Drop directory information since we only deal with files in S3
         else:
             s3_name = None
         return s3_name
     return _work
 
+
 def _prep_s3_directories(args, buckets):
-    """Map input directories into stable S3 buckets and folders for storing files.
+    """Map input directories into stable S3 buckets and folders for
+    storing files.
     """
     dirs = set([])
+
     def _get_dirs(fname, context, remap_dict):
         dirs.add(os.path.normpath(os.path.dirname(os.path.abspath(fname))))
+
     remap.walk_files(args, _get_dirs, {}, pass_dirs=True)
     work_dir, biodata_dir = _get_known_dirs(args)
     out = {}
@@ -141,13 +178,17 @@ def _prep_s3_directories(args, buckets):
             external_count += 1
     return out
 
+
 def _get_known_dirs(args):
-    """Retrieve known local work directory and biodata directories as baselines for buckets.
+    """Retrieve known local work directory and biodata directories
+    as baselines for buckets.
     """
     _, data = config_utils.get_dataarg(args)
     work_dir = tz.get_in(["dirs", "work"], data)
-    if "alt" in data["reference"] and data["reference"]["alt"].keys() != [data["genome_build"]]:
-        raise NotImplementedError("Need to support packing alternative references to S3")
+    if "alt" in data["reference"]:
+        if data["reference"]["alt"].keys() != [data["genome_build"]]:
+            raise NotImplementedError("Need to support packing alternative"
+                                      " references to S3")
 
     parts = tz.get_in(["reference", "fasta", "base"], data).split(os.path.sep)
     while len(parts) > 0:
