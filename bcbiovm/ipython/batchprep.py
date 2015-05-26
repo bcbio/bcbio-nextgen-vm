@@ -1,7 +1,7 @@
 """Prepare batch scripts for submitting bcbio_vm jobs.
 
-Automates the process of preparing submission batch scripts, using the same arguments as
-standard IPython runs.
+Automates the process of preparing submission batch scripts, using
+the same arguments as standard IPython runs.
 """
 import os
 
@@ -10,11 +10,13 @@ from bcbiovm.docker import defaults
 # names that indicate we're running on a dedicated AWS queue
 AWS_QUEUES = set(["cloud"])
 
+
 def _get_ipython_cmdline(args):
-    """Translate arguments back into a standard bcbio_vm ipython submission command.
+    """Translate arguments back into a standard bcbio_vm ipython
+    submission command.
     """
-    cmd = ["bcbio_vm.py", "ipython", args.sample_config, args.scheduler, args.queue,
-           "--numcores", str(args.numcores)]
+    cmd = ["bcbio_vm.py", "ipython", args.sample_config, args.scheduler,
+           args.queue, "--numcores", str(args.numcores)]
     has_timelimit = False
     for resource in args.resources:
         cmd += ["-r", resource]
@@ -22,10 +24,12 @@ def _get_ipython_cmdline(args):
             has_timelimit = True
     if not has_timelimit and args.queue in AWS_QUEUES:
         cmd += ["-r", "timelimit=0"]
-    for opt_arg in ["timeout", "retries", "tag", "tmpdir", "fcdir", "systemconfig"]:
+    for opt_arg in ["timeout", "retries", "tag", "tmpdir",
+                    "fcdir", "systemconfig"]:
         if getattr(args, opt_arg):
             cmd += ["--%s" % opt_arg, str(getattr(args, opt_arg))]
     return " ".join(cmd)
+
 
 def submit_script(args):
     args = defaults.update_check_args(args, "Could not prep batch scripts")
@@ -34,19 +38,26 @@ def submit_script(args):
         out_handle.write("#!/bin/bash\n")
         out_handle.write(_get_scheduler_cmds(args) + "\n")
         out_handle.write(_get_ipython_cmdline(args) + "\n")
-    print("Submission script for %s written to %s" % (args.scheduler, out_file))
-    print("Start analysis with: %s %s" % (_get_submit_cmd(args.scheduler), out_file))
+    print("Submission script for %s written to %s" %
+          (args.scheduler, out_file))
+    print("Start analysis with: %s %s" %
+          (_get_submit_cmd(args.scheduler), out_file))
+
 
 def _get_scheduler_cmds(args):
-    cmds = {"slurm": _get_slurm_cmds,
-            "sge": _get_sge_cmds,
-            "lsf": _get_lsf_cmds,
-            "torque": _get_torque_cmds,
-            "pbspro": _get_torque_cmds}
+    cmds = {
+        "slurm": _get_slurm_cmds,
+        "sge": _get_sge_cmds,
+        "lsf": _get_lsf_cmds,
+        "torque": _get_torque_cmds,
+        "pbspro": _get_torque_cmds
+    }
     try:
         return cmds[args.scheduler](args)
     except KeyError:
-        raise NotImplementedError("Batch script preparation for %s not yet supported" % args.scheduler)
+        raise NotImplementedError("Batch script preparation for %s "
+                                  "not yet supported" % args.scheduler)
+
 
 def _get_slurm_cmds(args):
     cmds = ["--cpus-per-task=1", "--mem=2000", "-p %s" % args.queue]
@@ -59,6 +70,7 @@ def _get_slurm_cmds(args):
         cmds += ["-J %s-submit" % args.tag]
     return "\n".join("#SBATCH %s" % x for x in cmds)
 
+
 def _get_sge_cmds(args):
     cmds = ["-cwd", "-j y", "-S /bin/bash"]
     if args.queue:
@@ -67,11 +79,13 @@ def _get_sge_cmds(args):
         cmds += ["-N %s-submit" % args.tag]
     return "\n".join("#$ %s" % x for x in cmds)
 
+
 def _get_lsf_cmds(args):
     cmds = ["-q %s" % args.queue, "-n 1"]
     if args.tag:
         cmds += ["-J %s-submit" % args.tag]
     return "\n".join("#BSUB %s" % x for x in cmds)
+
 
 def _get_torque_cmds(args):
     cmds = ["-V", "-j oe", "-q %s" % args.queue, "-l nodes=1:ppn=1"]
@@ -79,10 +93,13 @@ def _get_torque_cmds(args):
         cmds += ["-N %s-submit" % args.tag]
     return "\n".join("#PBS %s" % x for x in cmds)
 
+
 def _get_submit_cmd(scheduler):
-    cmds = {"slurm": "sbatch",
-            "sge": "qsub",
-            "lsf": "bsub",
-            "torque": "qsub",
-            "pbspro": "qsub"}
+    cmds = {
+        "slurm": "sbatch",
+        "sge": "qsub",
+        "lsf": "bsub",
+        "torque": "qsub",
+        "pbspro": "qsub"
+    }
     return cmds[scheduler]
