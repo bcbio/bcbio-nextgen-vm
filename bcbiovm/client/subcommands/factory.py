@@ -3,6 +3,7 @@ from bcbiovm.client.subcommands import cluster
 from bcbiovm.client.subcommands import config
 from bcbiovm.client.subcommands import docker
 from bcbiovm.client.subcommands import icel
+from bcbiovm.client.subcommands import ipython
 
 # TODO(alexandrucoman): Add support for dynamically loading subcommands
 
@@ -35,6 +36,10 @@ _SUBCOMMANDS = {
         'Unmount': icel.Unmount,
         'Stop': icel.Stop,
         'Specification': icel.Specification
+    },
+    'ipython': {
+        'IPython': ipython.IPython,
+        'IPythonPrep': ipython.IPythonPrep,
     }
 }
 
