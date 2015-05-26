@@ -23,6 +23,7 @@ _SUBCOMMANDS = {
         'BiodataUpload': docker.BiodataUpload,
         'SystemUpdate': docker.SystemUpdate,
         'SetupInstall': docker.SetupInstall,
+        'RunFunction': docker.RunFunction,
     },
     'icel': {
         'Create': icel.Create,

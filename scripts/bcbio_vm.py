@@ -80,19 +80,6 @@ def cmd_clusterk(args):
     args = install.docker_image_arg(args)
     clusterk_main.run(args, devel.DOCKER)
 
-def cmd_runfn(args):
-    args = defaults.update_check_args(args, "Could not run bcbio-nextgen function.")
-    args = install.docker_image_arg(args)
-    with open(args.parallel) as in_handle:
-        parallel = yaml.safe_load(in_handle)
-    with open(args.runargs) as in_handle:
-        runargs = yaml.safe_load(in_handle)
-    cmd_args = {"systemconfig": args.systemconfig, "image": args.image, "pack": parallel["pack"]}
-    out = run.do_runfn(args.fn_name, runargs, cmd_args, parallel, devel.DOCKER)
-    out_file = "%s-out%s" % os.path.splitext(args.runargs)
-    with open(out_file, "w") as out_handle:
-        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
-    pack.send_output(parallel["pack"], out_file)
 
 def cmd_server(args):
     args = defaults.update_check_args(args, "Could not run server.")
@@ -174,13 +161,7 @@ def _template_cmd(subparsers):
                         action='store_true', default=False)
     parser.set_defaults(func=template.setup)
 
-def _runfn_cmd(subparsers):
-    parser = subparsers.add_parser("runfn", help="Run a specific bcbio-nextgen function with provided arguments")
-    parser = _std_config_args(parser)
-    parser.add_argument("fn_name", help="Name of the function to run")
-    parser.add_argument("parallel", help="JSON/YAML file describing the parallel environment")
-    parser.add_argument("runargs", help="JSON/YAML file with arguments to the function")
-    parser.set_defaults(func=cmd_runfn)
+
 
 def _run_clusterk_cmd(subparsers):
     parser = subparsers.add_parser("clusterk", help="Run on Amazon web services using Clusterk.")
