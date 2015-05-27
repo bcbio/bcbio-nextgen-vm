@@ -9,6 +9,8 @@ from bcbiovm.provider.aws import iam as aws_iam
 from bcbiovm.provider.aws import icel as aws_icel
 from bcbiovm.provider.aws import vpc as aws_vpc
 
+# pylint: disable=no-self-use
+
 
 class AWSProvider(base.BaseCloudProvider):
 

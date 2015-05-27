@@ -203,6 +203,8 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
     """
     Suppress Ansible output when running playbooks.
     """
+    # pylint: disable=no-init
+
     # TODO(alexandrucoman): Add debug messages for each callback
     #                       overwritten below.
 

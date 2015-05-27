@@ -135,6 +135,8 @@ def _get_system_config(systemconfig, datadir):
 
 
 def _read_system_config(dockerconf, systemconfig, datadir):
+    # FIXME(alexandrucoman): Unused argument 'dockerconf'
+    # pylint: disable=unused-argument
     config = _get_system_config(systemconfig, datadir)
     # Map external galaxy specifications over to docker container
     dmounts = []

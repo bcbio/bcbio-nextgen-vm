@@ -4,6 +4,8 @@ Shared constants across the bcbio-nextgen-vm project.
 import os
 import sys
 
+# pylint: disable=no-init,old-style-class
+
 NFS_OPTIONS = "rw,async,nfsvers=3"  # NFS tuning
 DEFAULT_PERMISSIONS = 0o644
 DEFAULT_PROVIDER = 'aws'

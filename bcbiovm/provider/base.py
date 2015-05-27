@@ -113,7 +113,8 @@ class BaseCloudProvider(object):
         else:
             return self._flavor.get(machine)
 
-    def start(self, cluster, config=None, no_setup=False, verbose=False):
+    @staticmethod
+    def start(cluster, config=None, no_setup=False, verbose=False):
         """Create a cluster using the supplied configuration.
 
         :param cluster:   Type of cluster. It refers to a
@@ -125,7 +126,8 @@ class BaseCloudProvider(object):
         return clusterops.ElastiCluster.start(cluster, config, no_setup,
                                               verbose)
 
-    def stop(self, cluster, config=None, force=False, use_default=False,
+    @staticmethod
+    def stop(cluster, config=None, force=False, use_default=False,
              verbose=False):
         """Stop a cluster and all associated VM instances.
 
@@ -140,7 +142,8 @@ class BaseCloudProvider(object):
         return clusterops.ElastiCluster(cluster, config, force, use_default,
                                         verbose)
 
-    def setup(self, cluster, config=None, verbose=False):
+    @staticmethod
+    def setup(cluster, config=None, verbose=False):
         """Configure the cluster.
 
         :param cluster:     Type of cluster. It refers to a
@@ -150,7 +153,8 @@ class BaseCloudProvider(object):
         """
         return clusterops.ElastiCluster(cluster, config, verbose)
 
-    def ssh(self, cluster, config=None, ssh_args=None, verbose=False):
+    @staticmethod
+    def ssh(cluster, config=None, ssh_args=None, verbose=False):
         """Connect to the frontend of the cluster using the `ssh` command.
 
         :param cluster:     Type of cluster. It refers to a
@@ -165,7 +169,8 @@ class BaseCloudProvider(object):
         """
         return clusterops.ElastiCluster(cluster, config, ssh_args, verbose)
 
-    def _execute_remote(self, connection, command):
+    @staticmethod
+    def _execute_remote(connection, command):
         """Execute command on frontend node."""
         try:
             _, stdout, stderr = connection.exec_command(command)

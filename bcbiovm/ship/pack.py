@@ -90,7 +90,12 @@ def _remove_empty(xs):
     values in S3.
     """
     if isinstance(xs, (list, tuple)):
-        return filter(lambda x: x is not None, [_remove_empty(x) for x in xs])
+        out = []
+        for x in xs:
+            item = _remove_empty(x)
+            if item is not None:
+                out.append(item)
+        return out
     elif isinstance(xs, dict):
         out = {}
         for k, v in xs.items():
@@ -127,7 +132,11 @@ def _remap_and_ship(conn):
     side encryption.
     Uses gof3r for parallel multipart upload.
     """
+
     def _work(orig_fname, context, remap_dict):
+        # FIXME(alexandrucoman): Unused argument 'context'
+        # pylint: disable=unused-argument
+
         if os.path.isfile(orig_fname):
             dirname = os.path.normpath(os.path.dirname(
                 os.path.abspath(orig_fname)))
@@ -154,6 +163,8 @@ def _prep_s3_directories(args, buckets):
     dirs = set([])
 
     def _get_dirs(fname, context, remap_dict):
+        # FIXME(alexandrucoman): Unused argument 'context' and 'remap_dict'
+        # pylint: disable=unused-argument
         dirs.add(os.path.normpath(os.path.dirname(os.path.abspath(fname))))
 
     remap.walk_files(args, _get_dirs, {}, pass_dirs=True)

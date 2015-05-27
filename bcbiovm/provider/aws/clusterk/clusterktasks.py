@@ -60,6 +60,8 @@ def _test_clusterk(fn_name, parallel_file, arg_file):
 
 def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     """Run external function submitting to existing queue."""
+    # FIXME(alexandrucoman): Unused argument 'wrap_args'
+    # pylint: disable=unused-argument
     run_id = uuid.uuid4()
 
     script_file = "bcbio-%s-%s-run.sh" % (fn_name, run_id)
@@ -96,7 +98,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
                        "-c", str(queue["cores_per_job"]),
                        "-u", os.path.abspath(tarball),
                        os.path.basename(script_file)]
-            for tag in ("fnname=%s" % fn_name):
+            for tag in ("fnname=%s" % fn_name, ):
                 command.extend(["--tag", tag])
             do.run(command, "Submit to clusterk")
 

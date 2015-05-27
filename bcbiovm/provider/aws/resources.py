@@ -97,8 +97,9 @@ class Collector(object):
 
             yield stats(access_time, modified_time, size, file_info[3])
 
-    def _is_different(self, path, remote):
-        """Check if exists differences between the local andthe remote file.
+    @staticmethod
+    def _is_different(path, remote):
+        """Check if exists differences between the local and the remote file.
 
         :path:      the path of the local file
         :remote:    a namedtuple with the information regarding the remote

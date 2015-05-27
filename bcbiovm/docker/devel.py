@@ -1,5 +1,5 @@
-"""Utilities to help with developing using bcbio inside of docker.
-"""
+"""Utilities to help with developing using bcbio inside of docker."""
+from __future__ import print_function
 import copy
 import datetime
 import glob
@@ -72,7 +72,7 @@ def _upload_biodata(gbuild, target, all_dirs):
     if target == "seq":
         want_dirs = set(["rnaseq", "seq", "variation", "vep", "snpeff"])
         target_dirs = [x for x in all_dirs
-                       if (x.startswith("rnaseq-") or x in want_dirs)]
+                       if x.startswith("rnaseq-" or x in want_dirs)]
     else:
         target_dirs = [x for x in all_dirs if x == target]
     target_dirs = [os.path.join(gbuild, x) for x in target_dirs]
@@ -171,6 +171,7 @@ def run_docker_build(args):
 
     def extra_vars(cluster_config):
         """Extra variables to inject into a playbook."""
+        # pylint: disable=unused-argument
         return {
             "bcbio_bucket": args.bucket,
             "docker_buildtype": args.buildtype,

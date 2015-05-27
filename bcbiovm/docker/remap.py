@@ -46,6 +46,9 @@ def _mounts_to_out_dict(mounts):
 
 def remap_fname(fname, context, remap_dict):
     """Remap a filename given potential remapping mount points."""
+    # FIXME(alexandrucoman): Unused argument 'context'
+    # pylint: disable=unused-argument
+
     matches = []
     for k, v in remap_dict.items():
         if fname.startswith(k):
@@ -79,7 +82,7 @@ def walk_files(xs, f, remap_dict, context=None, pass_dirs=False):
                 out[k] = walk_files(v, f, remap_dict, cur_context, pass_dirs)
         return out
     elif (xs and isinstance(xs, six.string_types)
-            and xs.startswith(tuple(remap_dict.keys()))):
+          and xs.startswith(tuple(remap_dict.keys()))):
         return f(xs, context, remap_dict)
     elif (xs and isinstance(xs, six.string_types) and os.path.exists(xs) and
           (os.path.isfile(xs) or pass_dirs) and not remap_dict):

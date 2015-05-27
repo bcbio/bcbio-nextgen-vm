@@ -169,7 +169,8 @@ class BaseParser(object):
         """Command line provided to parser."""
         return self._command_line
 
-    def _discover_commands(self, command):
+    @staticmethod
+    def _discover_commands(command):
         """Search for all the subcommands for the received command."""
         container = [command]
         while container:
@@ -226,4 +227,5 @@ class BaseParser(object):
 
         # Parse the command line
         self._args = self._parser.parse_args(self.command_line)
+        # pylint: disable=no-member
         return self._args.funct()

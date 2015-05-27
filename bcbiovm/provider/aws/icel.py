@@ -92,7 +92,7 @@ class ICELOps(object):
         with the received prefix.
         """
         for index, name in enumerate(container):
-            if type(name) in (str, unicode) and name.startswith(prefix):
+            if isinstance(name, (str, unicode)) and name.startswith(prefix):
                 return (index, name)
 
     def _upload_icel_cf_template(self, oss_count, ost_vol_size, ost_vol_count,

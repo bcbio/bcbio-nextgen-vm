@@ -93,8 +93,8 @@ def _unpack_s3(bucket, args):
     remote_key = "s3://%s" % bucket
 
     def _get_s3(orig_fname, context, remap_dict):
-        """Pull down s3 published data locally for processing.
-        """
+        """Pull down s3 published data locally for processing."""
+        # pylint: disable=unused-argument
         if orig_fname.startswith(remote_key):
             if context[0] in ["reference", "genome_resources", "sam_ref"]:
                 cur_dir = os.path.join(local_dir, "genomes")
@@ -120,8 +120,10 @@ def _remap_dict_shared(workdir, new_workdir, args):
     out = {workdir: new_workdir}
 
     def _update_remap(fname, context, remap_dict):
-        """Updated list of directories we should potentially be remapping in.
+        """Updated list of directories we should potentially be
+        remapping in.
         """
+        # pylint: disable=unused-argument
         if not fname.startswith(tuple(out.keys())):
             if context and context[0] not in ignore_keys:
                 dirname = os.path.normpath(os.path.dirname(fname))
@@ -188,6 +190,8 @@ def _shared_finalizer(args, workdir, remap_dict, parallel):
     """Cleanup temporary working directory, copying missing files back
     to the shared workdir.
     """
+    # FIXME(alexandrucoman): Unused argument 'args'
+    # pylint: disable=unused-argument
     def _do(out):
         if remap_dict:
             new_remap_dict = {v: k for k, v in remap_dict.items()}

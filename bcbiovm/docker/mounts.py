@@ -15,7 +15,8 @@ def prepare_system(datadir, docker_biodata_dir):
         cur_d = os.path.normpath(os.path.realpath(os.path.join(datadir, d)))
         if not os.path.exists(cur_d):
             os.makedirs(cur_d)
-        mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(**locals()))
+        mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(
+            cur_d=cur_d, docker_biodata_dir=docker_biodata_dir, d=d))
     return mounts
 
 
@@ -27,7 +28,7 @@ def update_config(config, fcdir=None):
     if config.get("upload", {}).get("dir"):
         directories.append(config["upload"]["dir"])
     mounts = {}
-    for i, d in enumerate(sorted(set(directories))):
+    for _, d in enumerate(sorted(set(directories))):
         mounts[d] = d
     mounts = ["%s:%s" % (k, v) for k, v in mounts.items()]
     config = remap.external_to_docker(config, mounts)
@@ -128,7 +129,7 @@ def abs_file_paths(xs, base_dirs=None, ignore=None):
             out[k] = _normalize_path(v, base_dirs)
 
         elif (k not in ignore_keys and v and isinstance(v, (list, tuple))
-                and _normalize_path(v[0], base_dirs)):
+              and _normalize_path(v[0], base_dirs)):
             out[k] = [_normalize_path(x, base_dirs) for x in v]
         else:
             out[k] = v

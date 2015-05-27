@@ -88,7 +88,7 @@ class Container(object):
                     return
             self._data["content"].append(item)
 
-        elif type(item) in (list, tuple):
+        elif isinstance(item, (list, tuple)):
             if len(item) == len(self._data["meta"]["fields"]):
                 self._data["content"].append(item)
             else:
