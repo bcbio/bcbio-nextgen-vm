@@ -322,3 +322,20 @@ class Server(base.BaseCommand):
             bcbio_nextgen_args=["server", "--port",
                                 str(constant.DOCKER["port"])],
         )
+
+
+class SaveConfig(base.BaseCommand):
+
+    """Save standard configuration variables for current user."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "saveconfig",
+            help="Save standard configuration variables for current user. "
+                 "Avoids need to specify on the command line in future runs.")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        return docker_defaults.save(self.args)
