@@ -8,6 +8,7 @@ import matplotlib
 import pylab
 
 from bcbio.graph import graph
+from bcbio.workflow import template
 
 from bcbiovm.client import base
 from bcbiovm.client.subcommands import factory as command_factory
@@ -212,6 +213,27 @@ class VPCBoostrap(base.BaseCommand):
                                       config=self.args.econfig,
                                       network=self.args.network,
                                       recreate=self.args.recreate)
+
+
+class Template(base.BaseCommand):
+
+    """Create a bcbio sample.yaml file from a standard template and inputs."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "template",
+            help=("Create a bcbio sample.yaml file from a "
+                  "standard template and inputs"))
+        parser = template.setup_args(parser)
+        parser.add_argument(
+            '--relpaths', action='store_true', default=False,
+            help="Convert inputs into relative paths to the work directory")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        return template.setup
 
 
 class DockerDevel(base.BaseCommand):
