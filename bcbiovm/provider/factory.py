@@ -2,14 +2,16 @@
 import collections
 
 from bcbiovm.common import constant
-from bcbiovm.provider.aws import aws_provider
 from bcbiovm.provider import ship
+from bcbiovm.provider.aws import aws_provider
 from bcbiovm.provider.aws import ship as aws_ship
+from bcbiovm.provider.azure import azure_provider
 
 _Ship = collections.namedtuple("Ship", ["pack", "reconstitute"])
 
 CLOUD_PROVIDER = {
-    'aws': aws_provider.AWSProvider,
+    constant.PROVIDER.AWS: aws_provider.AWSProvider,
+    constant.PROVIDER.AZURE: azure_provider.AzureProvider,
 }
 SHIP = {
     "shared": (None, ship.ReconstituteShared),

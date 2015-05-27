@@ -134,6 +134,7 @@ class PROVIDER:
     """Contains the available providers' name."""
 
     AWS = "aws"
+    AZURE = "azure"
 
 
 class SSH:
