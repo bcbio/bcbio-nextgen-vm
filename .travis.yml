@@ -30,19 +30,35 @@ before_install:
   - sudo apt-get install -qqy gcc g++ zlib1g-dev libbz2-dev libpng12-dev &> /dev/null
   - sudo apt-get install -qqy libatlas-dev libpq-dev r-base-dev libreadline-dev &> /dev/null
   - sudo apt-get install -qqy libmysqlclient-dev libboost-dev libsqlite3-dev mercurial &> /dev/null
-  - echo "Installing requirements for biopython"
-  - sudo apt-get install -qqy clustalw clustalo &> /dev/null
-  - sudo apt-get install -qqy muscle mafft probcons wise emboss &> /dev/null
-  - sudo apt-get install -qqy samtools bwa &> /dev/null
   - echo "Installing azure client."
   - sudo apt-get install -qqy npm &> /dev/null
 
+cache:
+  directories:
+    - $HOME/.pip-cache/
+
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
+  - pip install pip --upgrade
   - sudo apt-get install -qqy python-numpy python-scipy
-  - pip install -r requirements.txt
-  - pip install tox
+  - sudo apt-get install -qqy python-matplotlib
+  - sudo apt-get install -qqy python-biopython
+  - sudo apt-get install -qqy python-sklearn
+  - pip install pylint pep8
+  - pip install -r requirements.txt --cache-dir $HOME/.pip-cache 
+  - python setup.py install
+
+before_script:
+  # One of the dependencies require another version of pip
+  - python -m pip install --upgrade --force pip
 
 # command to run tests, e.g. python setup.py test
 script:
-  - tox
+  - pylint --rcfile=pylintrc bcbiovm
+  - pep8 bcbiovm
+
+after_script:
+  # List installed packages, including editables.
+  - pip list
+  # List outdated packages (excluding editables)
+  - pip list --outdated
