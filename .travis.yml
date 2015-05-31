@@ -1,0 +1,48 @@
+# Config file for automatic testing at travis-ci.org
+language: python
+python: 2.7
+
+virtualenv:
+  system_site_packages: true
+
+before_install:
+  - echo "Update the system."
+  - sudo apt-get update -qqy &> /dev/null
+  - echo "Installing required packages."
+  - sudo apt-get install -qqy git &> /dev/null
+  - sudo apt-get install -qqy build-essential python-dev &> /dev/null
+  - echo "Installing requirements for openssl."
+  - sudo apt-get install -qqy libssl-dev libffi-dev &> /dev/null
+  - echo "Installing requirements for pycurl."
+  - sudo apt-get install -qqy libcurl4-openssl-dev &> /dev/null
+  - echo "Installing requirements for lxml."
+  - sudo apt-get install -qqy libxml2-dev libxslt1-dev &> /dev/null
+  - echo "Installing requirements for matplotlib."
+  - sudo apt-get install -qqy libxft-dev libpng-dev libfreetype6-dev &> /dev/null
+  - echo "Installing requirements for scipy."
+  - sudo apt-get install -qqy liblapack-dev gfortran &> /dev/null
+  - sudo apt-get install -qqy libgmp-dev libmpfr-dev &> /dev/null
+  - sudo apt-get install -qqy libblas-dev libblas3gf &> /dev/null
+  - echo "Installing requirements for matplotlib"
+  - sudo apt-get install -qqy inkscape libav-tools gdb mencoder dvipng &> /dev/null
+  - sudo apt-get install -qqy graphviz &> /dev/null
+  - echo "Installing requirements for pysam"
+  - sudo apt-get install -qqy gcc g++ zlib1g-dev libbz2-dev libpng12-dev &> /dev/null
+  - sudo apt-get install -qqy libatlas-dev libpq-dev r-base-dev libreadline-dev &> /dev/null
+  - sudo apt-get install -qqy libmysqlclient-dev libboost-dev libsqlite3-dev mercurial &> /dev/null
+  - echo "Installing requirements for biopython"
+  - sudo apt-get install -qqy clustalw clustalo &> /dev/null
+  - sudo apt-get install -qqy muscle mafft probcons wise emboss &> /dev/null
+  - sudo apt-get install -qqy samtools bwa &> /dev/null
+  - echo "Installing azure client."
+  - sudo apt-get install -qqy npm &> /dev/null
+
+# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+install:
+  - sudo apt-get install -qqy python-numpy python-scipy
+  - pip install -r requirements.txt
+  - pip install tox
+
+# command to run tests, e.g. python setup.py test
+script:
+  - tox
