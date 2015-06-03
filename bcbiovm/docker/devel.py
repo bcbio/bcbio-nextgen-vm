@@ -14,6 +14,7 @@ import numpy
 import yaml
 
 from bcbio import utils
+from bcbio.distributed import objectstore
 from bcbio.pipeline import genome
 from bcbio.provenance import do
 
@@ -209,12 +210,14 @@ def _upload_biodata(gbuild, target, all_dirs):
     else:
         target_dirs = [x for x in all_dirs if x == target]
     target_dirs = [os.path.join(gbuild, x) for x in target_dirs]
-    bucketname = genome.S3_INFO["bucket"]
-    keyname = genome.S3_INFO["key"].format(build=gbuild, target=target)
-    conn = boto.connect_s3()
-    bucket = conn.get_bucket(bucketname)
-    key = bucket.get_key(keyname)
+    fname = objectstore.BIODATA_INFO["s3"].format(build=gbuild, target=target)
+    remotef = objectstore.parse_remote(fname)
+    conn = objectstore.connect(fname)
+    bucket = conn.get_bucket(remotef.bucket)
+    key = bucket.get_key(remotef.key)
     if not key:
+        keyname = remotef.key
+        bucketname = remotef.bucket
         target_dirs = " ".join(target_dirs)
         cmd = ("tar -cvpf - {target_dirs} | pigz -c | "
                "gof3r put --no-md5 -k {keyname} -b {bucketname} "
