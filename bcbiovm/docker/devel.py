@@ -75,6 +75,7 @@ def _upload_biodata(gbuild, target, all_dirs):
                        if x.startswith("rnaseq-" or x in want_dirs)]
     else:
         target_dirs = [x for x in all_dirs if x == target]
+
     target_dirs = [os.path.join(gbuild, x) for x in target_dirs]
     fname = objectstore.BIODATA_INFO["s3"].format(build=gbuild, target=target)
     remotef = objectstore.parse_remote(fname)

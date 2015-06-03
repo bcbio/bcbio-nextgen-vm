@@ -78,6 +78,8 @@ class SSHClient(object):
         """
         proxy_command = None
         if bastion_host:
+            # NOTE(alexandrucoman): Avoid pylint FP
+            # pylint: disable=no-member
             proxy_command = paramiko.proxy.ProxyCommand(
                 constant.SSH.PROXY % {"host": self._host,
                                       "port": self._port,
@@ -86,6 +88,8 @@ class SSHClient(object):
             )
 
         try:
+            # NOTE(alexandrucoman): Avoid pylint FP
+            # pylint: disable=unexpected-keyword-arg
             self._ssh_client.connect(self._host, username=self._user,
                                      allow_agent=True, sock=proxy_command)
         except paramiko.SSHException:
