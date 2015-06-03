@@ -1,4 +1,5 @@
 """Sub-commands factory."""
+from bcbiovm.client.subcommands import aws
 from bcbiovm.client.subcommands import cluster
 from bcbiovm.client.subcommands import config
 from bcbiovm.client.subcommands import docker
@@ -8,6 +9,11 @@ from bcbiovm.client.subcommands import ipython
 # TODO(alexandrucoman): Add support for dynamically loading subcommands
 
 _SUBCOMMANDS = {
+    'aws': {
+        'ClusterK': aws.ClusterK,
+        'IAMBootstrap': aws.IAMBootstrap,
+        'VPCBoostrap': aws.VPCBoostrap,
+    },
     'cluster': {
         'Bootstrap': cluster.Bootstrap,
         'Command': cluster.Command,

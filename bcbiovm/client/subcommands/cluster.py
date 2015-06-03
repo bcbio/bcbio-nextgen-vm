@@ -32,7 +32,7 @@ class Bootstrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         return provider.bootstrap(cluster=self.args.cluster,
                                   config=self.args.econfig,
                                   reboot=not self.args.no_reboot,
@@ -64,7 +64,7 @@ class Command(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         return provider.run_script(cluster=self.args.cluster,
                                    config=self.args.econfig,
                                    script=self.args.script)
@@ -92,7 +92,7 @@ class Setup(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         return provider.setup(cluster=self.args.cluster,
                               config=self.args.econfig,
                               verbose=self.args.verbose)
@@ -123,7 +123,7 @@ class Start(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         status = provider.start(cluster=self.args.cluster,
                                 config=self.args.econfig,
                                 no_setup=False,
@@ -160,7 +160,7 @@ class Stop(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         return provider.stop(cluster=self.args.cluster,
                              config=self.args.econfig,
                              force=False,
@@ -194,7 +194,7 @@ class SSHConnection(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get()
+        provider = cloud_factory.get(self.args.provider)
         return provider.ssh(cluster=self.args.cluster,
                             config=self.args.econfig,
                             ssh_args=self.args.args,

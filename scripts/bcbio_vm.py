@@ -27,10 +27,8 @@ class BCBioParser(base.Parser):
         factory.get('ipython', 'IPython'),
         factory.get('ipython', 'IPythonPrep'),
         client_commands.Template,
-        client_commands.AWSCommand,
+        client_commands.Provider,
         # TODO(alexandrucoman): Add elasticluster command
-        client_commands.Graph,
-        client_commands.ClusterK,
         factory.get('docker', 'RunFunction'),
         client_commands.DockerDevel,
         factory.get('docker', 'SaveConfig')
