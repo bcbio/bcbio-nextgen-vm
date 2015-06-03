@@ -223,3 +223,26 @@ class AWSProvider(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         pass
+
+
+class AzureProvider(base.BaseCommand):
+
+    """Automate resources for running bcbio on Azure."""
+    sub_commands = [
+        (ElastiCluster, "actions"),
+        # TODO(alexandrucoman): Add `info` command
+        (Graph, "actions"),
+        (command_factory.get("azure", "PrepareEnvironment"), "actions")
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "azure",
+            help="Automate resources for running bcbio on Azure")
+        actions = parser.add_subparsers(title="[azure commands]")
+        self._register_parser("actions", actions)
+
+    def process(self):
+        """Run the command with the received information."""
+        pass

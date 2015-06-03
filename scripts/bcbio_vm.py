@@ -28,6 +28,7 @@ class BCBioParser(base.BaseParser):
         factory.get('ipython', 'IPythonPrep'),
         client_commands.Template,
         client_commands.AWSProvider,
+        client_commands.AzureProvider,
         # TODO(alexandrucoman): Add elasticluster command
         factory.get('docker', 'RunFunction'),
         client_commands.DockerDevel,
