@@ -116,8 +116,8 @@ def _save_install_defaults(args):
 
 def _get_install_defaults(args):
     install_config = _get_config_file(args)
-    if (install_config and os.path.exists(install_config)
-            and os.path.getsize(install_config) > 0):
+    if (install_config and os.path.exists(install_config) and
+            os.path.getsize(install_config) > 0):
         with open(install_config) as in_handle:
             return yaml.load(in_handle)
     return {}

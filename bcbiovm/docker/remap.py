@@ -74,15 +74,15 @@ def walk_files(xs, f, remap_dict, context=None, pass_dirs=False):
         if context is None:
             context = []
         for k, v in xs.items():
-            if (context and context[-1] == "algorithm"
-                    and k in run_info.ALGORITHM_NOPATH_KEYS):
+            if (context and context[-1] == "algorithm" and
+                    k in run_info.ALGORITHM_NOPATH_KEYS):
                 out[k] = v
             else:
                 cur_context = context[:] + [k]
                 out[k] = walk_files(v, f, remap_dict, cur_context, pass_dirs)
         return out
-    elif (xs and isinstance(xs, six.string_types)
-          and xs.startswith(tuple(remap_dict.keys()))):
+    elif (xs and isinstance(xs, six.string_types) and
+          xs.startswith(tuple(remap_dict.keys()))):
         return f(xs, context, remap_dict)
     elif (xs and isinstance(xs, six.string_types) and os.path.exists(xs) and
           (os.path.isfile(xs) or pass_dirs) and not remap_dict):

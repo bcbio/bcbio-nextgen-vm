@@ -124,12 +124,12 @@ def abs_file_paths(xs, base_dirs=None, ignore=None):
     ignore_keys = set(ignore if ignore else [])
     out = {}
     for k, v in xs.items():
-        if (k not in ignore_keys and v and isinstance(v, six.string_types)
-                and _normalize_path(v, base_dirs)):
+        if (k not in ignore_keys and v and isinstance(v, six.string_types) and
+                _normalize_path(v, base_dirs)):
             out[k] = _normalize_path(v, base_dirs)
 
-        elif (k not in ignore_keys and v and isinstance(v, (list, tuple))
-              and _normalize_path(v[0], base_dirs)):
+        elif (k not in ignore_keys and v and isinstance(v, (list, tuple)) and
+              _normalize_path(v[0], base_dirs)):
             out[k] = [_normalize_path(x, base_dirs) for x in v]
         else:
             out[k] = v

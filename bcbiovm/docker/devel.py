@@ -81,6 +81,7 @@ def _upload_biodata(gbuild, target, all_dirs):
     conn = objectstore.connect(fname)
     bucket = conn.get_bucket(remotef.bucket)
     key = bucket.get_key(remotef.key)
+
     if not key:
         keyname = remotef.key
         bucketname = remotef.bucket

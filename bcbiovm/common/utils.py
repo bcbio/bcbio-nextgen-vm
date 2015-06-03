@@ -78,7 +78,7 @@ class SSHClient(object):
         """
         proxy_command = None
         if bastion_host:
-            proxy_command = paramiko.ProxyCommand(
+            proxy_command = paramiko.proxy.ProxyCommand(
                 constant.SSH.PROXY % {"host": self._host,
                                       "port": self._port,
                                       "user": user,

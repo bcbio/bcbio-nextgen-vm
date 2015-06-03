@@ -225,7 +225,11 @@ class ICELOps(object):
     def _get_stack_param(self, stack_name, parameter):
         """Return the value of the received parameter from the stack."""
         aws_config = self._cluster_config["cloud"]
-        connection = boto.ec2.connect_to_region(
+        # NOTE(alenxadrucoman): I have changed boto.ec2 with
+        #                       boto.cloudformation.
+        # Instance of 'EC2Connection' has no 'describe_stacks'
+        # member (no-member)
+        connection = boto.cloudformation.connect_to_region(
             aws_config['ec2_region'],
             aws_access_key_id=aws_config['ec2_access_key'],
             aws_secret_access_key=aws_config['ec2_secret_key'])
