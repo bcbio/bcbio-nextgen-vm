@@ -28,6 +28,7 @@ _SUBCOMMANDS = {
     },
     'config': {
         'EditAWS': config.EditAWS,
+        'EditAzure': config.EditAzure,
     },
     'docker': {
         'BiodataUpload': docker.BiodataUpload,
