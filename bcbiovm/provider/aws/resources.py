@@ -15,6 +15,7 @@ import paramiko
 import toolz
 
 from bcbiovm.common import cluster as cluster_ops
+from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.common import objects
 from bcbiovm.provider.aws import icel
@@ -49,7 +50,9 @@ class Collector(object):
         """
         self._output = rawdir
         self._verbose = verbose
-        self._elasticluster = cluster_ops.ElastiCluster(config)
+        self._elasticluster = cluster_ops.ElastiCluster(
+            provider=constant.PROVIDER.AWS)
+        self._elasticluster.load_config(config)
         self._cluster = self._elasticluster.get_cluster(cluster)
         self._aws_config = self._elasticluster.get_config(cluster)
         self._icel = icel.ICELOps(cluster, config)
@@ -270,7 +273,9 @@ class Report(object):
         :param verbose:   increase verbosity
         """
         self._information = objects.Report()
-        self._elasticluster = cluster_ops.ElastiCluster(config)
+        self._elasticluster = cluster_ops.ElastiCluster(
+            provider=constant.PROVIDER.AWS)
+        self._elasticluster.load_config(config)
         self._cluster_config = self._elasticluster.get_config(cluster)
         self._verbose = verbose
 

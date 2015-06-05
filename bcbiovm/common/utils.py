@@ -318,11 +318,12 @@ def execute(*command, **kwargs):
     #                       The maximum number of attempts has been exceeded.
 
 
-def write_elasticluster_config(config, output):
+def write_elasticluster_config(config, output,
+                               provider=constant.DEFAULT_PROVIDER):
     """Write Elasticluster configuration file with user and security
     information.
     """
-    template_file = constant.PATH.EC_CONFIG_TEMPLATE
+    template_file = constant.PATH.EC_CONFIG_TEMPLATE.format(provider=provider)
     config_file = {}
     content = []
 

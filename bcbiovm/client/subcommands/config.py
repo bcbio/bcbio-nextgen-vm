@@ -1,7 +1,7 @@
 """Manipulate elasticluster configuration files, providing easy
 ways to edit in place.
 """
-
+import abc
 import datetime
 import shutil
 
@@ -10,13 +10,16 @@ import six
 from bcbiovm.client import base
 from bcbiovm.common import constant
 
+__all__ = ["EditAWS"]
 
-class Edit(base.BaseCommand):
+
+@six.add_metaclass(abc.ABCMeta)
+class EditSetup(base.BaseCommand):
 
     """Edit cluster configuration."""
 
     def __init__(self):
-        super(Edit, self).__init__()
+        super(EditSetup, self).__init__()
         self._parser = six.moves.configparser.RawConfigParser()
 
     @staticmethod
@@ -32,6 +35,29 @@ class Edit(base.BaseCommand):
         the given section.
         """
         return dict(self._parser.items(section))
+
+    def _backup_config(self):
+        """Make a copy of the current config file."""
+        now = datetime.datetime.now()
+        backup_file = ("%(base)s.bak%(timestamp)s" %
+                       {"base": self.args.econfig,
+                        "timestamp": now.strftime("%Y-%m-%d-%H-%M-%S")})
+        shutil.move(self.args.econfig, backup_file)
+
+    @abc.abstractmethod
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        pass
+
+    @abc.abstractmethod
+    def process(self):
+        """Override this with your desired procedures."""
+        pass
+
+
+class EditAWS(EditSetup):
+
+    """Edit elasticluster setup for AWS provider."""
 
     def _frontend(self, flavor, nfs_size, iops):
         """Change values regarding the frontend node."""
@@ -52,11 +78,7 @@ class Edit(base.BaseCommand):
 
     def _save(self):
         """Update the config file."""
-        now = datetime.datetime.now()
-        backup_file = ("%(base)s.bak%(timestamp)s" %
-                       {"base": self.args.econfig,
-                        "timestamp": now.strftime("%Y-%m-%d-%H-%M-%S")})
-        shutil.move(self.args.econfig, backup_file)
+        self._backup_config()
         with open(self.args.econfig, "w") as file_handle:
             self._parser.write(file_handle)
 
@@ -65,8 +87,8 @@ class Edit(base.BaseCommand):
         parser = self._main_parser.add_parser(
             "edit", help="Edit cluster configuration")
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(provider="aws"))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -95,7 +117,9 @@ class Edit(base.BaseCommand):
                 default=frontend["flavor"])
         else:
             setup_provider = "ansible-slurm"
-            frontend_flavor = "c3.large"
+            frontend_flavor = self._ask(
+                message="Machine type for frontend worker node",
+                default="c3.large")
             compute_flavor = self._ask(
                 message="Machine type for compute nodes",
                 default=cluster["flavor"])

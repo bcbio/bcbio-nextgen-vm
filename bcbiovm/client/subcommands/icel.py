@@ -20,8 +20,9 @@ class Create(base.BaseCommand):
             help=("Create scratch filesystem using "
                   "Intel Cloud Edition for Lustre"))
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AWS))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -60,7 +61,7 @@ class Create(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         # NOTE(alexandrucoman): Command available only for AWS Provider
-        provider = cloud_factory.get('aws')
+        provider = cloud_factory.get(constant.PROVIDER.AWS)
         provider.create_icel(
             cluster=self.args.cluster,
             config=self.args.econfig,
@@ -86,8 +87,9 @@ class Mount(base.BaseCommand):
             help="Mount Lustre filesystem on all cluster nodes",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AWS))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -102,7 +104,7 @@ class Mount(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get('aws')
+        provider = cloud_factory.get(constant.PROVIDER.AWS)
         provider.mount_lustre(cluster=self.args.cluster,
                               config=self.args.econfig,
                               stack_name=self.args.stack_name,
@@ -120,8 +122,9 @@ class Unmount(base.BaseCommand):
             help="Unmount Lustre filesystem on all cluster nodes",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AWS))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -136,7 +139,7 @@ class Unmount(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get('aws')
+        provider = cloud_factory.get(constant.PROVIDER.AWS)
         provider.unmount_lustre(cluster=self.args.cluster,
                                 config=self.args.econfig,
                                 stack_name=self.args.stack_name,
@@ -154,8 +157,9 @@ class Stop(base.BaseCommand):
             help="Stop the running Lustre filesystem and clean up resources",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AWS))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -167,7 +171,7 @@ class Stop(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get('aws')
+        provider = cloud_factory.get(constant.PROVIDER.AWS)
         provider.stop_lustre(cluster=self.args.cluster,
                              config=self.args.econfig,
                              stack_name=self.args.stack_name)
@@ -184,8 +188,9 @@ class Specification(base.BaseCommand):
             help="Get the filesystem spec for a running filesystem",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AWS))
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
@@ -197,7 +202,7 @@ class Specification(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get('aws')
+        provider = cloud_factory.get(constant.PROVIDER.AWS)
         print(provider.lustre_spec(cluster=self.args.cluster,
                                    config=self.args.econfig,
                                    stack_name=self.args.stack_name))

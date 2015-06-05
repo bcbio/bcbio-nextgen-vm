@@ -32,19 +32,21 @@ class ElastiCluster(object):
     _EC_SSH = "ssh"
     _EC_SETUP = "setup"
 
-    def __init__(self, config):
+    def __init__(self, provider=constant.DEFAULT_PROVIDER):
         self._config = None
-        self._config_file = config
-
-        self._load_config()
+        self._config_file = None
+        self._provider = provider
 
     @property
     def config(self):
         """Instance of :class Configurator:."""
         return self._config
 
-    def _load_config(self):
+    def load_config(self, config=None):
         """Load the Elasticluster configuration."""
+        if config is None:
+            self._config_file = constant.PATH.EC_CONFIG.format(
+                provider=self._provider)
         # TODO(alexandrucoman): Change `storage` with a constant
         storage_dir = os.path.join(os.path.dirname(self._config_file),
                                    "storage")
@@ -254,7 +256,7 @@ class AnsiblePlaybook(object):
 
     def __init__(self, inventory_path, playbook_path, config=None,
                  cluster=None, verbose=True, extra_vars=None,
-                 ansible_cfg=None):
+                 ansible_cfg=None, provider=constant.DEFAULT_PROVIDER):
         """
         :param inventory_path:  the path to the inventory hosts file
         :param playbook_path:   the path to a playbook file
@@ -276,7 +278,8 @@ class AnsiblePlaybook(object):
         self._runner_cb = None
 
         if config and cluster:
-            ecluster = ElastiCluster(config)
+            ecluster = ElastiCluster(provider)
+            ecluster.load_config(config)
             self._cluster = ecluster.get_config(cluster)
 
         self._extra_vars = self._get_extra_vars(extra_vars)

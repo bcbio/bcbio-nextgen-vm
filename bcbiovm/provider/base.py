@@ -22,6 +22,7 @@ class BaseCloudProvider(object):
     def __init__(self, name=None):
         self._name = name or self.__class__.__name__
         self._flavor = self._set_flavors()
+        self._ecluster = clusterops.ElastiCluster(self._name)
 
     @abc.abstractmethod
     def _set_flavors(self):
@@ -107,14 +108,23 @@ class BaseCloudProvider(object):
         """
         pass
 
+    @staticmethod
+    def _execute_remote(connection, command):
+        """Execute command on frontend node."""
+        try:
+            _, stdout, stderr = connection.exec_command(command)
+        except paramiko.SSHException as exc:
+            return (None, exc)
+
+        return (stdout.read(), stderr.read())
+
     def flavors(self, machine=None):
         if not machine:
             return self._flavor.keys()
         else:
             return self._flavor.get(machine)
 
-    @staticmethod
-    def start(cluster, config=None, no_setup=False, verbose=False):
+    def start(self, cluster, config=None, no_setup=False, verbose=False):
         """Create a cluster using the supplied configuration.
 
         :param cluster:   Type of cluster. It refers to a
@@ -123,11 +133,9 @@ class BaseCloudProvider(object):
         :param no_setup:  Only start the cluster, do not configure it.
         :param verbose:   Increase verbosity.
         """
-        return clusterops.ElastiCluster.start(cluster, config, no_setup,
-                                              verbose)
+        return self._ecluster.start(cluster, config, no_setup, verbose)
 
-    @staticmethod
-    def stop(cluster, config=None, force=False, use_default=False,
+    def stop(self, cluster, config=None, force=False, use_default=False,
              verbose=False):
         """Stop a cluster and all associated VM instances.
 
@@ -139,11 +147,10 @@ class BaseCloudProvider(object):
         :param use_default: Assume `yes` to all queries and do not prompt.
         :param verbose:     Increase verbosity.
         """
-        return clusterops.ElastiCluster(cluster, config, force, use_default,
-                                        verbose)
+        return self._ecluster.stop(cluster, config, force, use_default,
+                                   verbose)
 
-    @staticmethod
-    def setup(cluster, config=None, verbose=False):
+    def setup(self, cluster, config=None, verbose=False):
         """Configure the cluster.
 
         :param cluster:     Type of cluster. It refers to a
@@ -151,10 +158,9 @@ class BaseCloudProvider(object):
         :param config:      Elasticluster config file
         :param verbose:     Increase verbosity.
         """
-        return clusterops.ElastiCluster(cluster, config, verbose)
+        return self._ecluster.setup(cluster, config, verbose)
 
-    @staticmethod
-    def ssh(cluster, config=None, ssh_args=None, verbose=False):
+    def ssh(self, cluster, config=None, ssh_args=None, verbose=False):
         """Connect to the frontend of the cluster using the `ssh` command.
 
         :param cluster:     Type of cluster. It refers to a
@@ -167,17 +173,7 @@ class BaseCloudProvider(object):
             If the ssh_args are provided the command will be executed on
             the remote machine instead of opening an interactive shell.
         """
-        return clusterops.ElastiCluster(cluster, config, ssh_args, verbose)
-
-    @staticmethod
-    def _execute_remote(connection, command):
-        """Execute command on frontend node."""
-        try:
-            _, stdout, stderr = connection.exec_command(command)
-        except paramiko.SSHException as exc:
-            return (None, exc)
-
-        return (stdout.read(), stderr.read())
+        return self._ecluster.ssh(cluster, config, ssh_args, verbose)
 
     def run_script(self, cluster, config, script):
         """Run a script on the frontend node inside a screen session.
@@ -187,8 +183,8 @@ class BaseCloudProvider(object):
         :param config:      Elasticluster config file
         :param script:      The path of the script.
         """
-        ecluster = clusterops.ElastiCluster(config)
-        cluster = ecluster.get_cluster(cluster)
+        self._ecluster.load_config(config)
+        cluster = self._ecluster.get_cluster(cluster)
 
         frontend = cluster.get_frontend_node()
         client = frontend.connect(known_hosts_file=cluster.known_hosts_file)

@@ -34,7 +34,8 @@ class ICELOps(object):
     CREATE_COMPLETE = 'CREATE_COMPLETE'
 
     def __init__(self, cluster, config):
-        self._ecluster = cluster_ops.ElastiCluster(config)
+        self._ecluster = cluster_ops.ElastiCluster(constant.PROVIDER.AWS)
+        self._ecluster.load_config(config)
         self._cluster_config = self._ecluster.get_config(cluster)
 
         self._cluster_name = cluster
@@ -362,7 +363,8 @@ class ICELOps(object):
             config=self._config_path,
             cluster=self._cluster_name,
             verbose=verbose,
-            extra_vars=get_lustre_vars)
+            extra_vars=get_lustre_vars,
+            provider=constant.PROVIDER.AWS)
         return playbook.run()
 
     def stack_name(self, node_addr):
@@ -543,7 +545,8 @@ class ICELOps(object):
             config=self._config_path,
             cluster=self._cluster_name,
             verbose=verbose,
-            ansible_cfg=ansible_config_path)
+            ansible_cfg=ansible_config_path,
+            provider=constant.PROVIDER.AWS)
         return playbook.run()
 
     def mount(self, stack_name, verbose):

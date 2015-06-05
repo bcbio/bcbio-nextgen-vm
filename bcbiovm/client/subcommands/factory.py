@@ -23,7 +23,7 @@ _SUBCOMMANDS = {
         'SSHConnection': cluster.SSHConnection,
     },
     'config': {
-        'Edit': config.Edit,
+        'Edit': config.EditAWS,
     },
     'docker': {
         'BiodataUpload': docker.BiodataUpload,

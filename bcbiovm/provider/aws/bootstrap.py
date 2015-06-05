@@ -32,7 +32,8 @@ class Bootstrap(object):
         self._verbose = verbose
         self._provider = provider
 
-        self._ecluster = cluster.ElastiCluster(config)
+        self._ecluster = cluster.ElastiCluster(provider=constant.PROVIDER.AWS)
+        self._ecluster.load_config(config)
         self._cluster = self._ecluster.get_cluster(cluster_name)
 
         self._inventory_path = os.path.join(
@@ -47,12 +48,14 @@ class Bootstrap(object):
                                 extra variables to pass to ansible given
                                 the arguments and cluster configuration
         """
-        playbook = cluster.AnsiblePlaybook(inventory_path=self._inventory_path,
-                                           playbook_path=playbook,
-                                           config=self._config,
-                                           cluster=self._cluster_name,
-                                           verbose=self._verbose,
-                                           extra_vars=extra_vars)
+        playbook = cluster.AnsiblePlaybook(
+            inventory_path=self._inventory_path,
+            playbook_path=playbook,
+            config=self._config,
+            cluster=self._cluster_name,
+            verbose=self._verbose,
+            extra_vars=extra_vars,
+            provider=constant.PROVIDER.AWS)
         return playbook.run()
 
     def docker(self):

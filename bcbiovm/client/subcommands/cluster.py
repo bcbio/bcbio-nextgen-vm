@@ -17,7 +17,7 @@ class Bootstrap(base.BaseCommand):
             help="Update a bcbio AWS system with the latest code and tools",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -32,6 +32,9 @@ class Bootstrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         return provider.bootstrap(cluster=self.args.cluster,
                                   config=self.args.econfig,
@@ -51,7 +54,7 @@ class Command(base.BaseCommand):
                  "node inside a screen session",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -64,6 +67,9 @@ class Command(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         return provider.run_script(cluster=self.args.cluster,
                                    config=self.args.econfig,
@@ -80,7 +86,7 @@ class Setup(base.BaseCommand):
             "setup", help="Rerun cluster configuration steps",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -92,6 +98,9 @@ class Setup(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         return provider.setup(cluster=self.args.cluster,
                               config=self.args.econfig,
@@ -108,7 +117,7 @@ class Start(base.BaseCommand):
             "start", help="Start a bcbio cluster",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -123,6 +132,9 @@ class Start(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         status = provider.start(cluster=self.args.cluster,
                                 config=self.args.econfig,
@@ -148,7 +160,7 @@ class Stop(base.BaseCommand):
             "stop", help="Stop a bcbio cluster",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -160,6 +172,9 @@ class Stop(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         return provider.stop(cluster=self.args.cluster,
                              config=self.args.econfig,
@@ -178,7 +193,7 @@ class SSHConnection(base.BaseCommand):
             "ssh", help="SSH to a bcbio cluster",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
+            "--econfig", default=None,
             help="Elasticluster bcbio configuration file")
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
@@ -194,6 +209,9 @@ class SSHConnection(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        if self.args.econfig is None:
+            self.args.econfig = constant.PATH.EC_CONFIG.format(
+                provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)
         return provider.ssh(cluster=self.args.cluster,
                             config=self.args.econfig,

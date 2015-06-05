@@ -1,6 +1,7 @@
 """AWS Cloud Provider for bcbiovm."""
 
 from bcbiovm.common import objects
+from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
@@ -17,7 +18,7 @@ class AWSProvider(base.BaseCloudProvider):
     """AWS Provider for bcbiovm."""
 
     def __init__(self):
-        super(AWSProvider, self).__init__()
+        super(AWSProvider, self).__init__(name=constant.PROVIDER.AWS)
 
     def _set_flavors(self):
         """Returns a dictionary with all the flavors available for the current
@@ -134,7 +135,7 @@ class AWSProvider(base.BaseCloudProvider):
         configuration.update(iam.create_keypair(config))
         configuration.update(iam.bcbio_iam_user(create, recreate))
         configuration.update(iam.bcbio_s3_instance_profile(create))
-        utils.write_elasticluster_config(configuration, config)
+        utils.write_elasticluster_config(configuration, config, self._name)
         return configuration
 
     def bootstrap_vpc(self, cluster, config, network, recreate):

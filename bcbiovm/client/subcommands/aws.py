@@ -1,4 +1,5 @@
 """Subcommands available for AWS provider."""
+from __future__ import print_function
 import argparse
 import os
 import textwrap
@@ -88,8 +89,8 @@ class IAMBootstrap(base.BaseCommand):
         parser = self._main_parser.add_parser(
             "iam", help="Create IAM user and policies")
         parser.add_argument(
-            "--econfig", default=constant.PATH.EC_CONFIG,
-            help="Elasticluster bcbio configuration file")
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(provider="aws"))
         parser.add_argument(
             "--recreate", action="store_true", default=False,
             help="Recreate current IAM user access keys")
@@ -121,7 +122,7 @@ class VPCBoostrap(base.BaseCommand):
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument(
             "--econfig", help="Elasticluster bcbio configuration file",
-            default=constant.PATH.EC_CONFIG)
+            default=constant.PATH.EC_CONFIG.format(provider="aws"))
         parser.add_argument(
             "--recreate", action="store_true", default=False,
             help=("Remove and recreate the VPC, destroying all "

@@ -95,13 +95,13 @@ class PATH:
     EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share", "elasticluster",
                                       "providers", "ansible-playbooks",
                                       "library")
-    EC_CONFIG = os.path.join(EC, "config")
     EC_STORAGE = os.path.join(EC, "storage")
+    EC_CONFIG = os.path.join(EC, "{provider}.config")
     PICKLE_FILE = os.path.join(EC_STORAGE, "%(cluster)s.pickle")
 
     ANSIBLE_TEMPLATE = os.path.join(ANSIBLE_BASE, "ansible-icel.cfg.template")
     EC_CONFIG_TEMPLATE = os.path.join(sys.prefix, "share", "bcbio-vm",
-                                      "elasticluster", "config")
+                                      "elasticluster", "{provider}.config")
     SSH_TEMPLATE = os.path.join(ANSIBLE_BASE, "ssh_config-icel.template")
 
     INSTALL_PARAMS = os.path.join(DATADIR, "config", "install-params.yaml")
@@ -127,6 +127,13 @@ class PLAYBOOK:
                                 "tasks", "mount.yml")
     UNMOUNT_LUSTRE = os.path.join(PATH.ANSIBLE_BASE, "roles", "lustre_client",
                                   "tasks", "unmount.yml")
+
+
+class PROVIDER:
+
+    """Contains the available providers' name."""
+
+    AWS = "aws"
 
 
 class SSH:

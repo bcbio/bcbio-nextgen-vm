@@ -146,14 +146,14 @@ class ElastiCluster(base.BaseCommand):
         pass
 
 
-class Config(base.BaseCommand):
+class ConfigAWS(base.BaseCommand):
 
     """Manipulate elasticluster configuration files, providing easy
     ways to edit in place.
     """
 
     sub_commands = [
-        (command_factory.get("config", "Edit"), "actions"),
+        (command_factory.get("config", "EditAWS"), "actions"),
     ]
 
     def setup(self):
@@ -202,7 +202,7 @@ class AWSProvider(base.BaseCommand):
 
     sub_commands = [
         (ElastiCluster, "actions"),
-        (Config, "actions"),
+        (ConfigAWS, "actions"),
         # TODO(alexandrucoman): Add `info` command
         (command_factory.get("aws", "IAMBootstrap"), "actions"),
         (command_factory.get("aws", "VPCBoostrap"), "actions"),

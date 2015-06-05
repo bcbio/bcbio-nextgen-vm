@@ -6,6 +6,7 @@ import re
 import boto.ec2
 
 from bcbiovm.common import cluster as clusterops
+from bcbiovm.common import constant
 from bcbiovm.common import utils
 
 LOG = utils.get_logger(__name__)
@@ -32,7 +33,8 @@ class VirtualPrivateCloud(object):
         self._network = network
         self._recreate = recreate
 
-        ecluster = clusterops.ElastiCluster(config)
+        ecluster = clusterops.ElastiCluster(constant.PROVIDER.AWS)
+        ecluster.load_config(config)
         cluster_config = ecluster.get_config(cluster)
 
         self._key_id = cluster_config['cloud']['ec2_access_key']
