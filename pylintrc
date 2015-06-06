@@ -308,7 +308,7 @@ ignore-mixin-members=yes
 # (useful for modules/projects where namespaces are manipulated during runtime
 
 # and thus existing member attributes cannot be deduced by static analysis
-ignored-modules=
+ignored-modules=numpy
 
 # List of classes names for which member attributes should not be checked
 
