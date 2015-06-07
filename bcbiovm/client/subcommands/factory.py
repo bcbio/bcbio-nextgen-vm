@@ -23,12 +23,13 @@ _SUBCOMMANDS = {
         'SSHConnection': cluster.SSHConnection,
     },
     'config': {
-        'Edit': config.EditAWS,
+        'EditAWS': config.EditAWS,
     },
     'docker': {
         'BiodataUpload': docker.BiodataUpload,
         'Build': docker.Build,
         'Install': docker.Install,
+        'SaveConfig': docker.SaveConfig,
         'Server': docker.Server,
         'SetupInstall': docker.SetupInstall,
         'SystemUpdate': docker.SystemUpdate,

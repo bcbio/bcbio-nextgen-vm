@@ -16,7 +16,7 @@ from bcbiovm.client.subcommands import factory
 from bcbiovm.common import cluster
 
 
-class BCBioParser(base.Parser):
+class BCBioParser(base.BaseParser):
 
     """bcbio-nextgen-vm command line application."""
 
@@ -27,7 +27,7 @@ class BCBioParser(base.Parser):
         factory.get('ipython', 'IPython'),
         factory.get('ipython', 'IPythonPrep'),
         client_commands.Template,
-        client_commands.Provider,
+        client_commands.AWSProvider,
         # TODO(alexandrucoman): Add elasticluster command
         factory.get('docker', 'RunFunction'),
         client_commands.DockerDevel,
@@ -42,14 +42,15 @@ class BCBioParser(base.Parser):
         """Extend the parser configuration in order to expose all
         the received commands.
         """
-        parser = argparse.ArgumentParser(
+        self._parser = argparse.ArgumentParser(
             description=("Automatic installation for bcbio-nextgen pipelines,"
                          " with docker."))
-        parser.add_argument(
+        self._parser.add_argument(
             "--datadir",
             help="Directory with genome data and associated files.",
             type=lambda x: (os.path.abspath(os.path.expanduser(x))))
-        self._parser = parser.add_subparsers(title="[sub-commands]")
+        self._subparser = self._parser.add_subparsers(
+            title="[sub-commands]", dest="provider")
 
 
 def main():
@@ -57,7 +58,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
         sys.exit(cluster.ElastiCluster.execute(sys.argv[1:]))
 
-    bcbio = BCBioParser()
+    bcbio = BCBioParser(sys.argv[1:])
     bcbio.run()
 
 

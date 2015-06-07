@@ -9,10 +9,11 @@ import collections
 import six
 
 from bcbiovm.common import exception
+from bcbiovm.common import utils
 
 __all__ = ['BaseCommand', 'BaseParser']
 
-
+LOG = utils.get_logger(__name__)
 SubCommand = collections.namedtuple("SubCommand", ["name", "instance"])
 
 
@@ -55,10 +56,9 @@ class BaseCommand(object):
         self.setup()
 
         for command, parser_name in self.sub_commands or ():
+            LOG.debug("Trying to bind %(command)r to %(parser)r",
+                      {"command": command.__name__, "parser": parser_name})
             parser = self._get_parser(parser_name)
-            if not parser:
-                raise ValueError("Invalid parser name %(name)s",
-                                 {"name": parser_name})
             self._bind(command, parser)
 
     @property
@@ -77,7 +77,7 @@ class BaseCommand(object):
         return self._name
 
     @property
-    def commands(self):
+    def subcommands(self):
         """Generator for all the commands bonded to the current command.
 
         Each subcommand is an namedtuple with the following fields:
@@ -96,7 +96,11 @@ class BaseCommand(object):
 
     def _get_parser(self, name):
         """Get the parser for the current command."""
-        return self._parsers.get(name)
+        try:
+            return self._parsers[name]
+        except KeyError:
+            raise ValueError("Invalid parser name %(name)s",
+                             {"name": name})
 
     def _register_parser(self, name, parser):
         """Register a new parser."""
@@ -153,11 +157,14 @@ class BaseParser(object):
         self._commands = []
         self._command_line = command_line
         self._parser = None
+        self._subparser = None
 
         self.setup()
 
         for command_cls in self.commands:
-            self.register_command(command_cls(self, self._parser))
+            LOG.debug("Create an instance of %(command)r",
+                      {"command": command_cls})
+            self.register_command(command_cls(self, self._subparser))
 
     @property
     def args(self):
@@ -175,8 +182,12 @@ class BaseParser(object):
         container = [command]
         while container:
             command = container.pop()
+            LOG.debug("Searching for all the subcommands for %(command)r",
+                      {"command": command.name})
             for subcommand in command.subcommands:
                 container.append(subcommand.instance)
+                LOG.debug("Subcommand %(subcommand)r was found.",
+                          {"subcommand": subcommand.name})
                 yield subcommand.instance
 
     def register_command(self, command):
@@ -185,7 +196,11 @@ class BaseParser(object):
         If the command have another commands bonded, those will be
         also registered.
         """
+        LOG.debug("Trying to register %(command)r",
+                  {"command": command.name})
         if not self.check_command(command):
+            LOG.error("%(command)r is not recognized.",
+                      {"command": command})
             return
 
         self._commands.append(command)
@@ -214,8 +229,12 @@ class BaseParser(object):
         Exemple:
         ::
             # ...
-            self._parser = argparse.ArgumentParser(description=description)
-            self._parser.add_argument("--example", help="just an example")
+            self._parser = argparse.ArgumentParser(
+                description=description)
+            self._parser.add_argument(
+                "--example", help="just an example")
+            self._subparser = self._parser.add_subparsers(
+                title="[sub-commands]")
             # ...
         """
 

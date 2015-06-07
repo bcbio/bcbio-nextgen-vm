@@ -22,7 +22,7 @@ class IPython(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_pjarser(
+        parser = self._main_parser.add_parser(
             "ipython",
             help="Run on a cluster using IPython parallel.")
         parser.add_argument(

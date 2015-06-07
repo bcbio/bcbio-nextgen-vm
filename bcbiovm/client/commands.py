@@ -115,7 +115,7 @@ class DockerDevel(base.BaseCommand):
             help=("Utilities to help with develping using bcbion"
                   "inside of docker."))
         actions = parser.add_subparsers(title="[devel commands]")
-        self._register_parser(actions, "actions")
+        self._register_parser("actions", actions)
 
     def process(self):
         """Run the command with the received information."""
@@ -139,7 +139,7 @@ class ElastiCluster(base.BaseCommand):
         parser = self._main_parser.add_parser(
             "cluster", help="Run and manage AWS clusters")
         actions = parser.add_subparsers(title="[cluster specific actions]")
-        self._register_parser(actions, "actions")
+        self._register_parser("actions", actions)
 
     def process(self):
         """Run the command with the received information."""
@@ -163,7 +163,7 @@ class ConfigAWS(base.BaseCommand):
             help="Define configuration details for running a cluster")
         actions = parser.add_subparsers(
             title="[configuration specific actions]")
-        self._register_parser(actions, "actions")
+        self._register_parser("actions", actions)
 
     def process(self):
         """Run the command with the received information."""
@@ -189,7 +189,7 @@ class ICELCommand(base.BaseCommand):
             help=("Create scratch filesystem using Intel Cloud Edition"
                   "for Lustre"))
         actions = parser.add_subparsers(title="[icel create]")
-        self._register_parser(actions, "actions")
+        self._register_parser("actions", actions)
 
     def process(self):
         """Run the command with the received information."""
@@ -217,24 +217,7 @@ class AWSProvider(base.BaseCommand):
             "aws",
             help="Automate resources for running bcbio on AWS")
         actions = parser.add_subparsers(title="[aws commands]")
-        self._register_parser(actions, "actions")
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
-
-
-class Provider(base.BaseCommand):
-
-    sub_commands = [
-        (AWSProvider, "provider")
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        subparser = self._main_parser.add_subparsers(title=["cloud provider"],
-                                                     dest="provider")
-        self._register_parser(subparser, "provider")
+        self._register_parser("actions", actions)
 
     def process(self):
         """Run the command with the received information."""
