@@ -5,7 +5,6 @@ import datetime
 import glob
 import os
 import shutil
-import subprocess
 
 import numpy
 import yaml
@@ -17,6 +16,7 @@ from bcbio.provenance import do
 
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
+from bcbiovm.common import utils as common_utils
 from bcbiovm.docker import defaults, install, manage, mounts
 
 
@@ -116,17 +116,16 @@ def run_setup_install(args):
     cmd = ["docker", "run", "-i", "-d", "--net=host"]
     cmd.extend(bmounts)
     cmd.extend([args.image, "bash", "-l", "-c", bash_cmd])
-    # TODO(alexandrucoman): Use bcbiovm.common.utils.execute
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    cid = process.communicate()[0].strip()
+    cid, _ = common_utils.execute(cmd)
+    cid = cid.strip()
     do.run(["docker", "attach", "--no-stdin", cid],
            "Running in docker container: %s" % cid,
            log_stdout=True)
 
     # TODO(alexandrucoman): Use bcbiovm.common.utils.execute
-    subprocess.check_call(["docker", "commit", cid, args.image])
-    subprocess.check_call(["docker", "rm", cid], stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT)
+    common_utils.execute(["docker", "commit", cid, args.image],
+                         check_exit_code=True)
+    common_utils.execute(["docker", "rm", cid], check_exit_code=True)
     print("Updated bcbio-nextgen install in docker container: %s" % args.image)
 
 

@@ -6,9 +6,10 @@ import operator
 import os
 import platform
 import pwd
-import subprocess
 
 from bcbio.provenance import do
+
+from bcbiovm.common import utils
 
 
 def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
@@ -41,23 +42,23 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
                 group.gr_name, str(group.gr_gid)]
     cmd += ["bcbio_nextgen.py"] + bcbio_nextgen_args
     # logger.info(" ".join(cmd))
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    cid = process.communicate()[0].strip()
+    cid, _ = utils.execute(cmd)
+    cid = cid.strip()
     try:
         do.run(["docker", "attach", "--no-stdin", cid],
                "Running in docker container: %s" % cid,
                log_stdout=True)
     except Exception:
         print("Stopping docker container")
-        # FIXME(alexandrucoman): Use bcbiovm.utils.execute
-        subprocess.call(["docker", "kill", cid], stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT)
+        _, error = utils.execute(["docker", "kill", cid])
+        if error:
+            print(error)
     finally:
-        # FIXME(alexandrucoman): Use bcbiovm.utils.execute
-        subprocess.call(["docker", "kill", cid], stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT)
-        subprocess.call(["docker", "rm", cid], stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT)
+        for command in (["docker", "kill", cid],
+                        ["docker", "rm", cid]):
+            _, error = utils.execute(command)
+            if error:
+                print(error)
     return cid
 
 

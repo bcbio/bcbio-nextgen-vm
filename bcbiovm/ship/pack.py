@@ -4,7 +4,6 @@ to shared infrastructure.
 """
 
 import os
-import subprocess
 
 import boto
 from boto.exception import S3ResponseError
@@ -12,6 +11,8 @@ import toolz as tz
 
 from bcbio.pipeline import config_utils
 from bcbio import utils
+
+from bcbiovm.common import utils as common_utils
 from bcbiovm.docker import remap
 
 
@@ -108,10 +109,11 @@ def _remove_empty(xs):
 
 
 def _put_s3(fname, keyname, bucket):
-    subprocess.check_call([
-        "gof3r", "put", "-p", fname, "-k", keyname,
-        "-b", bucket, "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
-        "-m", "x-amz-server-side-encryption:AES256"])
+    common_utils.execute(
+        ["gof3r", "put", "-p", fname, "-k", keyname,
+         "-b", bucket, "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
+         "-m", "x-amz-server-side-encryption:AES256"],
+        check_exit_code=True)
 
 
 def _get_s3_bucket(conn, bucket_name):

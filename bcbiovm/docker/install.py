@@ -83,7 +83,6 @@ def pull(args, dockerconf):
     currently smaller with an exported gzipped image.
     """
     print("Retrieving bcbio-nextgen docker image with code and tools")
-    # subprocess.check_call(["docker", "pull", image])
     assert args.image, "Unspecified image name for docker import"
     utils.execute(["docker", "import", dockerconf["image_url"], args.image],
                   check_exit_code=0)

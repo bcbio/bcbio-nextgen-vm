@@ -5,7 +5,6 @@ then handing off outputs to ship back to subsequent processing steps.
 """
 import os
 import shutil
-import subprocess
 import uuid
 
 import toolz as tz
@@ -15,6 +14,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio import utils
+
+from bcbiovm.common import utils as common_utils
 from bcbiovm.docker import remap
 from bcbiovm.ship import pack as ship_n_pack
 
@@ -82,8 +83,10 @@ def _transfer_s3(out_fname, keyname, bucket):
     if not os.path.exists(out_fname):
         utils.safe_makedir(os.path.dirname(out_fname))
         with file_transaction(out_fname) as tx_out_fname:
-            subprocess.check_call(["gof3r", "get", "-p", tx_out_fname,
-                                   "-k", keyname, "-b", bucket])
+            common_utils.execute(
+                ["gof3r", "get", "-p", tx_out_fname,
+                 "-k", keyname, "-b", bucket],
+                check_exit_code=True)
 
 
 def _unpack_s3(bucket, args):
