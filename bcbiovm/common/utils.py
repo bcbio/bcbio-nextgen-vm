@@ -241,7 +241,7 @@ def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
     return True
 
 
-def execute(*command, **kwargs):
+def execute(command, **kwargs):
     """Helper method to shell out and execute a command through subprocess.
 
     :param attempts:        How many times to retry running the command.
@@ -289,7 +289,7 @@ def execute(*command, **kwargs):
                                        stderr=subprocess.PIPE, shell=shell,
                                        cwd=cwd, env=env_variables)
             result = process.communicate()
-            return_code = result.returncode     # pylint: disable=no-member
+            return_code = process.returncode
 
             if six.PY3 and not binary and result is not None:
                 # pylint: disable=no-member

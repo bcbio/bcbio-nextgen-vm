@@ -247,4 +247,4 @@ class BaseParser(object):
         # Parse the command line
         self._args = self._parser.parse_args(self.command_line)
         # pylint: disable=no-member
-        return self._args.funct()
+        return self._args.func()

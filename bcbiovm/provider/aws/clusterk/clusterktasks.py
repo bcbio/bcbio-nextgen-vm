@@ -54,8 +54,9 @@ def _test_clusterk(fn_name, parallel_file, arg_file):
     shutil.copy(parallel_file, test_dir)
     shutil.copy(arg_file, test_dir)
     with utils.chdir(test_dir):
-        common_utils.execute("bcbio_vm.py", "runfn", fn_name, parallel_file,
-                             arg_file, check_exit_code=0)
+        common_utils.execute(
+            ["bcbio_vm.py", "runfn", fn_name, parallel_file, arg_file],
+            check_exit_code=0)
 
 
 def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):

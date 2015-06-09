@@ -61,9 +61,10 @@ class IAMOps(object):
             os.makedirs(keypair_dir)
 
         if new_key:
-            utils.execute("ssh-keygen", "-t", "rsa", "-N", "", "-f",
-                          private_key, "-C", "bcbio_aws_keypair",
-                          check_exit_code=0)
+            utils.execute(
+                ["ssh-keygen", "-t", "rsa", "-N", "",
+                 "-f", private_key, "-C", "bcbio_aws_keypair"],
+                check_exit_code=0)
 
         ec2 = boto.connect_ec2()
         key = ec2.get_key_pair(keyname)
