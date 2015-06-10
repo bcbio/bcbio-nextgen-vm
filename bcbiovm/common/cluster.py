@@ -34,9 +34,10 @@ class ElastiCluster(object):
     _EC_SETUP = "setup"
 
     def __init__(self, provider=constant.DEFAULT_PROVIDER):
-        self._config = None
-        self._config_file = None
         self._provider = provider
+        self._config = None
+        self._config_file = constant.PATH.EC_CONFIG.format(
+            provider=provider)
 
     @property
     def config(self):
@@ -45,9 +46,9 @@ class ElastiCluster(object):
 
     def load_config(self, config=None):
         """Load the Elasticluster configuration."""
-        if config is None:
-            self._config_file = constant.PATH.EC_CONFIG.format(
-                provider=self._provider)
+        if config is not None:
+            self._config_file = config
+
         # TODO(alexandrucoman): Change `storage` with a constant
         storage_dir = os.path.join(os.path.dirname(self._config_file),
                                    "storage")
@@ -128,6 +129,8 @@ class ElastiCluster(object):
         cls._add_common_options(command, **kwargs)
         cls._check_command(command)
         sys.argv = command
+        LOG.debug("Run elasticluster command: %(command)s",
+                  {"command": command})
         try:
             return ec_main.main()
         except SystemExit as exc:
@@ -318,6 +321,7 @@ class AnsiblePlaybook(object):
 
     def prologue(self):
         """Setup the environment before playbook run."""
+        LOG.debug("Setup the environment before playbook run.")
         os.environ[self.HOST_KEY_CHECKING] = constant.ANSIBLE.KEY_CHECKING
         if self._ansible_cfg:
             os.environ[self.TEMP_CONFIG] = os.environ.get(self.CONFIG)
@@ -326,6 +330,7 @@ class AnsiblePlaybook(object):
 
     def epilogue(self):
         """Cleanup the environment after playbook run."""
+        LOG.debug("Cleanup the environment after playbook run.")
         if self._ansible_cfg:
             old_ansible_cfg = os.environ.pop(self.TEMP_CONFIG, None)
             if old_ansible_cfg:
@@ -341,6 +346,9 @@ class AnsiblePlaybook(object):
                  contains information regarding unreachable hosts and
                  the second one contains information regarding failures.
         """
+        LOG.debug("Trying to run %(playbook)r ansible playbook.",
+                  {"playbook": self._playbook})
+
         private_key = None
         if self._cluster:
             private_key = self._cluster['login']['user_key_private']
@@ -362,8 +370,14 @@ class AnsiblePlaybook(object):
         failures = {}
         for host, hoststatus in status.items():
             if hoststatus['unreachable']:
+                LOG.warning("The host %(host)r in unreachable.",
+                            {"host": host})
                 unreachable.append(host)
+
             if hoststatus['failures']:
+                LOG.warning(
+                    "On host %(host)r something went wrong: %(failures)s",
+                    {"host": host, "failures": hoststatus["failures"]})
                 failures[host] = hoststatus['failures']
 
         return (unreachable, failures)
