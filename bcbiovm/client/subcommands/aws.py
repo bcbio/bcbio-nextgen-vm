@@ -102,7 +102,7 @@ class IAMBootstrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(self.args.provider)
+        provider = cloud_factory.get(self.args.provider)()
         provider.bootstrap_iam(config=self.args.econfig,
                                create=not self.args.nocreate,
                                recreate=self.args.recreate)
@@ -137,7 +137,7 @@ class VPCBoostrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(self.args.provider)
+        provider = cloud_factory.get(self.args.provider)()
         return provider.bootstrap_vpc(cluster=self.args.cluster,
                                       config=self.args.econfig,
                                       network=self.args.network,

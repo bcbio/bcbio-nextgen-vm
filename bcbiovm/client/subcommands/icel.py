@@ -61,7 +61,7 @@ class Create(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         # NOTE(alexandrucoman): Command available only for AWS Provider
-        provider = cloud_factory.get(constant.PROVIDER.AWS)
+        provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.create_icel(
             cluster=self.args.cluster,
             config=self.args.econfig,
@@ -104,7 +104,7 @@ class Mount(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)
+        provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.mount_lustre(cluster=self.args.cluster,
                               config=self.args.econfig,
                               stack_name=self.args.stack_name,
@@ -139,7 +139,7 @@ class Unmount(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)
+        provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.unmount_lustre(cluster=self.args.cluster,
                                 config=self.args.econfig,
                                 stack_name=self.args.stack_name,
@@ -171,7 +171,7 @@ class Stop(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)
+        provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.stop_lustre(cluster=self.args.cluster,
                              config=self.args.econfig,
                              stack_name=self.args.stack_name)
@@ -202,7 +202,7 @@ class Specification(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)
+        provider = cloud_factory.get(constant.PROVIDER.AWS)()
         print(provider.lustre_spec(cluster=self.args.cluster,
                                    config=self.args.econfig,
                                    stack_name=self.args.stack_name))

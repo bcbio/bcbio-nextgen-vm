@@ -55,7 +55,7 @@ class Graph(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(self.args.provider)
+        provider = cloud_factory.get(self.args.provider)()
         if (self.args.cluster and
                 self.args.cluster.lower() not in ("none", "false")):
             provider.colect_data(cluster=self.args.cluster,
