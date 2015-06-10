@@ -2,7 +2,7 @@
 
 from bcbiovm.common import objects
 from bcbiovm.provider import base
-
+from bcbiovm.provider.azure import bootstrap as azure_bootstrap
 # pylint: disable=no-self-use
 
 
@@ -131,4 +131,9 @@ class AzureProvider(base.BaseCloudProvider):
         :param reboot:    whether to upgrade and restart the host OS
         :param verbose:   increase verbosity
         """
-        pass
+        install = azure_bootstrap.Bootstrap(
+            provider=self, config=config, cluster_name=cluster,
+            reboot=reboot, verbose=verbose)
+        for playbook in (install.docker, install.gof3r, install.bcbio):
+            # TODO(alexandrucoman): Check the results
+            playbook()
