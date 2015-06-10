@@ -2,7 +2,31 @@
 import os
 
 from bcbiovm.client import base
+from bcbiovm.common import constant
 from bcbiovm.common import utils
+
+
+class ECConfig(base.BaseCommand):
+
+    """Write Elasticluster configuration file with user information."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "ec-config",
+            help="Write Elasticluster configuration file.")
+        parser.add_argument(
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=constant.PATH.EC_CONFIG.format(
+                provider=constant.PROVIDER.AZURE))
+
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        return utils.write_elasticluster_config(
+            config={}, output=self.args.econfig,
+            provider=constant.PROVIDER.AZURE)
 
 
 class ManagementCertificate(base.BaseCommand):
@@ -123,6 +147,7 @@ class PrepareEnvironment(base.BaseCommand):
     sub_commands = [
         (ManagementCertificate, "actions"),
         (PrivateKey, "actions"),
+        (ECConfig, "actions"),
     ]
 
     def setup(self):
