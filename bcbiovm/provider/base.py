@@ -28,6 +28,11 @@ class BaseCloudProvider(object):
         self._flavor = self._set_flavors()
         self._ecluster = clusterops.ElastiCluster(self._name)
 
+    @property
+    def name(self):
+        """The cloud provider name."""
+        return self._name
+
     @abc.abstractmethod
     def _set_flavors(self):
         """Returns a dictionary with all the flavors available for the current
