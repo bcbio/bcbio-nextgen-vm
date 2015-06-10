@@ -237,7 +237,7 @@ def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
         file_handle.flush()
 
     os.chmod(path, permissions)
-    os.utime(utime)
+    os.utime(path, utime)
     return True
 
 
@@ -338,6 +338,7 @@ def write_elasticluster_config(config, output,
 
     with open(template_file, "r") as file_handle:
         for line in file_handle.readlines():
+            line = line.strip()
             key, sep, _ = line.partition("=")
             if sep == "=" and key in config:
                 content.append("%(name)s=%(value)s" %
