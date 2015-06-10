@@ -6,7 +6,8 @@ import sys
 import ansible.utils
 import ansible.callbacks
 import ansible.playbook
-import elasticluster
+from elasticluster import conf as ec_conf
+from elasticluster import main as ec_main
 import voluptuous
 
 from bcbiovm.common import constant
@@ -51,7 +52,7 @@ class ElastiCluster(object):
         storage_dir = os.path.join(os.path.dirname(self._config_file),
                                    "storage")
         try:
-            self._config = elasticluster.conf.Configurator.fromConfig(
+            self._config = ec_conf.Configurator.fromConfig(
                 self._config_file, storage_dir)
         except voluptuous.Error:
             # FIXME(alexandrucoman): Raise InvalidConfig
@@ -79,13 +80,14 @@ class ElastiCluster(object):
     @classmethod
     def _add_common_options(cls, command, config=None, verbose=None):
         """Add common options to the command line."""
-        if config:
-            # Add `--config config_file` to the command
-            command.extend([cls._CONFIG[1], config])
-
         if verbose:
-            # Add `--verbose` to the command
-            command.append(cls._VERBOSE[1])
+            # Insert `--verbose` to the command
+            command.insert(1, cls._VERBOSE[1])
+
+        if config:
+            # Insert `--config config_file` to the command
+            for argument in (config, cls._CONFIG[1]):
+                command.insert(1, argument)
 
     @classmethod
     def _check_command(cls, command):
@@ -127,7 +129,7 @@ class ElastiCluster(object):
         cls._check_command(command)
         sys.argv = command
         try:
-            return elasticluster.main.main()
+            return ec_main.main()
         except SystemExit as exc:
             return exc.args[0]
 
