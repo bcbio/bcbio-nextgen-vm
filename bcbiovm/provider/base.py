@@ -8,8 +8,12 @@ import os
 
 import paramiko
 import six
+import toolz
+
+from bcbio.distributed import ipython
 
 from bcbiovm.common import cluster as clusterops
+from bcbiovm.common import constant
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -206,3 +210,81 @@ class BaseCloudProvider(object):
                              {"name": screen_name, "script": remote_file,
                               "output": ouput_file})
         client.close()
+
+
+class Bootstrap(object):
+
+    """
+    Update or install the bcbio and its requirements.
+    """
+
+    def __init__(self, provider, config, cluster_name, reboot, verbose):
+        """
+        :param provider:       an instance of
+                               :class bcbiovm.provider.base.BaseCloudProvider:
+        :param config:         elasticluster config file
+        :param cluster_name:   cluster name
+        :param reboot:         whether to upgrade and restart the host OS
+        :param verbose:        increase verbosity
+        """
+        self._config = config
+        self._cluster_name = cluster_name
+        self._reboot = reboot
+        self._verbose = verbose
+        self._provider = provider
+
+        self._ecluster = clusterops.ElastiCluster(provider=self._provider.name)
+        self._ecluster.load_config(config)
+        self._cluster = self._ecluster.get_cluster(cluster_name)
+
+        self._inventory_path = os.path.join(
+            self._cluster.repository.storage_path,
+            "ansible-inventory.%(cluster)s" % {"cluster": cluster_name})
+
+    def _run_playbook(self, playbook, extra_vars=None):
+        """Run a playbook and return the result.
+
+        :param playbook_path:   the path to a playbook file
+        :param extra_args:      is an option function that should return
+                                extra variables to pass to ansible given
+                                the arguments and cluster configuration
+        """
+        playbook = clusterops.AnsiblePlaybook(
+            inventory_path=self._inventory_path,
+            playbook_path=playbook,
+            config=self._config,
+            cluster=self._cluster_name,
+            verbose=self._verbose,
+            extra_vars=extra_vars,
+            provider=self._provider.name)
+        return playbook.run()
+
+    def docker(self):
+        """Install docker."""
+        return self._run_playbook(constant.PLAYBOOK.DOCKER)
+
+    def bcbio(self):
+        """Install bcbio_vm and docker container with tools.
+        Set core and memory usage.
+        """
+        def _extra_vars(cluster_config):
+            """Extra variables to inject into a playbook."""
+            # Calculate cores and memory
+            compute_nodes = int(
+                toolz.get_in(["nodes", "frontend", "compute_nodes"],
+                             cluster_config, 0))
+            if compute_nodes > 0:
+                machine = toolz.get_in(["nodes", "compute", "flavor"],
+                                       cluster_config)
+            else:
+                machine = toolz.get_in(["nodes", "frontend", "flavor"],
+                                       cluster_config)
+            flavor = self._provider.flavors(machine=machine)
+            cores = ipython.per_machine_target_cores(flavor.cpus,
+                                                     compute_nodes)
+            return {
+                "target_cores": cores,
+                "target_memory": flavor.memory,
+                "upgrade_host_os_and_reboot": self._reboot}
+
+        return self._run_playbook(constant.PLAYBOOK.BCBIO, _extra_vars)
