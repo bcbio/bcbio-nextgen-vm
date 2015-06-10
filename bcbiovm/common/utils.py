@@ -324,7 +324,6 @@ def write_elasticluster_config(config, output,
     information.
     """
     template_file = constant.PATH.EC_CONFIG_TEMPLATE.format(provider=provider)
-    config_file = {}
     content = []
 
     if not os.path.exists(os.path.dirname(output)):
@@ -339,13 +338,11 @@ def write_elasticluster_config(config, output,
 
     with open(template_file, "r") as file_handle:
         for line in file_handle.readlines():
-            line = line.strip()
-            key, sep, value = line.partition("=")
-            if sep != "=":
-                continue
-            config[key] = value
+            key, sep, _ = line.partition("=")
+            if sep == "=" and key in config:
+                content.append("%(name)s=%(value)s" %
+                               {"name": key, "value": config[key]})
+            else:
+                content.append(line)
 
-    config_file.update(config)
-    for key, value in config_file.items():
-        content.append("%(name)s=%(value)s" % {"name": key, "value": value})
     write_file(output, "\n".join(content), open_mode="w")
