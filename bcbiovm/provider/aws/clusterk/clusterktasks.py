@@ -64,6 +64,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     # FIXME(alexandrucoman): Unused argument 'wrap_args'
     # pylint: disable=unused-argument
     run_id = uuid.uuid4()
+    s3pack = pack.S3Pack()
 
     script_file = "bcbio-%s-%s-run.sh" % (fn_name, run_id)
     arg_file = "bcbio-%s-%s-args.json" % (fn_name, run_id)
@@ -71,7 +72,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     tarball = "bcbio-%s-%s.tar.gz" % (fn_name, run_id)
     out_file = "%s-out%s" % os.path.splitext(arg_file)
 
-    run_args = pack.send_run(run_args, parallel["pack"])
+    run_args = s3pack.send_run(run_args, parallel["pack"])
     with utils.chdir(os.getcwd()):
         with open(arg_file, "w") as out_handle:
             yaml.safe_dump(run_args, out_handle,

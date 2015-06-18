@@ -5,7 +5,20 @@ import os
 import yaml
 
 from bcbiovm.docker import manage, mounts
-from bcbiovm.ship import pack
+
+
+def prep_s3(biodata_bucket, run_bucket, output_folder):
+    """Prepare configuration for shipping to S3."""
+    return {
+        "type": "S3",
+        "buckets": {
+            "run": run_bucket,
+            "biodata": biodata_bucket,
+        },
+        "folders": {
+            "output": output_folder,
+        }
+    }
 
 
 def run(args, docker_config):
@@ -30,8 +43,8 @@ def run(args, docker_config):
         yaml.safe_dump(ready_config, out_handle,
                        default_flow_style=False,
                        allow_unicode=False)
-    parallel["pack"] = pack.prep_s3(args.biodata_bucket, args.run_bucket,
-                                    "runfn_output")
+    parallel["pack"] = prep_s3(args.biodata_bucket, args.run_bucket,
+                               "runfn_output")
     parallel["wrapper_args"] = [{"sample_config": ready_config_file,
                                  "docker_config": docker_config,
                                  "fcdir": args.fcdir,

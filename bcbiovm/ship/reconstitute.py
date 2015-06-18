@@ -31,13 +31,14 @@ def prep_workdir(pack, parallel, args):
                                                     remap_dict, parallel)
 
     elif pack["type"] == "S3":
+        s3pack = ship_n_pack.S3Pack()
         workdir, new_args = _unpack_s3(pack["buckets"]["run"], args)
         datai, data = config_utils.get_dataarg(new_args)
         if "dirs" not in data:
             data["dirs"] = {}
         data["dirs"]["work"] = workdir
         new_args[datai] = data
-        return workdir, new_args, ship_n_pack.send_run_integrated(pack)
+        return workdir, new_args, s3pack.send_run_integrated(pack)
     else:
         raise ValueError("Cannot handle work directory "
                          "preparation type: %s" % pack)

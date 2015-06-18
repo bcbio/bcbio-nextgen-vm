@@ -257,7 +257,9 @@ class RunFunction(base.BaseCommand):
         with open(out_file, "w") as out_handle:
             yaml.safe_dump(out, out_handle, default_flow_style=False,
                            allow_unicode=False)
-        ship_pack.send_output(parallel["pack"], out_file)
+        # FIXME(alexandrucoman): Taking cloud provider into consideration
+        s3pack = ship_pack.S3Pack()
+        s3pack.send_output(parallel["pack"], out_file)
 
 
 class Install(base.BaseCommand):

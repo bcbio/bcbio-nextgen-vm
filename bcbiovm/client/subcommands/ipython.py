@@ -13,12 +13,25 @@ from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import mounts as docker_mounts
 from bcbiovm.docker import run as docker_run
 from bcbiovm.ipython import batchprep
-from bcbiovm.ship import pack
 
 
 class IPython(base.BaseCommand):
 
     """Run on a cluster using IPython parallel."""
+
+    @staticmethod
+    def shared_filesystem(workdir, datadir, tmpdir=None):
+        """Enable running processing within an optional temporary directory.
+
+        workdir is assumed to be available on a shared filesystem,
+        so we don't require any work to prepare.
+        """
+        return {
+            "type": "shared",
+            "workdir": workdir,
+            "tmpdir": tmpdir,
+            "datadir": datadir
+        }
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -95,7 +108,7 @@ class IPython(base.BaseCommand):
             {
                 "sample_config": ready_config_file,
                 "fcdir": args.fcdir,
-                "pack": pack.shared_filesystem(work_dir, args.datadir,
+                "pack": self.shared_filesystem(work_dir, args.datadir,
                                                args.tmpdir),
                 "systemconfig": systemconfig,
                 "image": args.image
