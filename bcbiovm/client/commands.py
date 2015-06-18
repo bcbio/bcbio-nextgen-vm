@@ -69,11 +69,12 @@ class Graph(base.BaseCommand):
         if resource_usage:
             matplotlib.use('Agg')
             pylab.rcParams['figure.figsize'] = (35.0, 12.0)
-            data_frames, hardware_info = resource_usage
-            # Note(alexandrucoman): For the moment graph.generate_graphs
-            #                       do not recognise this argument
-            #                       configuration.
-            graph.generate_graphs(data_frames, hardware_info, self.args.outdir)
+            data, hardware, steps = resource_usage
+            graph.generate_graphs(data_frames=data,
+                                  hardware_info=hardware,
+                                  steps=steps,
+                                  outdir=self.args.outdir,
+                                  verbose=self.args.verbose)
 
 
 class Template(base.BaseCommand):

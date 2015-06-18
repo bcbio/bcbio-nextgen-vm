@@ -221,18 +221,20 @@ class Parser(object):
         :return:    an instance of :class collections.namedtuple:
                     with the following fields: start and end
         """
-        output = collections.namedtuple("Time", ["start", "end"])
+        output = collections.namedtuple("Time", ["start", "end", "steps"])
         bcbio_timings = graph.get_bcbio_timings(self._bcbio_log)
         steps = bcbio_timings.keys()
-        return output(min(steps), max(steps))
+        return output(min(steps), max(steps), steps)
 
     def run(self):
         """Parse the information.
 
-        :return: a tuple with two dictionaries, the first contains
-                 an instance of :pandas.DataFrame: for each host and
-                 the second one contains information regarding the
-                 hardware configuration
+        :return: a tuple with three dictionaries, the first one contains
+                 an instance of :pandas.DataFrame: for each host, the
+                 second one contains information regarding the hardware
+                 configuration and the last one contains information
+                 regarding timing.
+        :type return: tuple
         """
         data_frames = {}
         hardware_info = {}
@@ -256,7 +258,7 @@ class Parser(object):
             else:
                 data_frames[host] = pandas.concat([data_frames[host], data])
 
-        return (data_frames, hardware_info)
+        return (data_frames, hardware_info, time_frame.steps)
 
 
 class Report(object):
