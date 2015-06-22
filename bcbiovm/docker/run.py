@@ -11,7 +11,7 @@ import yaml
 
 from bcbio import log
 from bcbiovm.docker import manage, mounts, remap
-from bcbiovm.ship import reconstitute
+from bcbiovm.ship import factory as ship_factory
 
 
 def do_analysis(args, dockerconf):
@@ -49,18 +49,21 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
     dmounts = []
+    reconstitute = ship_factory.get(cmd_args["pack"]["type"]).reconstitute()
+
     if cmd_args.get("sample_config"):
         with open(cmd_args["sample_config"]) as in_handle:
             _, dmounts = mounts.update_config(yaml.load(in_handle),
                                               cmd_args["fcdir"])
-    datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
+
+    datadir, fn_args = reconstitute.prepare_datadir(cmd_args["pack"], fn_args)
     if "orig_systemconfig" in cmd_args:
         orig_sconfig = _get_system_configfile(cmd_args["orig_systemconfig"],
                                               datadir)
         orig_galaxydir = os.path.dirname(orig_sconfig)
         dmounts.append("%s:%s" % (orig_galaxydir, orig_galaxydir))
-    work_dir, fn_args, finalizer = reconstitute.prep_workdir(cmd_args["pack"],
-                                                             parallel, fn_args)
+    work_dir, fn_args, finalizer = reconstitute.prepare_workdir(
+        cmd_args["pack"], parallel, fn_args)
     dmounts += mounts.prepare_system(datadir, dockerconf["biodata_dir"])
     reconstitute.prep_systemconfig(datadir, fn_args)
     _, system_mounts = _read_system_config(dockerconf,
