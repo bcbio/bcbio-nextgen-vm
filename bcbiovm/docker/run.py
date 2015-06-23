@@ -11,7 +11,7 @@ import yaml
 
 from bcbio import log
 from bcbiovm.docker import manage, mounts, remap
-from bcbiovm.ship import factory as ship_factory
+from bcbiovm.provider import factory
 
 
 def do_analysis(args, dockerconf):
@@ -49,7 +49,7 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     """"Run a single defined function inside a docker container, returning results.
     """
     dmounts = []
-    reconstitute = ship_factory.get(cmd_args["pack"]["type"]).reconstitute()
+    reconstitute = factory.get_ship(cmd_args["pack"]["type"]).reconstitute()
 
     if cmd_args.get("sample_config"):
         with open(cmd_args["sample_config"]) as in_handle:

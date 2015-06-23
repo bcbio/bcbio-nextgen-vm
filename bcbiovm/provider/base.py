@@ -5,15 +5,19 @@ Provider base-classes:
 """
 import abc
 import os
+import yaml
 
 import paramiko
 import six
 import toolz
 
+from bcbio import utils
 from bcbio.distributed import ipython
+from bcbio.pipeline import config_utils
 
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
+from bcbiovm.docker import remap
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -293,3 +297,186 @@ class Bootstrap(object):
                 "upgrade_host_os_and_reboot": self._reboot}
 
         return self._run_playbook(constant.PLAYBOOK.BCBIO, _extra_vars)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class Pack(object):
+
+    """Prepare a running process to execute remotely, moving files
+    as necessary to shared infrastructure.
+    """
+
+    _CONTAINER = "buckets"
+
+    def _remove_empty(self, argument):
+        """Remove null values in a nested set of arguments."""
+        if isinstance(argument, (list, tuple)):
+            output = []
+            for item in argument:
+                item = self._remove_empty(item)
+                if item is not None:
+                    output.append(item)
+            return output
+        elif isinstance(argument, dict):
+            output = {}
+            for key, value in argument.items():
+                value = self._remove_empty(value)
+                if value is not None:
+                    output[key] = value
+            return output if output else None
+        else:
+            return argument
+
+    @staticmethod
+    def _local_directories(args):
+        """Retrieve known local work directory and biodata directories
+        as baselines for buckets.
+        """
+        _, data = config_utils.get_dataarg(args)
+        work_dir = toolz.get_in(["dirs", "work"], data)
+        if "alt" in data["reference"]:
+            if data["reference"]["alt"].keys() != [data["genome_build"]]:
+                raise NotImplementedError("Need to support packing alternative"
+                                          " references.")
+
+        parts = toolz.get_in(["reference", "fasta",
+                              "base"], data).split(os.path.sep)
+        while parts:
+            if parts.pop() == data["genome_build"]:
+                break
+
+        biodata_dir = os.path.sep.join(parts) if parts else None
+        return (work_dir, biodata_dir)
+
+    def _map_directories(self, args, containers):
+        """Map input directories into stable containers and folders for
+        storing files.
+        """
+        output = {}
+        external_count = 0
+        directories = set()
+
+        def _callback(filename, *args):
+            """Callback function for remap.walk_files."""
+            # pylint: disable=unused-argument
+            directory = os.path.dirname(os.path.abspath(filename))
+            directories.add(os.path.normpath(directory))
+
+        remap.walk_files(args, _callback, {}, pass_dirs=True)
+        work_dir, biodata_dir = self._local_directories(args)
+        for directory in sorted(directories):
+            if work_dir and directory.startswith(work_dir):
+                folder = directory.replace(work_dir, "").strip("/")
+                output[directory] = {"container": containers["run"],
+                                     "folder": folder}
+            elif biodata_dir and directory.startswith(biodata_dir):
+                folder = directory.replace(biodata_dir, "").strip("/")
+                output[directory] = {"container": containers["biodata"],
+                                     "folder": folder}
+            else:
+                folder = os.path.join("externalmap", str(external_count))
+                output[directory] = {"container": containers["run"],
+                                     "folder": folder}
+                external_count += 1
+        return output
+
+    def send_run_integrated(self, config):
+        """Integrated implementation sending run results back
+        to central store.
+        """
+
+        def finalizer(args):
+            output = []
+            for arg_set in args:
+                new_args = self.send_run(arg_set, config)
+                output.append(new_args)
+            return output
+
+        return finalizer
+
+    def send_run(self, args, config):
+        """Ship required processing files to the storage service for running
+        on non-shared filesystem instances.
+        """
+        directories = self._map_directories(args, config[self._CONTAINER])
+        files = remap.walk_files(args, self._remap_and_ship,
+                                 directories, pass_dirs=True)
+        return self._remove_empty(files)
+
+    @abc.abstractmethod
+    def _remap_and_ship(self, orig_fname, context, remap_dict):
+        """Uploads files if not present in the specified container.
+
+        Remap a file into an storage service container and key,
+        shipping if not present.
+        """
+        pass
+
+    @abc.abstractmethod
+    def upload(self, filename, key, container):
+        """Upload the received file."""
+        pass
+
+    @abc.abstractmethod
+    def send_output(self, config, out_file):
+        """Send an output file with state information from a run."""
+        pass
+
+
+@six.add_metaclass(abc.ABCMeta)
+class Reconstitute(object):
+
+    """Reconstitute an analysis in a temporary directory
+    on the current machine.
+
+    Handles copying or linking files into a work directory,
+    running an analysis, then handing off outputs to ship
+    back to subsequent processing steps.
+    """
+
+    @staticmethod
+    def is_required_resource(context, parallel):
+        fresources = parallel.get("fresources")
+        if not fresources:
+            return True
+        for fresource in fresources:
+            if context[:len(fresource)] == fresource:
+                return True
+        return False
+
+    @staticmethod
+    def prep_systemconfig(datadir, args):
+        """Prepare system configuration files on bare systems
+        if not present.
+        """
+        default_system = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+        if utils.file_exists(default_system):
+            return
+
+        with open(default_system, "w") as out_handle:
+            _, data = config_utils.get_dataarg(args)
+            output = {"resources": toolz.get_in(["config", "resources"],
+                                                data, {})}
+            yaml.safe_dump(output, out_handle, default_flow_style=False,
+                           allow_unicode=False)
+
+    def prepare_datadir(self, pack, args):
+        """Prepare the biodata directory."""
+        # pylint: disable=no-self-use
+        if "datadir" in pack:
+            return pack["datadir"], args
+
+        raise ValueError("Cannot handle biodata directory "
+                         "preparation type: %s" % pack)
+
+    @abc.abstractmethod
+    def get_output(self, target_file, pconfig):
+        """Retrieve an output file from pack configuration."""
+        pass
+
+    @abc.abstractmethod
+    def prepare_workdir(self, pack, parallel, args):
+        """Unpack necessary files and directories into a temporary structure
+        for processing.
+        """
+        pass

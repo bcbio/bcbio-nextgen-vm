@@ -9,7 +9,7 @@ from bcbio import utils
 from bcbio.provenance import do
 
 from bcbiovm.common import utils as common_utils
-from bcbiovm.ship import factory as ship_factory
+from bcbiovm.provider.aws import ship as aws_ship
 
 
 def _bootstrap_sh(fn_name, arg_file, parallel_file):
@@ -63,9 +63,8 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     # FIXME(alexandrucoman): Unused argument 'wrap_args'
     # pylint: disable=unused-argument
     run_id = uuid.uuid4()
-    ship = ship_factory.get("s3")
-    pack, reconstitute = ship.pack(), ship.reconstitute()
-
+    pack = aws_ship.S3Pack()
+    reconstitute = aws_ship.ReconstituteS3()
     script_file = "bcbio-%s-%s-run.sh" % (fn_name, run_id)
     arg_file = "bcbio-%s-%s-args.json" % (fn_name, run_id)
     parallel_file = "bcbio-%s-%s-parallel.json" % (fn_name, run_id)
