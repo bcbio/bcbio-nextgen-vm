@@ -413,11 +413,6 @@ class Pack(object):
         pass
 
     @abc.abstractmethod
-    def upload(self, filename, key, container):
-        """Upload the received file."""
-        pass
-
-    @abc.abstractmethod
     def send_output(self, config, out_file):
         """Send an output file with state information from a run."""
         pass
