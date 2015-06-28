@@ -4,77 +4,17 @@ an analysis in a temporary directory on the current machine.
 import os
 import re
 
-import azure
 import toolz
-from azure import storage
 from bcbio import utils
-from bcbio.distributed import objectstore
 from bcbio.pipeline import config_utils
-
 
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
+from bcbiovm.provider import objectstore
 
 BLOB_NAME = "{folder}/{filename}"
 BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
              "{container}/{blob}")
-
-
-class AzureBlob(objectstore.AzureBlob):
-
-    """Azure Blob storage service manager."""
-
-    def __init__(self):
-        super(AzureBlob, self).__init__()
-
-    @staticmethod
-    def exists(account_name, container, blob_name):
-        """Check if the blob exists.
-
-        :account_name: The storage account name. All access to Azure Storage
-                       is done through a storage account.
-        :container:    The name of the container that contains the blob. All
-                       blobs must be in a container.
-        :blob_name:    The name of the blob.
-        """
-        blob_handle = objectstore.BlobHandle(
-            blob_service=account_name, container=container,
-            blob=blob_name, chunk_size=32)
-        try:
-            # pylint: disable=protected-access
-            blob_handle._download_chunk(chunk_offset=0)
-        except azure.WindowsAzureMissingResourceError:
-            return False
-
-        return True
-
-    @classmethod
-    def connect(cls, account_name, account_key=None):
-        """Returns a connection object pointing to the endpoint
-        associated to the received blob service.
-        """
-        if account_key is None:
-            # FIXME(alexandrucoman): Define the env variable name
-            account_key = os.getenv("BLOB_ACCOUNT_KEY", None)
-
-        return storage.BlobService(account_name=account_name,
-                                   account_key=account_key)
-
-    @classmethod
-    def upload(cls, filename, account_name, container, blob_name):
-        """Upload the received file.
-
-        :filename:     The file path for the file which will be uploaded.
-        :account_name: The storage account name. All access to Azure Storage
-                       is done through a storage account.
-        :container:    The name of the container that contains the blob. All
-                       blobs must be in a container.
-        :blob_name:    The name of the blob.
-        """
-        blob_service = cls.connect(account_name)
-        blob_service.put_block_blob_from_path(container_name=container,
-                                              blob_name=blob_name,
-                                              file_path=filename)
 
 
 class BlobPack(base.Pack):
@@ -85,29 +25,17 @@ class BlobPack(base.Pack):
 
     def __init__(self):
         super(BlobPack, self).__ini__()
-
-    @staticmethod
-    def _upload(filename, account_name, container, blob_name):
-        """Upload the received file.
-
-        :filename:     The file path for the file which will be uploaded.
-        :account_name: The storage account name. All access to Azure Storage
-                       is done through a storage account.
-        :container:    The name of the container that contains the blob. All
-                       blobs must be in a container.
-        :blob_name:    The name of the blob.
-        """
-        return AzureBlob.upload(filename, account_name, container, blob_name)
+        self._storage = objectstore.AzureBlob()
 
     def _upload_if_not_exists(self, filename, store):
         """Upload the received file if not exists."""
-        account_name = store["storage_account"]
+        account = store["storage_account"]
         container = store["container"]
         blob_name = BLOB_NAME.format(folder=store["folder"],
                                      filename=os.path.basename(filename))
 
-        if not AzureBlob.exists(account_name, container, blob_name):
-            self._upload(filename, account_name, container, blob_name)
+        if not self._storage.exists(account, container, blob_name):
+            self._storage.upload(filename, account, container, blob_name)
 
     def _remap_and_ship(self, orig_fname, context, remap_dict):
         """Remap a file into an Azure blob and key, shipping if not present.
@@ -135,7 +63,7 @@ class BlobPack(base.Pack):
         blob_name = BLOB_NAME.format(
             folder=toolz.get_in(["folders", "output"], config),
             filename=os.path.basename(out_file))
-        self._upload(out_file, account_name, container, blob_name)
+        self._storage.upload(out_file, account_name, container, blob_name)
 
 
 class ReconstituteBlob(base.Reconstitute):
@@ -148,19 +76,19 @@ class ReconstituteBlob(base.Reconstitute):
     back to subsequent processing steps.
     """
 
-    _URL_FORMAT = re.compile(r'http.*\/\/(?P<storage>[^.]+)[^/]+\/'
-                             r'(?P<container>[^/]+)\/*(?P<blob>.*)')
+    def __init__(self):
+        super(ReconstituteBlob, self).__init__()
+        self._storage = objectstore.AzureBlob()
 
-    @staticmethod
-    def _download(source, destination):
+    def _download(self, source, destination):
         """Download file from Azure Blob Storage Service."""
         if os.path.exists(destination):
             return
 
         download_directory = os.path.dirname(destination)
         utils.safe_makedir(download_directory)
-        AzureBlob.download(filename=source, input_dir=None,
-                           dl_dir=download_directory)
+        self._storage.download(filename=source, input_dir=None,
+                               dl_dir=download_directory)
 
     def _unpack(self, account_name, container, args):
         """Create local directory in current directory with pulldowns
