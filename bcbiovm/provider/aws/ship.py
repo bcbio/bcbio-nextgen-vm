@@ -1,33 +1,25 @@
+"""Prepare a running process to execute remotely and reconstitute
+an analysis in a temporary directory on the current machine.
+"""
 import os
 
-import boto
 import toolz
 from bcbio import utils
-from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 
-from bcbiovm.common import utils as common_utils
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
+from bcbiovm.provider import objectstore
 
 
 class S3Pack(base.Pack):
 
-    def __init__(self):
-        self._conn = boto.connect_s3()
+    """Prepare a running process to execute remotely, moving files
+    as necessary to shared infrastructure.
+    """
 
-    def _get_bucket(self, bucket_name):
-        """Retrieves a bucket by name."""
-        try:
-            # If the bucket does not exist, an S3ResponseError
-            # will be raised.
-            bucket = self._conn.get_bucket(bucket_name)
-        except boto.exception.S3ResponseError as exc:
-            if exc.status == 404:
-                bucket = self._conn.create_bucket(bucket_name)
-            else:
-                raise
-        return bucket
+    def __init__(self):
+        self._storage = objectstore.AmazonS3()
 
     def _remap_and_ship(self, orig_fname, context, remap_dict):
         """Remap a file into an S3 bucket and key, shipping if not present.
@@ -41,35 +33,25 @@ class S3Pack(base.Pack):
 
         dirname = os.path.dirname(os.path.abspath(orig_fname))
         store = remap_dict[os.path.normpath(dirname)]
-        bucket = self._get_bucket(store["bucket"])
 
         for filename in utils.file_plus_index(orig_fname):
             keyname = "%s/%s" % (store["folder"], os.path.basename(filename))
-            key = bucket.get_key(keyname)
-            if not key:
-                self.upload(filename, keyname, store["bucket"])
+            if not self._storage.exists(store["bucket"], keyname):
+                self._storage.upload(filename=filename, key=keyname,
+                                     container=store["bucket"])
 
         # Drop directory information since we only deal with files in S3
         s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"],
                                      os.path.basename(orig_fname))
         return s3_name
 
-    @classmethod
-    def upload(cls, filename, key, container):
-        """Upload the received file."""
-        common_utils.execute(
-            ["gof3r", "put", "-p", filename,
-             "-k", key, "-b", container,
-             "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
-             "-m", "x-amz-server-side-encryption:AES256"],
-            check_exit_code=True)
-
     def send_output(self, config, out_file):
         """Send an output file with state information from a run."""
         keyname = "%s/%s" % (toolz.get_in(["folders", "output"], config),
                              os.path.basename(out_file))
-        bucket = toolz.get_in(["buckets", "run"], config)
-        self.upload(filename=out_file, key=keyname, container=bucket)
+        self._storage.upload(
+            filename=out_file, key=keyname,
+            container=toolz.get_in(["buckets", "run"], config))
 
 
 class ReconstituteS3(base.Reconstitute):
@@ -82,18 +64,20 @@ class ReconstituteS3(base.Reconstitute):
     back to subsequent processing steps.
     """
 
-    @staticmethod
-    def _download(out_fname, keyname, bucket):
+    def __init__(self):
+        super(ReconstituteS3, self).__init__()
+        self._storage = objectstore.AmazonS3()
+        self._s3_url = "s3://{bucket}{region}/{key}"
+
+    def _download(self, source, destination):
         """Download file from Amazon S3."""
-        if os.path.exists(out_fname):
+        if os.path.exists(destination):
             return
 
-        utils.safe_makedir(os.path.dirname(out_fname))
-        with file_transaction(out_fname) as tx_out_fname:
-            common_utils.execute(
-                ["gof3r", "get", "-p", tx_out_fname,
-                 "-k", keyname, "-b", bucket],
-                check_exit_code=True)
+        download_directory = os.path.dirname(destination)
+        utils.safe_makedir(download_directory)
+        self._storage.download(filename=source, input_dir=None,
+                               dl_dir=download_directory)
 
     def _unpack(self, bucket, args):
         """Create local directory in current directory with pulldowns
@@ -115,8 +99,8 @@ class ReconstituteS3(base.Reconstitute):
 
             for fname in utils.file_plus_index(orig_fname):
                 out_fname = fname.replace(remote_key, cur_dir)
-                keyname = fname.replace(remote_key + "/", "")
-                self._download(out_fname, keyname, bucket)
+                self._download(source=fname, destination=out_fname)
+
             return orig_fname.replace(remote_key, cur_dir)
 
         new_args = remap.walk_files(args, _callback, {remote_key: local_dir})
@@ -126,7 +110,6 @@ class ReconstituteS3(base.Reconstitute):
         """Unpack necessary files and directories into a temporary structure
         for processing.
         """
-
         s3pack = S3Pack()
         workdir, new_args = self._unpack(pack["buckets"]["run"], args)
         datai, data = config_utils.get_dataarg(new_args)
@@ -140,8 +123,10 @@ class ReconstituteS3(base.Reconstitute):
         """Retrieve an output file from pack configuration."""
         keyname = "%s/%s" % (toolz.get_in(["folders", "output"], pconfig),
                              os.path.basename(target_file))
-        self._download(target_file, keyname,
-                       toolz.get_in(["buckets", "run"], pconfig))
+        s3_file = self._s3_url.format(
+            bucket=toolz.get_in(["buckets", "run"], pconfig),
+            region="", key=keyname)
+        self._download(source=s3_file, destination=target_file)
         return target_file
 
     def prepare_datadir(self, pack, args):
