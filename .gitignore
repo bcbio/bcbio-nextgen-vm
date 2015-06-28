@@ -5,6 +5,7 @@ dist/
 .DS_Store
 .#*
 .ropeproject
+.idea
 setuptools*
 venv/
 bcbiovm/version.py
