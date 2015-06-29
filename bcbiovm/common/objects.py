@@ -110,3 +110,99 @@ class Container(object):
     def to_dict(self):
         """Dictionary representation of the container."""
         return self._data
+
+
+class ShipingConfig(object):
+
+    """Store configuration for shipping to one storage service.
+
+    Example:
+    ::
+        s3_config = ShipingConfig()
+        s3_config.add_container(name="buckets", alias="containers")
+        s3_config.add_container(name="folders")
+        s3_config.add_item(name="type", value="S3")
+        s3_config.add_item("run", "run_bucket", container="containers")
+        s3_config.add_item("biodata", "biodata_bucket", container="containers")
+        s3_config.add_item("output", "output_folder", container="folders")
+
+    >>> s3_config.buckets
+    {'run': 'run_bucket', 'biodata': 'biodata_bucket'}
+    >>> s3_config.containers
+    {'run': 'run_bucket', 'biodata': 'biodata_bucket'}
+    >>> s3_config.buckets["run"]
+    run_bucket
+    >>> s3_config.data
+    {'folders': {'output': 'output_folder'},
+     'buckets': {'run': 'run_bucket', 'biodata': 'biodata_bucket'},
+     'type': 'S3'
+    }
+
+    """
+
+    def __init__(self):
+        self._data = {}
+        self._alias = {}
+
+    def __getattr__(self, name):
+        """Hook for getting attribute from local storage"""
+        data = self.__dict__.get("_data")
+        container = self._get_container(name)
+        if container in data:
+            return data[container]
+
+        raise AttributeError("'ShipingConfig' object has no attribute '{}'"
+                             .format(name))
+
+    @property
+    def data(self):
+        """Return the local storage."""
+        return self._data
+
+    def _check_alias(self, alias):
+        """Check if the received alias can be used."""
+        if alias in self._data:
+            return False
+        else:
+            return True
+
+    def _get_container(self, alias):
+        """Return the container name."""
+        if alias in self._data:
+            return alias
+
+        if alias in self._alias:
+            return self._alias[alias]
+
+    def add_container(self, name, alias=None):
+        """Create a new container for the shiping configuration."""
+        if alias:
+            if not self._check_alias(alias):
+                # TODO(alexandrucoman): Raise custom exception
+                #                       Invalid alias provided
+                return
+            self._alias[alias] = name
+
+        self._data.setdefault(name, {})
+
+    def add_item(self, name, value, container=None):
+        """Add or update the received item."""
+        if not container:
+            container = self._data
+        else:
+            container = self._get_container(container) or container
+            container = self._data.setdefault(container, {})
+
+        container[name] = value
+
+    def get_item(self, name, container=None):
+        """Return the required item."""
+        if not container:
+            return self._data[name]
+        else:
+            container = self._get_container(container)
+            return self._data[container][name]
+
+    def to_dict(self):
+        """Dictionary representation of the container."""
+        return self._data
