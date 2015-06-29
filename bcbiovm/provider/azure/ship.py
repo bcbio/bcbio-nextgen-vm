@@ -18,19 +18,27 @@ BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
              "{container}/{blob}")
 
 
-def shiping_config(biodata_blob, run_blob, output_folder,
-                   storage_account):
+def get_shiping_config(biodata_container, run_container, output_folder,
+                       storage_account):
     """Prepare configuration for shipping to Azure Blob Service."""
-    blob_config = objects.ShipingConfig()
-    blob_config.add_item("type", "S3")
-    blob_config.add_item("storage_account", storage_account)
+    config = {
+        "type": "blob",
+        "storage_account": storage_account,
+        "blobs": {
+            "run": run_container,
+            "biodata": biodata_container,
+        },
+        "folders": {
+            "output": output_folder
+        }
+    }
+    return config
 
-    blob_config.add_container(name="blobs", alias="containers")
-    blob_config.add_item("run", run_blob, container="blobs")
-    blob_config.add_item("biodata", biodata_blob, container="blobs")
 
-    blob_config.add_container(name="folders")
-    blob_config.add_item("output", output_folder, container="folders")
+def shiping_config(config):
+    """Create a ShipingConfig object with the received information."""
+    blob_config = objects.ShipingConfig(config)
+    blob_config.add_alias(container="blobs", alias="containers")
     return blob_config
 
 

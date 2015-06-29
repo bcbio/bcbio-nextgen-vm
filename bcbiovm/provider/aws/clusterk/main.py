@@ -34,7 +34,7 @@ def run(args, docker_config):
 
     ship_conf = provider_factory.get_ship_config("S3")
     parallel["pack"] = ship_conf(args.biodata_bucket, args.run_bucket,
-                                 "runfn_output").to_dict()
+                                 "runfn_output")
 
     parallel["wrapper_args"] = [{"sample_config": ready_config_file,
                                  "docker_config": docker_config,

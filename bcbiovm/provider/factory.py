@@ -23,9 +23,9 @@ SHIP = {
 }
 
 SHIP_CONFIG = {
-    "blob": azure_ship.shiping_config,
-    "shared": shared_ship.shared_shiping_config,
-    "S3": aws_ship.shiping_config,
+    "blob": azure_ship.get_shiping_config,
+    "shared": shared_ship.get_shiping_config,
+    "S3": aws_ship.get_shiping_config,
 }
 
 

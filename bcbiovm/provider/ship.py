@@ -14,17 +14,24 @@ from bcbiovm.docker import remap
 from bcbiovm.provider import base
 
 
-def shared_shiping_config(workdir, datadir, tmpdir=None):
+def get_shiping_config(workdir, datadir, tmpdir=None):
     """Enable running processing within an optional temporary directory.
 
     :param workdir: is assumed to be available on a shared filesystem,
     so we don't require any work to prepare.
     """
-    shared_config = objects.ShipingConfig()
-    shared_config.add_item("type", "shared")
-    shared_config.add_item("workdir", workdir)
-    shared_config.add_item("tmpdir", tmpdir)
-    shared_config.add_item("datadir", datadir)
+    config = {
+        "type": "shared",
+        "workdir": workdir,
+        "tmpdir": tmpdir,
+        "datadir": datadir
+    }
+    return config
+
+
+def shiping_config(config):
+    """Create a ShipingConfig object with the received information."""
+    shared_config = objects.ShipingConfig(config)
     return shared_config
 
 

@@ -97,7 +97,7 @@ class IPython(base.BaseCommand):
             {
                 "sample_config": ready_config_file,
                 "fcdir": args.fcdir,
-                "pack": ship_conf(work_dir, args.datadir, args.tmpdir).data,
+                "pack": ship_conf(work_dir, args.datadir, args.tmpdir),
                 "systemconfig": systemconfig,
                 "image": args.image
             }]

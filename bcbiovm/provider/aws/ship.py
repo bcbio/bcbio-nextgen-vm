@@ -13,17 +13,25 @@ from bcbiovm.docker import remap
 from bcbiovm.provider import base
 
 
-def shiping_config(biodata_bucket, run_bucket, output_folder):
+def get_shiping_config(biodata_container, run_container, output_folder):
     """Prepare configuration for shipping to S3."""
-    s3_config = objects.ShipingConfig()
-    s3_config.add_item("type", "S3")
+    config = {
+        "type": "S3",
+        "buckets": {
+            "run": run_container,
+            "biodata": biodata_container,
+        },
+        "folders": {
+            "output": output_folder
+        }
+    }
+    return config
 
-    s3_config.add_container(name="buckets", alias="containers")
-    s3_config.add_item("run", run_bucket, container="buckets")
-    s3_config.add_item("biodata", biodata_bucket, container="buckets")
 
-    s3_config.add_container(name="folders")
-    s3_config.add_item("output", output_folder, container="folders")
+def shiping_config(config):
+    """Create a ShipingConfig object with the received information."""
+    s3_config = objects.ShipingConfig(config)
+    s3_config.add_alias(container="buckets", alias="containers")
     return s3_config
 
 
