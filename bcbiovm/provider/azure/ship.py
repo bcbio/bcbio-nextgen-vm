@@ -9,9 +9,9 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import objects
+from bcbiovm.common import objectstore
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
-from bcbiovm.provider import objectstore
 
 BLOB_NAME = "{folder}/{filename}"
 BLOB_FILE = ("https://{storage}.blob.core.windows.net/"

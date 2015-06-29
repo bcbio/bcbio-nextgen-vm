@@ -8,9 +8,9 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import objects
+from bcbiovm.common import objectstore
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
-from bcbiovm.provider import objectstore
 
 
 def shiping_config(biodata_bucket, run_bucket, output_folder):
