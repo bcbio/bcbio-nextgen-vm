@@ -8,6 +8,7 @@ import toolz
 from bcbio import utils
 from bcbio.pipeline import config_utils
 
+from bcbiovm.common import objects
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
 from bcbiovm.provider import objectstore
@@ -15,6 +16,22 @@ from bcbiovm.provider import objectstore
 BLOB_NAME = "{folder}/{filename}"
 BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
              "{container}/{blob}")
+
+
+def shiping_config(biodata_blob, run_blob, output_folder,
+                   storage_account):
+    """Prepare configuration for shipping to Azure Blob Service."""
+    blob_config = objects.ShipingConfig()
+    blob_config.add_item("type", "S3")
+    blob_config.add_item("storage_account", storage_account)
+
+    blob_config.add_container(name="blobs", alias="containers")
+    blob_config.add_item("run", run_blob, container="blobs")
+    blob_config.add_item("biodata", biodata_blob, container="blobs")
+
+    blob_config.add_container(name="folders")
+    blob_config.add_item("output", output_folder, container="folders")
+    return blob_config
 
 
 class BlobPack(base.Pack):

@@ -3,22 +3,10 @@
 import os
 
 import yaml
+from bcbio.pipeline import main
 
 from bcbiovm.docker import manage, mounts
-
-
-def prep_s3(biodata_bucket, run_bucket, output_folder):
-    """Prepare configuration for shipping to S3."""
-    return {
-        "type": "S3",
-        "buckets": {
-            "run": run_bucket,
-            "biodata": biodata_bucket,
-        },
-        "folders": {
-            "output": output_folder,
-        }
-    }
+from bcbiovm.provider import factory as provider_factory
 
 
 def run(args, docker_config):
@@ -43,8 +31,11 @@ def run(args, docker_config):
         yaml.safe_dump(ready_config, out_handle,
                        default_flow_style=False,
                        allow_unicode=False)
-    parallel["pack"] = prep_s3(args.biodata_bucket, args.run_bucket,
-                               "runfn_output")
+
+    ship_conf = provider_factory.get_ship_config("S3")
+    parallel["pack"] = ship_conf(args.biodata_bucket, args.run_bucket,
+                                 "runfn_output").to_dict()
+
     parallel["wrapper_args"] = [{"sample_config": ready_config_file,
                                  "docker_config": docker_config,
                                  "fcdir": args.fcdir,
@@ -55,7 +46,6 @@ def run(args, docker_config):
                          ["version",
                           "--workdir=%s" % docker_config["work_dir"]])
 
-    from bcbio.pipeline import main
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,
                   parallel=parallel)

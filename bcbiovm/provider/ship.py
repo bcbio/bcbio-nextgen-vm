@@ -9,8 +9,23 @@ import uuid
 from bcbio import utils
 from bcbio.log import logger
 
+from bcbiovm.common import objects
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
+
+
+def shared_shiping_config(workdir, datadir, tmpdir=None):
+    """Enable running processing within an optional temporary directory.
+
+    :param workdir: is assumed to be available on a shared filesystem,
+    so we don't require any work to prepare.
+    """
+    shared_config = objects.ShipingConfig()
+    shared_config.add_item("type", "shared")
+    shared_config.add_item("workdir", workdir)
+    shared_config.add_item("tmpdir", tmpdir)
+    shared_config.add_item("datadir", datadir)
+    return shared_config
 
 
 class ReconstituteShared(base.Reconstitute):

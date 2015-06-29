@@ -7,9 +7,24 @@ import toolz
 from bcbio import utils
 from bcbio.pipeline import config_utils
 
+from bcbiovm.common import objects
 from bcbiovm.docker import remap
 from bcbiovm.provider import base
 from bcbiovm.provider import objectstore
+
+
+def shiping_config(biodata_bucket, run_bucket, output_folder):
+    """Prepare configuration for shipping to S3."""
+    s3_config = objects.ShipingConfig()
+    s3_config.add_item("type", "S3")
+
+    s3_config.add_container(name="buckets", alias="containers")
+    s3_config.add_item("run", run_bucket, container="buckets")
+    s3_config.add_item("biodata", biodata_bucket, container="buckets")
+
+    s3_config.add_container(name="folders")
+    s3_config.add_item("output", output_folder, container="folders")
+    return s3_config
 
 
 class S3Pack(base.Pack):
