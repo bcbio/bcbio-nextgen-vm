@@ -36,3 +36,10 @@ class BCBioException(Exception):
                 # TODO(alexandrucoman): Log the issue and the kwargs
 
         super(BCBioException, self).__init__(message)
+
+
+class NotFound(BCBioException):
+
+    """The required object is not available in container."""
+
+    template = "The %(object)r was not found in %(container)s."
