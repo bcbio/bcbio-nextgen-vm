@@ -3,6 +3,8 @@
 import json
 import collections
 
+from bcbiovm.common import exception as exc
+
 Flavor = collections.namedtuple("Flavor", ["cpus", "memory"])
 
 
@@ -14,11 +16,13 @@ class Report(object):
         self._data = {}
 
     def add_section(self, name, title=None, description=None, fields=None):
-        """Add a new section to the current report."""
+        """Add a new section to the current report.
+
+        :raises: bcbiovm.exception.BCBioException
+        """
         if name in self._data:
-            # TODO(alexandrucoman): Raise custom exception
-            #                       The section already exists
-            return
+            raise exc.BCBioException("The section %(section)r already "
+                                     "exists", section=name)
         self._data[name] = Container(name, title, description, fields)
         return self._data[name]
 
@@ -73,7 +77,10 @@ class Container(object):
             self.add_item(item)
 
     def add_item(self, item):
-        """Add a new item into container."""
+        """Add a new item into container.
+
+        :raises: bcbiovm.exception.BCBioException
+        """
         if isinstance(item, dict):
             item = []
             for field in self._data["meta"]["fields"]:
@@ -83,25 +90,22 @@ class Container(object):
                 elif "default" in field:
                     item.append(field["default"])
                 else:
-                    # TODO(alexandrucoman): Raise custom exception
-                    #                       Missing field
-                    return
+                    raise exc.BCBioException("The field %(field)r is mising.",
+                                             field=field_name)
             self._data["content"].append(item)
 
         elif isinstance(item, (list, tuple)):
             if len(item) == len(self._data["meta"]["fields"]):
                 self._data["content"].append(item)
             else:
-                # TODO(alexandrucoman): Raise custom exception
-                #                       Missing field
-                return
+                raise exc.BCBioException("Invalid number of fields.")
+
         elif len(self._data["meta"]["fields"]) == 1:
             self._data["content"].append(item)
 
         else:
-            # TODO(alexandrucoman): Raise custom exception
-            #                       Unknown item type
-            return
+            raise exc.BCBioException("Unknown item type %(item_type)r.",
+                                     item_type=type(item))
 
     def dump(self):
         """Text representation of the container."""
@@ -175,12 +179,14 @@ class ShipingConfig(object):
             return self._alias[alias]
 
     def add_container(self, name, alias=None):
-        """Create a new container for the shiping configuration."""
+        """Create a new container for the shiping configuration.
+
+        :raises: bcbiovm.exception.BCBioException
+        """
         if alias:
             if not self._check_alias(alias):
-                # TODO(alexandrucoman): Raise custom exception
-                #                       Invalid alias provided
-                return
+                raise exc.BCBioException("Invalid alias name provided: "
+                                         "%(alias)r", alias=alias)
             self._alias[alias] = name
 
         self._data.setdefault(name, {})
