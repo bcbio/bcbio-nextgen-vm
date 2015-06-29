@@ -141,11 +141,10 @@ class ShipingConfig(object):
      'buckets': {'run': 'run_bucket', 'biodata': 'biodata_bucket'},
      'type': 'S3'
     }
-
     """
 
-    def __init__(self):
-        self._data = {}
+    def __init__(self, data=None):
+        self._data = data or {}
         self._alias = {}
 
     def __getattr__(self, name):
@@ -178,17 +177,25 @@ class ShipingConfig(object):
         if alias in self._alias:
             return self._alias[alias]
 
+    def add_alias(self, container, alias):
+        """Add a new alias for the received container.
+
+        :raises: bcbiovm.exception.BCBioException
+        """
+        if not alias:
+            return
+
+        if not self._check_alias(alias):
+            raise exc.BCBioException("Invalid alias name provided: "
+                                     "%(alias)r", alias=alias)
+        self._alias[alias] = container
+
     def add_container(self, name, alias=None):
         """Create a new container for the shiping configuration.
 
         :raises: bcbiovm.exception.BCBioException
         """
-        if alias:
-            if not self._check_alias(alias):
-                raise exc.BCBioException("Invalid alias name provided: "
-                                         "%(alias)r", alias=alias)
-            self._alias[alias] = name
-
+        self.add_alias(name, alias)
         self._data.setdefault(name, {})
 
     def add_item(self, name, value, container=None):
@@ -209,6 +216,10 @@ class ShipingConfig(object):
             container = self._get_container(container)
             return self._data[container][name]
 
-    def to_dict(self):
-        """Dictionary representation of the container."""
-        return self._data
+    @classmethod
+    def from_dict(cls, data, alias_list=None):
+        """Create a new ShipingConfig from an existing dictionary."""
+        shiping_config = cls(data)
+        for container, alias in alias_list or ():
+            shiping_config.add_alias(container, alias)
+        return shiping_config
