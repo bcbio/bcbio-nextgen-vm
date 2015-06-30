@@ -11,7 +11,7 @@ from bcbiovm.docker import devel as docker_devel
 from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import manage as docker_manage
 from bcbiovm.docker import run as docker_run
-from bcbiovm.provider.aws import ship
+from bcbiovm.provider import factory as provider_factory
 
 
 def _install_or_upgrade(main_parser, callback, install=True):
@@ -243,6 +243,10 @@ class RunFunction(base.BaseCommand):
             self.args, "Could not run bcbio-nextgen function.")
         args = docker_install.docker_image_arg(args)
 
+        # FIXME(alexandrucoman): Taking cloud provider into consideration
+        shiping_config = provider_factory.get_ship_config("S3", raw=False)
+        ship = provider_factory.get_ship("S3")
+
         with open(args.parallel) as in_handle:
             parallel = yaml.safe_load(in_handle)
 
@@ -250,16 +254,16 @@ class RunFunction(base.BaseCommand):
             runargs = yaml.safe_load(in_handle)
 
         cmd_args = {"systemconfig": args.systemconfig,
-                    "image": args.image, "pack": parallel["pack"]}
+                    "image": args.image,
+                    "pack": parallel["pack"]}
         out = docker_run.do_runfn(args.fn_name, runargs, cmd_args,
                                   parallel, constant.DOCKER)
         out_file = "%s-out%s" % os.path.splitext(args.runargs)
         with open(out_file, "w") as out_handle:
             yaml.safe_dump(out, out_handle, default_flow_style=False,
                            allow_unicode=False)
-        # FIXME(alexandrucoman): Taking cloud provider into consideration
-        s3pack = ship.S3Pack()
-        s3pack.send_output(parallel["pack"], out_file)
+
+        ship.pack.send_output(shiping_config(parallel["pack"]), out_file)
 
 
 class Install(base.BaseCommand):

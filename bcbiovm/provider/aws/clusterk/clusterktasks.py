@@ -9,7 +9,7 @@ from bcbio import utils
 from bcbio.provenance import do
 
 from bcbiovm.common import utils as common_utils
-from bcbiovm.provider.aws import ship as aws_ship
+from bcbiovm.provider import factory as provider_factory
 
 
 def _bootstrap_sh(fn_name, arg_file, parallel_file):
@@ -63,15 +63,17 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     # FIXME(alexandrucoman): Unused argument 'wrap_args'
     # pylint: disable=unused-argument
     run_id = uuid.uuid4()
-    pack = aws_ship.S3Pack()
-    reconstitute = aws_ship.ReconstituteS3()
+    aws_ship = provider_factory.get_ship("S3")
+    shiping_config = provider_factory.get_ship_config("S3", raw=False)
+    config = shiping_config(parallel["pack"])
+
     script_file = "bcbio-%s-%s-run.sh" % (fn_name, run_id)
     arg_file = "bcbio-%s-%s-args.json" % (fn_name, run_id)
     parallel_file = "bcbio-%s-%s-parallel.json" % (fn_name, run_id)
     tarball = "bcbio-%s-%s.tar.gz" % (fn_name, run_id)
     out_file = "%s-out%s" % os.path.splitext(arg_file)
 
-    run_args = pack.send_run(run_args, parallel["pack"])
+    run_args = aws_ship.pack.send_run(run_args, config)
     with utils.chdir(os.getcwd()):
         with open(arg_file, "w") as out_handle:
             yaml.safe_dump(run_args, out_handle,
@@ -103,7 +105,7 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
                 command.extend(["--tag", tag])
             do.run(command, "Submit to clusterk")
 
-        output_file = reconstitute.get_output(out_file, parallel["pack"])
+        output_file = aws_ship.reconstitute.get_output(out_file, config)
         with open(output_file) as in_handle:
             out = yaml.safe_load(in_handle)
         for f in [script_file, parallel_file, arg_file, tarball, out_file]:
