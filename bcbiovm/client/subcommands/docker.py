@@ -244,7 +244,7 @@ class RunFunction(base.BaseCommand):
         args = docker_install.docker_image_arg(args)
 
         # FIXME(alexandrucoman): Taking cloud provider into consideration
-        shiping_config = provider_factory.get_ship_config("S3", raw=False)
+        shipping_config = provider_factory.get_ship_config("S3", raw=False)
         ship = provider_factory.get_ship("S3")
 
         with open(args.parallel) as in_handle:
@@ -253,9 +253,11 @@ class RunFunction(base.BaseCommand):
         with open(args.runargs) as in_handle:
             runargs = yaml.safe_load(in_handle)
 
-        cmd_args = {"systemconfig": args.systemconfig,
-                    "image": args.image,
-                    "pack": parallel["pack"]}
+        cmd_args = {
+            "systemconfig": args.systemconfig,
+            "image": args.image,
+            "pack": shipping_config(parallel["pack"]),
+        }
         out = docker_run.do_runfn(args.fn_name, runargs, cmd_args,
                                   parallel, constant.DOCKER)
         out_file = "%s-out%s" % os.path.splitext(args.runargs)
@@ -263,7 +265,7 @@ class RunFunction(base.BaseCommand):
             yaml.safe_dump(out, out_handle, default_flow_style=False,
                            allow_unicode=False)
 
-        ship.pack.send_output(shiping_config(parallel["pack"]), out_file)
+        ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
 
 
 class Install(base.BaseCommand):

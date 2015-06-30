@@ -64,8 +64,8 @@ def runfn(fn_name, queue, wrap_args, parallel, run_args, testing=True):
     # pylint: disable=unused-argument
     run_id = uuid.uuid4()
     aws_ship = provider_factory.get_ship("S3")
-    shiping_config = provider_factory.get_ship_config("S3", raw=False)
-    config = shiping_config(parallel["pack"])
+    shipping_config = provider_factory.get_ship_config("S3", raw=False)
+    config = shipping_config(parallel["pack"])
 
     script_file = "bcbio-%s-%s-run.sh" % (fn_name, run_id)
     arg_file = "bcbio-%s-%s-args.json" % (fn_name, run_id)

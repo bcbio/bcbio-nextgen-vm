@@ -17,8 +17,8 @@ BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
              "{container}/{blob}")
 
 
-def get_shiping_config(biodata_container, run_container, output_folder,
-                       storage_account):
+def get_shipping_config(biodata_container, run_container, output_folder,
+                        storage_account):
     """Prepare configuration for shipping to Azure Blob Service."""
     config = {
         "type": "blob",
@@ -34,9 +34,9 @@ def get_shiping_config(biodata_container, run_container, output_folder,
     return config
 
 
-def shiping_config(config):
-    """Create a ShipingConfig object with the received information."""
-    blob_config = objects.ShipingConfig(config)
+def shipping_config(config):
+    """Create a ShippingConfig object with the received information."""
+    blob_config = objects.ShippingConfig(config)
     blob_config.add_alias(container="blobs", alias="containers")
     return blob_config
 
@@ -79,7 +79,7 @@ class BlobPack(base.Pack):
                                 the blob. All blobs must be in a container.
             * folder            The name of the folder where the file
                                 will be stored.
-            * shiping_config    an instance of :class objects.ShipingConfig:
+            * shipping_config   an instance of :class objects.ShippingConfig:
         """
         # pylint: disable=unused-argument
         if not os.path.isfile(orig_fname):
@@ -87,7 +87,7 @@ class BlobPack(base.Pack):
 
         dirname = os.path.dirname(os.path.abspath(orig_fname))
         store = remap_dict[os.path.normpath(dirname)]
-        config = store["shiping_config"]
+        config = store["shipping_config"]
 
         for file_path in utils.file_plus_index(orig_fname):
             self._upload_if_not_exists(account=config.storage_account,
@@ -103,7 +103,7 @@ class BlobPack(base.Pack):
     def send_output(self, config, out_file):
         """Send an output file with state information from a run.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         blob_name = BLOB_NAME.format(folder=config.folders["output"],
                                      filename=os.path.basename(out_file))
@@ -115,9 +115,9 @@ class BlobPack(base.Pack):
         """Ship required processing files to the storage service for running
         on non-shared filesystem instances.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
-        directories = self._map_directories(args, shiping_config(config))
+        directories = self._map_directories(args, shipping_config(config))
         files = remap.walk_files(args, self._remap_and_ship,
                                  directories, pass_dirs=True)
         return self._remove_empty(files)
@@ -206,7 +206,7 @@ class ReconstituteBlob(base.Reconstitute):
     def prepare_datadir(self, pack, args):
         """Prepare the biodata directory.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         if pack.type == "blob":
             return self._unpack(account_name=pack.storage_account,

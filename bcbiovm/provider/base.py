@@ -350,7 +350,7 @@ class Pack(object):
         """Map input directories into stable containers and folders for
         storing files.
 
-        :shipping_config: instance of :class bcbiovm.object.ShipingConf:
+        :shipping_config: instance of :class bcbiovm.object.ShippingConf:
         """
         output = {}
         external_count = 0
@@ -403,7 +403,7 @@ class Pack(object):
         """Ship required processing files to the storage service for running
         on non-shared filesystem instances.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         pass
 
@@ -420,7 +420,7 @@ class Pack(object):
                                 the blob. All blobs must be in a container.
             * folder            The name of the folder where the file
                                 will be stored.
-            * shiping_config    an instance of :class objects.ShipingConfig:
+            * shipping_config   an instance of :class objects.ShippingConfig:
         """
         pass
 
@@ -428,7 +428,7 @@ class Pack(object):
     def send_output(self, config, out_file):
         """Send an output file with state information from a run.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         pass
 
@@ -473,7 +473,7 @@ class Reconstitute(object):
     def prepare_datadir(self, pack, args):
         """Prepare the biodata directory.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         # pylint: disable=no-self-use
         if pack.type == "shared":

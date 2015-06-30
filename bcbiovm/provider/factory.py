@@ -23,9 +23,9 @@ SHIP = {
 }
 
 SHIP_CONFIG = {
-    "blob": (azure_ship.shiping_config, azure_ship.get_shiping_config),
-    "shared": (shared_ship.shiping_config, shared_ship.get_shiping_config),
-    "S3": (aws_ship.shiping_config, aws_ship.get_shiping_config)
+    "blob": (azure_ship.shipping_config, azure_ship.get_shipping_config),
+    "shared": (shared_ship.shipping_config, shared_ship.get_shipping_config),
+    "S3": (aws_ship.shipping_config, aws_ship.get_shipping_config)
 }
 
 
@@ -50,7 +50,7 @@ def get_ship(provider):
 
 
 def get_ship_config(provider, raw=True):
-    """Return the shiping configuration for the received provider."""
+    """Return the shipping configuration for the received provider."""
     ship_config = SHIP_CONFIG.get(provider)
     if not ship_config:
         raise exception.NotFound(object=provider,

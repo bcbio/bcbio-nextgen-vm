@@ -12,7 +12,7 @@ from bcbiovm.docker import remap
 from bcbiovm.provider import base
 
 
-def get_shiping_config(biodata_container, run_container, output_folder):
+def get_shipping_config(biodata_container, run_container, output_folder):
     """Prepare configuration for shipping to S3."""
     config = {
         "type": "S3",
@@ -27,9 +27,9 @@ def get_shiping_config(biodata_container, run_container, output_folder):
     return config
 
 
-def shiping_config(config):
-    """Create a ShipingConfig object with the received information."""
-    s3_config = objects.ShipingConfig(config)
+def shipping_config(config):
+    """Create a ShippingConfig object with the received information."""
+    s3_config = objects.ShippingConfig(config)
     s3_config.add_alias(container="buckets", alias="containers")
     return s3_config
 
@@ -55,7 +55,7 @@ class S3Pack(base.Pack):
                                 the blob. All blobs must be in a container.
             * folder            The name of the folder where the file
                                 will be stored.
-            * shiping_config    an instance of :class objects.ShipingConfig:
+            * shipping_config   an instance of :class objects.ShippingConfig:
         """
         # pylint: disable=unused-argument
         if not os.path.isfile(orig_fname):
@@ -78,7 +78,7 @@ class S3Pack(base.Pack):
     def send_output(self, config, out_file):
         """Send an output file with state information from a run.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
         keyname = "%s/%s" % (config.folders["output"],
                              os.path.basename(out_file))
@@ -89,9 +89,9 @@ class S3Pack(base.Pack):
         """Ship required processing files to the storage service for running
         on non-shared filesystem instances.
 
-        :param config: an instances of :class objects.ShipingConf:
+        :param config: an instances of :class objects.ShippingConf:
         """
-        directories = self._map_directories(args, shiping_config(config))
+        directories = self._map_directories(args, shipping_config(config))
         files = remap.walk_files(args, self._remap_and_ship,
                                  directories, pass_dirs=True)
         return self._remove_empty(files)

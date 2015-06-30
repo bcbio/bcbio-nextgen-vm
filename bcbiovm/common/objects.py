@@ -116,13 +116,13 @@ class Container(object):
         return self._data
 
 
-class ShipingConfig(object):
+class ShippingConfig(object):
 
     """Store configuration for shipping to one storage service.
 
     Example:
     ::
-        s3_config = ShipingConfig()
+        s3_config = ShippingConfig()
         s3_config.add_container(name="buckets", alias="containers")
         s3_config.add_container(name="folders")
         s3_config.add_item(name="type", value="S3")
@@ -154,7 +154,7 @@ class ShipingConfig(object):
         if container in data:
             return data[container]
 
-        raise AttributeError("'ShipingConfig' object has no attribute '{}'"
+        raise AttributeError("'ShippingConfig' object has no attribute '{}'"
                              .format(name))
 
     @property
@@ -191,7 +191,7 @@ class ShipingConfig(object):
         self._alias[alias] = container
 
     def add_container(self, name, alias=None):
-        """Create a new container for the shiping configuration.
+        """Create a new container for the shipping configuration.
 
         :raises: bcbiovm.exception.BCBioException
         """
@@ -218,8 +218,8 @@ class ShipingConfig(object):
 
     @classmethod
     def from_dict(cls, data, alias_list=None):
-        """Create a new ShipingConfig from an existing dictionary."""
-        shiping_config = cls(data)
+        """Create a new ShippingConfig from an existing dictionary."""
+        shipping_config = cls(data)
         for container, alias in alias_list or ():
-            shiping_config.add_alias(container, alias)
-        return shiping_config
+            shipping_config.add_alias(container, alias)
+        return shipping_config
