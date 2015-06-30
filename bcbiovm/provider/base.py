@@ -18,6 +18,7 @@ from bcbio.pipeline import config_utils
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
 from bcbiovm.docker import remap
+from bcbiovm.provider import factory
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -306,8 +307,6 @@ class Pack(object):
     as necessary to shared infrastructure.
     """
 
-    _CONTAINER = "buckets"
-
     def _remove_empty(self, argument):
         """Remove null values in a nested set of arguments."""
         if isinstance(argument, (list, tuple)):
@@ -348,13 +347,16 @@ class Pack(object):
         biodata_dir = os.path.sep.join(parts) if parts else None
         return (work_dir, biodata_dir)
 
-    def _map_directories(self, args, containers):
+    def _map_directories(self, args, shipping_config):
         """Map input directories into stable containers and folders for
         storing files.
+
+        :shipping_config: instance of :class bcbiovm.object.ShipingConf:
         """
         output = {}
         external_count = 0
         directories = set()
+        work_dir, biodata_dir = self._local_directories(args)
 
         def _callback(filename, *args):
             """Callback function for remap.walk_files."""
@@ -363,21 +365,24 @@ class Pack(object):
             directories.add(os.path.normpath(directory))
 
         remap.walk_files(args, _callback, {}, pass_dirs=True)
-        work_dir, biodata_dir = self._local_directories(args)
         for directory in sorted(directories):
             if work_dir and directory.startswith(work_dir):
                 folder = directory.replace(work_dir, "").strip("/")
-                output[directory] = {"container": containers["run"],
-                                     "folder": folder}
+                container = shipping_config.containers["run"]
             elif biodata_dir and directory.startswith(biodata_dir):
                 folder = directory.replace(biodata_dir, "").strip("/")
-                output[directory] = {"container": containers["biodata"],
-                                     "folder": folder}
+                container = shipping_config.containers["biodata"]
             else:
                 folder = os.path.join("externalmap", str(external_count))
-                output[directory] = {"container": containers["run"],
-                                     "folder": folder}
+                container = shipping_config.containers["run"]
                 external_count += 1
+
+            output[directory] = {
+                "container": container,
+                "folder": folder,
+                "shipping_config": shipping_config
+            }
+
         return output
 
     def send_run_integrated(self, config):
@@ -397,8 +402,11 @@ class Pack(object):
     def send_run(self, args, config):
         """Ship required processing files to the storage service for running
         on non-shared filesystem instances.
+
+        :param config: an instances of :class objects.ShipingConf:
         """
-        directories = self._map_directories(args, config[self._CONTAINER])
+        shipping_config = factory.get_ship_config(config.type, raw=False)
+        directories = self._map_directories(args, shipping_config(config))
         files = remap.walk_files(args, self._remap_and_ship,
                                  directories, pass_dirs=True)
         return self._remove_empty(files)
@@ -409,12 +417,23 @@ class Pack(object):
 
         Remap a file into an storage service container and key,
         shipping if not present.
+
+        Each value from :param remap_dict: is an directory wich contains
+        the following keys:
+            * container:        The name of the container that contains
+                                the blob. All blobs must be in a container.
+            * folder            The name of the folder where the file
+                                will be stored.
+            * shiping_config    an instance of :class objects.ShipingConfig:
         """
         pass
 
     @abc.abstractmethod
     def send_output(self, config, out_file):
-        """Send an output file with state information from a run."""
+        """Send an output file with state information from a run.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
         pass
 
 
@@ -456,13 +475,16 @@ class Reconstitute(object):
                            allow_unicode=False)
 
     def prepare_datadir(self, pack, args):
-        """Prepare the biodata directory."""
+        """Prepare the biodata directory.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
         # pylint: disable=no-self-use
-        if "datadir" in pack:
-            return pack["datadir"], args
+        if pack.type == "shared":
+            return pack.datadir, args
 
         raise ValueError("Cannot handle biodata directory "
-                         "preparation type: %s" % pack)
+                         "preparation type: %s" % pack.data)
 
     @abc.abstractmethod
     def get_output(self, target_file, pconfig):
