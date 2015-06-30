@@ -18,7 +18,6 @@ from bcbio.pipeline import config_utils
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
 from bcbiovm.docker import remap
-from bcbiovm.provider import factory
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -399,17 +398,14 @@ class Pack(object):
 
         return finalizer
 
+    @abc.abstractmethod
     def send_run(self, args, config):
         """Ship required processing files to the storage service for running
         on non-shared filesystem instances.
 
         :param config: an instances of :class objects.ShipingConf:
         """
-        shipping_config = factory.get_ship_config(config.type, raw=False)
-        directories = self._map_directories(args, shipping_config(config))
-        files = remap.walk_files(args, self._remap_and_ship,
-                                 directories, pass_dirs=True)
-        return self._remove_empty(files)
+        pass
 
     @abc.abstractmethod
     def _remap_and_ship(self, orig_fname, context, remap_dict):

@@ -111,6 +111,17 @@ class BlobPack(base.Pack):
                              account_name=config.storage_account,
                              container=config.container["run"])
 
+    def send_run(self, args, config):
+        """Ship required processing files to the storage service for running
+        on non-shared filesystem instances.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
+        directories = self._map_directories(args, shiping_config(config))
+        files = remap.walk_files(args, self._remap_and_ship,
+                                 directories, pass_dirs=True)
+        return self._remove_empty(files)
+
 
 class ReconstituteBlob(base.Reconstitute):
 

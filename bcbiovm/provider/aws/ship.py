@@ -85,6 +85,17 @@ class S3Pack(base.Pack):
         self._storage.upload(filename=out_file, key=keyname,
                              container=config.containers["run"])
 
+    def send_run(self, args, config):
+        """Ship required processing files to the storage service for running
+        on non-shared filesystem instances.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
+        directories = self._map_directories(args, shiping_config(config))
+        files = remap.walk_files(args, self._remap_and_ship,
+                                 directories, pass_dirs=True)
+        return self._remove_empty(files)
+
 
 class ReconstituteS3(base.Reconstitute):
 
@@ -149,7 +160,7 @@ class ReconstituteS3(base.Reconstitute):
             data["dirs"] = {}
         data["dirs"]["work"] = workdir
         new_args[datai] = data
-        return workdir, new_args, s3pack.send_run_integrated(pack)
+        return (workdir, new_args, s3pack.send_run_integrated(pack))
 
     def get_output(self, target_file, pconfig):
         """Retrieve an output file from pack configuration."""
