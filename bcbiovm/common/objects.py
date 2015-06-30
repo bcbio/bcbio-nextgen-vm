@@ -1,14 +1,45 @@
 """Common objects used across the bcbio-vm project."""
 
-import json
+
 import collections
+import json
+import prettytable
 
 from bcbiovm.common import exception as exc
+
 
 Flavor = collections.namedtuple("Flavor", ["cpus", "memory"])
 
 
-class Report(object):
+class ReportMixin(object):
+
+    def raw(self):
+        """Dictionary representation of the container."""
+        return self._data
+
+    def _sanitize(self, data):
+        if isinstance(data, dict):
+            new_data = {}
+            for key, value in data.items():
+                new_data[key] = self._sanitize(value)
+            return new_data
+        if isinstance(data, SANITIZABLE):
+            return data.raw()
+        return data
+
+    def json(self, indent=True):
+        """Representation of the entity in JSON format."""
+        # Sanitize the dictionary to make sure it contains only dicts.
+        new_data = self._sanitize(self._data)
+        # Prettify and return the whole dict as json text.
+        indent = 4 if indent else None
+        try:
+            return json.dumps(new_data, indent=indent)
+        except ValueError:
+            return None
+
+
+class Report(ReportMixin):
 
     """Simple information container."""
 
@@ -26,8 +57,28 @@ class Report(object):
         self._data[name] = Container(name, title, description, fields)
         return self._data[name]
 
+    def __str__(self):
+        """String representation for current report."""
+        value = "<Report: {}>".format(self._data.keys())
+        return value
 
-class Container(object):
+    def __repr__(self):
+        """Machine-readable report representation"""
+        value = self.json(indent=False) or "Unknown format"
+        return "<Report: {}>".format(value)
+
+    def text(self):
+        chunks = []
+        for name, container in self._data.items():
+            chunks.append("{}\n{}\n{}".format(
+                name,
+                "=" * len(name),
+                container.text()
+            ))
+        return "\n\n".join(chunks)
+
+
+class Container(ReportMixin):
 
     """Simple container."""
 
@@ -54,12 +105,8 @@ class Container(object):
 
     def __repr__(self):
         """Machine-readable container representation"""
-        value = "<Container: Unknown format.>"
-        try:
-            value = json.dumps(self._data)
-        except ValueError:
-            pass
-        return value
+        value = self.json(indent=False) or "Unknown format"
+        return "<Container: {}>".format(value)
 
     def add_field(self, name, title=None, **kwargs):
         """Create or update an existing field.
@@ -82,17 +129,17 @@ class Container(object):
         :raises: bcbiovm.exception.BCBioException
         """
         if isinstance(item, dict):
-            item = []
+            row = []
             for field in self._data["meta"]["fields"]:
                 field_name = field.get("name")
                 if field_name in item:
-                    item.append(item[field_name])
+                    row.append(item[field_name])
                 elif "default" in field:
-                    item.append(field["default"])
+                    row.append(field["default"])
                 else:
                     raise exc.BCBioException("The field %(field)r is mising.",
                                              field=field_name)
-            self._data["content"].append(item)
+            self._data["content"].append(row)
 
         elif isinstance(item, (list, tuple)):
             if len(item) == len(self._data["meta"]["fields"]):
@@ -101,19 +148,19 @@ class Container(object):
                 raise exc.BCBioException("Invalid number of fields.")
 
         elif len(self._data["meta"]["fields"]) == 1:
-            self._data["content"].append(item)
+            self._data["content"].append([item])
 
         else:
             raise exc.BCBioException("Unknown item type %(item_type)r.",
                                      item_type=type(item))
 
-    def dump(self):
-        """Text representation of the container."""
-        return json.dumps(self._data)
-
-    def to_dict(self):
-        """Dictionary representation of the container."""
-        return self._data
+    def text(self):
+        """Return a pretty text table from the available data."""
+        columns = [field["name"] for field in self._data["meta"]["fields"]]
+        table = prettytable.PrettyTable(columns)
+        for row in self._data["content"]:
+            table.add_row(row)
+        return str(table)
 
 
 class ShippingConfig(object):
@@ -223,3 +270,6 @@ class ShippingConfig(object):
         for container, alias in alias_list or ():
             shipping_config.add_alias(container, alias)
         return shipping_config
+
+
+SANITIZABLE = (Report, Container)
