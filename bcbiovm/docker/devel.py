@@ -18,6 +18,7 @@ from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
 from bcbiovm.common import utils as common_utils
 from bcbiovm.docker import defaults, install, manage, mounts
+from bcbiovm.provider import factory as provider_factory
 
 
 def _get_cur_mem(key, val):
@@ -168,6 +169,7 @@ def run_docker_build(args):
     # Build docker images
     inventory_path = os.path.join(constant.PATH.ANSIBLE_BASE,
                                   "standard_hosts.txt")
+    playbook_path = provider_factory.get_playbook("docker_local")
 
     def extra_vars(cluster_config):
         """Extra variables to inject into a playbook."""
@@ -180,7 +182,7 @@ def run_docker_build(args):
 
     playbook = clusterops.AnsiblePlaybook(
         inventory_path=inventory_path,
-        playbook_path=constant.PLAYBOOK.DOCKER_LOCAl,
+        playbook_path=playbook_path,
         config=args.econfig,
         cluster=args.cluster,
         verbose=args.verbose,

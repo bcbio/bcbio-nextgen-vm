@@ -134,6 +134,6 @@ class AzureProvider(base.BaseCloudProvider):
         install = azure_bootstrap.Bootstrap(
             provider=self, config=config, cluster_name=cluster,
             reboot=reboot, verbose=verbose)
-        for playbook in (install.docker, install.gof3r, install.bcbio):
+        for playbook in (install.docker, install.bcbio):
             # TODO(alexandrucoman): Check the results
             playbook()

@@ -22,6 +22,7 @@ from bcbiovm.common import cluster as cluster_ops
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import utils
+from bcbiovm.provider import playbook as provider_playbook
 
 LOG = utils.get_logger(__name__)
 
@@ -346,11 +347,11 @@ class ICELOps(object):
         inventory_path = os.path.join(
             cluster.repository.storage_path,
             'ansible-inventory.{}'.format(self._cluster_name))
-
+        aws_playbook = provider_playbook.AWSPlaybook()
         if mount:
-            playbook_path = constant.PLAYBOOK.MOUNT_LUSTRE
+            playbook_path = aws_playbook.mount_lustre
         else:
-            playbook_path = constant.PLAYBOOK.MOUNT_LUSTRE
+            playbook_path = aws_playbook.unmount_lustre
 
         # pylint: disable=unused-argument
         def get_lustre_vars(cluster_config):
@@ -539,9 +540,10 @@ class ICELOps(object):
             cluster_storage_path, 'icel-{}.inventory'.format(stack_name))
         self._write_inventory(inventory_path, stack_name)
 
+        aws_playbook = provider_playbook.AWSPlaybook()
         playbook = cluster_ops.AnsiblePlaybook(
             inventory_path=inventory_path,
-            playbook_path=constant.PLAYBOOK.ICEL,
+            playbook_path=aws_playbook.icel,
             config=self._config_path,
             cluster=self._cluster_name,
             verbose=verbose,

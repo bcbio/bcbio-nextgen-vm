@@ -1,8 +1,8 @@
 """
 Helper class for updating or installing the bcbio and its requirements.
 """
-from bcbiovm.common import constant
 from bcbiovm.provider import base
+from bcbiovm.provider import playbook
 
 
 class Bootstrap(base.Bootstrap):
@@ -22,7 +22,4 @@ class Bootstrap(base.Bootstrap):
         """
         super(Bootstrap, self).__init__(provider, config, cluster_name,
                                         reboot, verbose)
-
-    def gof3r(self):
-        """Install gof3r."""
-        return self._run_playbook(constant.PLAYBOOK.GOF3R)
+        self._playbook = playbook.AWSPlaybook()

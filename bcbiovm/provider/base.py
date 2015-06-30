@@ -16,8 +16,8 @@ from bcbio.distributed import ipython
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import cluster as clusterops
-from bcbiovm.common import constant
 from bcbiovm.docker import remap
+from bcbiovm.provider import playbook as provider_playbook
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -249,6 +249,7 @@ class Bootstrap(object):
         self._inventory_path = os.path.join(
             self._cluster.repository.storage_path,
             "ansible-inventory.%(cluster)s" % {"cluster": cluster_name})
+        self._playbook = provider_playbook.Playbook()
 
     def _run_playbook(self, playbook, extra_vars=None):
         """Run a playbook and return the result.
@@ -270,7 +271,7 @@ class Bootstrap(object):
 
     def docker(self):
         """Install docker."""
-        return self._run_playbook(constant.PLAYBOOK.DOCKER)
+        return self._run_playbook(self._playbook.docker)
 
     def bcbio(self):
         """Install bcbio_vm and docker container with tools.
@@ -296,7 +297,7 @@ class Bootstrap(object):
                 "target_memory": flavor.memory,
                 "upgrade_host_os_and_reboot": self._reboot}
 
-        return self._run_playbook(constant.PLAYBOOK.BCBIO, _extra_vars)
+        return self._run_playbook(self._playbook.bcbio, _extra_vars)
 
 
 @six.add_metaclass(abc.ABCMeta)

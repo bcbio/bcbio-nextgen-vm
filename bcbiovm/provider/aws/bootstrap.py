@@ -3,8 +3,8 @@ Helper class for updating or installing the bcbio and its requirements.
 """
 import toolz
 
-from bcbiovm.common import constant
 from bcbiovm.provider import base
+from bcbiovm.provider import playbook
 
 
 class Bootstrap(base.Bootstrap):
@@ -24,10 +24,11 @@ class Bootstrap(base.Bootstrap):
         """
         super(Bootstrap, self).__init__(provider, config, cluster_name,
                                         reboot, verbose)
+        self._playbook = playbook.AWSPlaybook()
 
     def gof3r(self):
         """Install gof3r."""
-        return self._run_playbook(constant.PLAYBOOK.GOF3R)
+        return self._run_playbook(self._playbook.gof3r)
 
     def nfs(self):
         """Mount encrypted NFS volume on master node and expose
@@ -55,4 +56,4 @@ class Bootstrap(base.Bootstrap):
                     ["nodes", "frontend", "encrypted_volume_device"],
                     cluster_config, "/dev/xvdf")}
 
-        return self._run_playbook(constant.PLAYBOOK.NFS, _extra_vars)
+        return self._run_playbook(self._playbook.nfs, _extra_vars)
