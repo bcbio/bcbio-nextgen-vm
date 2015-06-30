@@ -24,16 +24,16 @@ class BCBioException(Exception):
     template = "An unknown exception occurred."
 
     def __init__(self, message=None, **kwargs):
-        self.kwargs = kwargs
-        if not message:
-            try:
-                message = self.template % kwargs
-            except TypeError:
-                # Something went wrong during message formatting.
-                # Probably kwargs doesn't match a variable in the message.
-                message = ("Message: %(template)s. Extra info: %(kwargs)s" %
-                           {"template": self.template, "kwargs": kwargs})
-                # TODO(alexandrucoman): Log the issue and the kwargs
+        message = message or self.template
+
+        try:
+            message = message % kwargs
+        except (TypeError, KeyError):
+            # Something went wrong during message formatting.
+            # Probably kwargs doesn't match a variable in the message.
+            message = ("Message: %(template)s. Extra or "
+                       "missing info: %(kwargs)s" %
+                       {"template": message, "kwargs": kwargs})
 
         super(BCBioException, self).__init__(message)
 
