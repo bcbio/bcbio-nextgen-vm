@@ -4,7 +4,6 @@ an analysis in a temporary directory on the current machine.
 import os
 import re
 
-import toolz
 from bcbio import utils
 from bcbio.pipeline import config_utils
 
@@ -52,20 +51,35 @@ class BlobPack(base.Pack):
         super(BlobPack, self).__ini__()
         self._storage = objectstore.AzureBlob()
 
-    def _upload_if_not_exists(self, filename, store):
-        """Upload the received file if not exists."""
-        account = store["storage_account"]
-        container = store["container"]
-        blob_name = BLOB_NAME.format(folder=store["folder"],
-                                     filename=os.path.basename(filename))
+    def _upload_if_not_exists(self, account, container, folder, path):
+        """Upload the received file if not exists.
+
+        :account:       The storage account name. All access to Azure Storage
+                        is done through a storage account.
+        :container:     The name of the container that contains the blob. All
+                        blobs must be in a container.
+        :param folder:  The name of the folder where the file will be stored.
+        :param path:    The name of the container from the storage service.
+        """
+        blob_name = BLOB_NAME.format(folder=folder,
+                                     filename=os.path.basename(path))
 
         if not self._storage.exists(account, container, blob_name):
-            self._storage.upload(filename, account, container, blob_name)
+            self._storage.upload(filename=path, account_name=account,
+                                 container=container, blob_name=blob_name)
 
     def _remap_and_ship(self, orig_fname, context, remap_dict):
         """Remap a file into an Azure blob and key, shipping if not present.
 
         Uploads files if not present in the specified blob.
+
+        Each value from :param remap_dict: is an directory wich contains
+        the following keys:
+            * container:        The name of the container that contains
+                                the blob. All blobs must be in a container.
+            * folder            The name of the folder where the file
+                                will be stored.
+            * shiping_config    an instance of :class objects.ShipingConfig:
         """
         # pylint: disable=unused-argument
         if not os.path.isfile(orig_fname):
@@ -73,22 +87,29 @@ class BlobPack(base.Pack):
 
         dirname = os.path.dirname(os.path.abspath(orig_fname))
         store = remap_dict[os.path.normpath(dirname)]
-        for filename in utils.file_plus_index(orig_fname):
-            self._upload_if_not_exists(filename, store)
+        config = store["shiping_config"]
+
+        for file_path in utils.file_plus_index(orig_fname):
+            self._upload_if_not_exists(account=config.storage_account,
+                                       container=store["container"],
+                                       folder=store["folder"],
+                                       path=file_path)
 
         blob = BLOB_NAME.format(folder=store["folder"],
                                 filename=os.path.basename(orig_fname))
-        return BLOB_FILE.format(storage=store["storage"],
+        return BLOB_FILE.format(storage=config.storage_account,
                                 blob=blob, container=store["container"])
 
     def send_output(self, config, out_file):
-        """Send an output file with state information from a run."""
-        account_name = toolz.get_in(["storage_account"], config)
-        container = toolz.get_in(["containers", "run"], config)
-        blob_name = BLOB_NAME.format(
-            folder=toolz.get_in(["folders", "output"], config),
-            filename=os.path.basename(out_file))
-        self._storage.upload(out_file, account_name, container, blob_name)
+        """Send an output file with state information from a run.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
+        blob_name = BLOB_NAME.format(folder=config.folders["output"],
+                                     filename=os.path.basename(out_file))
+        self._storage.upload(filename=out_file, blob_name=blob_name,
+                             account_name=config.storage_account,
+                             container=config.container["run"])
 
 
 class ReconstituteBlob(base.Reconstitute):
@@ -150,8 +171,8 @@ class ReconstituteBlob(base.Reconstitute):
         for processing.
         """
         blob_pack = BlobPack()
-        workdir, new_args = self._unpack(account_name=pack["storage_account"],
-                                         container=pack["containers"]["run"],
+        workdir, new_args = self._unpack(account_name=pack.storage_account,
+                                         container=pack.containers["run"],
                                          args=args)
         datai, data = config_utils.get_dataarg(new_args)
         if "dirs" not in data:
@@ -162,22 +183,23 @@ class ReconstituteBlob(base.Reconstitute):
 
     def get_output(self, target_file, pconfig):
         """Retrieve an output file from pack configuration."""
-        blob_name = BLOB_NAME.format(
-            folder=toolz.get_in(["folders", "output"], pconfig),
-            filename=os.path.basename(target_file))
-        blob_url = BLOB_FILE.format(
-            storage=toolz.get_in(["storage_account"], pconfig),
-            container=toolz.get_in(["containers", "run"], pconfig),
-            blob=blob_name)
+        blob_name = BLOB_NAME.format(folder=pconfig.folders["output"],
+                                     filename=os.path.basename(target_file))
+        blob_url = BLOB_FILE.format(storage=pconfig.storage_account,
+                                    container=pconfig.containers["run"],
+                                    blob=blob_name)
 
         self._download(source=blob_url, destination=target_file)
         return target_file
 
     def prepare_datadir(self, pack, args):
-        """Prepare the biodata directory."""
-        if pack["type"] == "blob":
-            return self._unpack(account_name=pack["storage_account"],
-                                container=pack["containers"]["run"],
+        """Prepare the biodata directory.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
+        if pack.type == "blob":
+            return self._unpack(account_name=pack.storage_account,
+                                container=pack.containers["run"],
                                 args=args)
 
         return super(ReconstituteBlob, self).prepare_datadir(pack, args)
