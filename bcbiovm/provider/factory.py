@@ -3,6 +3,7 @@ import collections
 
 from bcbiovm.common import constant
 from bcbiovm.common import exception
+from bcbiovm.provider import playbook as bcbio_playbook
 from bcbiovm.provider import ship as shared_ship
 from bcbiovm.provider.aws import aws_provider
 from bcbiovm.provider.aws import ship as aws_ship
@@ -26,6 +27,13 @@ SHIP_CONFIG = {
     "blob": (azure_ship.shipping_config, azure_ship.get_shipping_config),
     "shared": (shared_ship.shipping_config, shared_ship.get_shipping_config),
     "S3": (aws_ship.shipping_config, aws_ship.get_shipping_config)
+}
+
+
+PLAYBOOK = {
+    "AWS": bcbio_playbook.AWSPlaybook(),
+    "Azure": bcbio_playbook.AzurePlaybook(),
+    "default": bcbio_playbook.Playbook(),
 }
 
 
@@ -56,3 +64,9 @@ def get_ship_config(provider, raw=True):
         raise exception.NotFound(object=provider,
                                  container=SHIP_CONFIG.keys())
     return ship_config[raw]
+
+
+def get_playbook(playbook, provider="default"):
+    """Return the path of the received playbook."""
+    playbook_provider = PLAYBOOK.get(provider)
+    return getattr(playbook_provider, playbook)

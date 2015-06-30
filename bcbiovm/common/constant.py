@@ -108,27 +108,6 @@ class PATH:
     BCBIO_SYSTEM = os.path.join(DATADIR, "galaxy", "bcbio_system.yaml")
 
 
-class PLAYBOOK:
-
-    """Default paths for Ansible playbooks."""
-
-    BCBIO = os.path.join(PATH.ANSIBLE_BASE, "roles", "bcbio_bootstrap",
-                         "tasks", "main.yml")
-    DOCKER = os.path.join(PATH.ANSIBLE_BASE, "roles", "docker", "tasks",
-                          "main.yml")
-    DOCKER_LOCAl = os.path.join(PATH.ANSIBLE_BASE, "bcbio_vm_docker_local.yml")
-    GOF3R = os.path.join(PATH.ANSIBLE_BASE, "roles", "gof3r", "tasks",
-                         "main.yml")
-    NFS = os.path.join(PATH.ANSIBLE_BASE, "roles", "encrypted_nfs", "tasks",
-                       "main.yml")
-    ICEL = os.path.join(PATH.ANSIBLE_BASE, "roles", "icel", "tasks",
-                        "main.yml")
-    MOUNT_LUSTRE = os.path.join(PATH.ANSIBLE_BASE, "roles", "lustre_client",
-                                "tasks", "mount.yml")
-    UNMOUNT_LUSTRE = os.path.join(PATH.ANSIBLE_BASE, "roles", "lustre_client",
-                                  "tasks", "unmount.yml")
-
-
 class PROVIDER:
 
     """Contains the available providers' name."""
