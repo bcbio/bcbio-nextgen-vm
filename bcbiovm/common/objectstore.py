@@ -34,7 +34,7 @@ class AmazonS3(objectstore.AzureBlob):
         return bucket
 
     def exists(self, bucket_name, keyname):
-        bucket = self._storage.get_bucket(bucket_name)
+        bucket = self.get_bucket(bucket_name)
         key = bucket.get_key(keyname)
         return True if key else False
 
