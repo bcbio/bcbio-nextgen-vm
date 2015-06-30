@@ -3,7 +3,6 @@ an analysis in a temporary directory on the current machine.
 """
 import os
 
-import toolz
 from bcbio import utils
 from bcbio.pipeline import config_utils
 
@@ -49,6 +48,14 @@ class S3Pack(base.Pack):
 
         Uploads files if not present in the specified bucket, using server
         side encryption. Uses gof3r for parallel multipart upload.
+
+        Each value from :param remap_dict: is an directory wich contains
+        the following keys:
+            * container:        The name of the container that contains
+                                the blob. All blobs must be in a container.
+            * folder            The name of the folder where the file
+                                will be stored.
+            * shiping_config    an instance of :class objects.ShipingConfig:
         """
         # pylint: disable=unused-argument
         if not os.path.isfile(orig_fname):
@@ -59,22 +66,24 @@ class S3Pack(base.Pack):
 
         for filename in utils.file_plus_index(orig_fname):
             keyname = "%s/%s" % (store["folder"], os.path.basename(filename))
-            if not self._storage.exists(store["bucket"], keyname):
+            if not self._storage.exists(store["container"], keyname):
                 self._storage.upload(filename=filename, key=keyname,
-                                     container=store["bucket"])
+                                     container=store["container"])
 
         # Drop directory information since we only deal with files in S3
-        s3_name = "s3://%s/%s/%s" % (store["bucket"], store["folder"],
+        s3_name = "s3://%s/%s/%s" % (store["container"], store["folder"],
                                      os.path.basename(orig_fname))
         return s3_name
 
     def send_output(self, config, out_file):
-        """Send an output file with state information from a run."""
-        keyname = "%s/%s" % (toolz.get_in(["folders", "output"], config),
+        """Send an output file with state information from a run.
+
+        :param config: an instances of :class objects.ShipingConf:
+        """
+        keyname = "%s/%s" % (config.folders["output"],
                              os.path.basename(out_file))
-        self._storage.upload(
-            filename=out_file, key=keyname,
-            container=toolz.get_in(["buckets", "run"], config))
+        self._storage.upload(filename=out_file, key=keyname,
+                             container=config.containers["run"])
 
 
 class ReconstituteS3(base.Reconstitute):
@@ -134,7 +143,7 @@ class ReconstituteS3(base.Reconstitute):
         for processing.
         """
         s3pack = S3Pack()
-        workdir, new_args = self._unpack(pack["buckets"]["run"], args)
+        workdir, new_args = self._unpack(pack.containers["run"], args)
         datai, data = config_utils.get_dataarg(new_args)
         if "dirs" not in data:
             data["dirs"] = {}
@@ -144,17 +153,16 @@ class ReconstituteS3(base.Reconstitute):
 
     def get_output(self, target_file, pconfig):
         """Retrieve an output file from pack configuration."""
-        keyname = "%s/%s" % (toolz.get_in(["folders", "output"], pconfig),
+        keyname = "%s/%s" % (pconfig.folders["output"],
                              os.path.basename(target_file))
-        s3_file = self._s3_url.format(
-            bucket=toolz.get_in(["buckets", "run"], pconfig),
-            region="", key=keyname)
+        s3_file = self._s3_url.format(bucket=pconfig.containers["run"],
+                                      region="", key=keyname)
         self._download(source=s3_file, destination=target_file)
         return target_file
 
     def prepare_datadir(self, pack, args):
         """Prepare the biodata directory."""
-        if pack["type"] == "S3":
-            return self._unpack(pack["buckets"]["biodata"], args)
+        if pack.type == "S3":
+            return self._unpack(pack.containers["biodata"], args)
 
         return super(ReconstituteS3, self).prepare_datadir(pack, args)
