@@ -2,7 +2,6 @@
 
 from bcbiovm.common import objects
 from bcbiovm.common import constant
-from bcbiovm.common import exception
 from bcbiovm.common import utils
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
@@ -110,15 +109,16 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
         """
+        result = {}
         install = aws_bootstrap.Bootstrap(provider=self, config=config,
                                           cluster_name=cluster, reboot=reboot)
-        for playbook in (install.docker, install.gof3r, install.nfs,
-                         install.bcbio):
-            unreachable, failures = playbook()
-            if unreachable or failures:
-                raise exception.BCBioException(
-                    "Failed to install or update the bcbio-nextgen "
-                    "code and the tools.")
+        for playbook_name in ("docker", "gof3r", "nfs", "bcbio"):
+            playbook = getattr(install, playbook_name)
+            result[playbook_name] = playbook()
+            if not result[playbook_name].status:
+                break
+
+        return result
 
     def bootstrap_iam(self, config, create, recreate):
         """Create IAM users and instance profiles for running bcbio on AWS.

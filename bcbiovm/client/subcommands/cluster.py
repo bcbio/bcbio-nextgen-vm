@@ -1,9 +1,11 @@
 """Run and manage a cluster using elasticluster."""
+from __future__ import print_function
 
 import argparse
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
+from bcbiovm.common import objects
 from bcbiovm.provider import factory as cloud_factory
 
 
@@ -29,13 +31,29 @@ class Bootstrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
+        status = True
+        report = objects.Report()
         if self.args.econfig is None:
             self.args.econfig = constant.PATH.EC_CONFIG.format(
                 provider=self.args.provider)
+
         provider = cloud_factory.get(self.args.provider)()
-        return provider.bootstrap(cluster=self.args.cluster,
-                                  config=self.args.econfig,
-                                  reboot=not self.args.no_reboot)
+        result = provider.bootstrap(cluster=self.args.cluster,
+                                    config=self.args.econfig,
+                                    reboot=not self.args.no_reboot)
+
+        for playbook, info in result.items():
+            if not info.status:
+                status = False
+
+            section = report.add_section(
+                name=playbook, title="Ansible playbook: %s" % playbook,
+                fields=[{"name": "Playbook"}, {"name": "Unreachable"},
+                        {"name": "Failures"}])
+            section.add_item([playbook, info.unreachable, info.failures])
+
+        if not status:
+            print(report.text())
 
 
 class Command(base.BaseCommand):

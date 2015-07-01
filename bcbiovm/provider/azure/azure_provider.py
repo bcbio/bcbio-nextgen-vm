@@ -127,9 +127,15 @@ class AzureProvider(base.BaseCloudProvider):
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
         """
-        install = azure_bootstrap.Bootstrap(
-            provider=self, config=config, cluster_name=cluster,
-            reboot=reboot)
-        for playbook in (install.docker, install.bcbio):
-            # TODO(alexandrucoman): Check the results
-            playbook()
+        result = {}
+        install = azure_bootstrap.Bootstrap(provider=self, config=config,
+                                            cluster_name=cluster,
+                                            reboot=reboot)
+
+        for playbook_name in ("docker", "bcbio"):
+            playbook = getattr(install, playbook_name)
+            result[playbook_name] = playbook()
+            if not result[playbook_name].status:
+                break
+
+        return result

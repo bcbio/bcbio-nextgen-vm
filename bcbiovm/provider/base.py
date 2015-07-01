@@ -4,6 +4,7 @@ Provider base-classes:
     types that support that contract.
 """
 import abc
+import collections
 import os
 import yaml
 
@@ -217,7 +218,14 @@ class Bootstrap(object):
     Update or install the bcbio and its requirements.
     """
 
+<<<<<<< HEAD
     def __init__(self, provider, config, cluster_name, reboot):
+=======
+    _RESPONSE = collections.namedtuple("Response",
+                                       ["status", "unreachable", "failures"])
+
+    def __init__(self, provider, config, cluster_name, reboot, verbose):
+>>>>>>> Use AnisblePlaybook response
         """
         :param provider:       an instance of
                                :class bcbiovm.provider.base.BaseCloudProvider:
@@ -254,7 +262,8 @@ class Bootstrap(object):
             cluster=self._cluster_name,
             extra_vars=extra_vars,
             provider=self._provider.name)
-        return playbook.run()
+        playbook_response = playbook.run()
+        return self._RESPONSE(all(playbook_response), *playbook_response)
 
     def docker(self):
         """Install docker."""
