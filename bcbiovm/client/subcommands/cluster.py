@@ -1,15 +1,57 @@
 """Run and manage a cluster using elasticluster."""
 from __future__ import print_function
 
+import abc
 import argparse
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.common import objects
+from bcbiovm.common import utils
 from bcbiovm.provider import factory as cloud_factory
 
+LOG = utils.get_logger(__name__)
 
-class Bootstrap(base.BaseCommand):
+
+class CommandMixin(base.BaseCommand):
+
+    """Base command class for commands which are ussing AnsiblePlaybook."""
+
+    @staticmethod
+    def _process_playbook_response(response):
+        """Process the information received from AnsiblePlaybook."""
+        status = True
+        report = objects.Report()
+        fields = [
+            {"name": "playbook", "title": "Ansible playbook"},
+            {"name": "unreachable", "title": "Unreachable host"},
+            {"name": "failures", "title": "Hosts where playbook failed."}
+        ]
+
+        for playbook, playbook_info in response.items():
+            if not playbook_info.status:
+                status = False
+
+            section = report.add_section(
+                name=playbook, fields=fields,
+                title="Ansible playbook: %s" % playbook)
+            section.add_item([playbook, playbook_info.unreachable,
+                              playbook_info.failures])
+
+        return(status, report)
+
+    @abc.abstractmethod
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        pass
+
+    @abc.abstractmethod
+    def process(self):
+        """Override this with your desired procedures."""
+        pass
+
+
+class Bootstrap(CommandMixin):
 
     """Update a bcbio AWS system with the latest code and tools."""
 
@@ -31,28 +73,19 @@ class Bootstrap(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        status = True
-        report = objects.Report()
         if self.args.econfig is None:
             self.args.econfig = constant.PATH.EC_CONFIG.format(
                 provider=self.args.provider)
 
         provider = cloud_factory.get(self.args.provider)()
-        result = provider.bootstrap(cluster=self.args.cluster,
-                                    config=self.args.econfig,
-                                    reboot=not self.args.no_reboot)
-
-        for playbook, info in result.items():
-            if not info.status:
-                status = False
-
-            section = report.add_section(
-                name=playbook, title="Ansible playbook: %s" % playbook,
-                fields=[{"name": "Playbook"}, {"name": "Unreachable"},
-                        {"name": "Failures"}])
-            section.add_item([playbook, info.unreachable, info.failures])
-
-        if not status:
+        response = provider.bootstrap(cluster=self.args.cluster,
+                                      config=self.args.econfig,
+                                      reboot=not self.args.no_reboot)
+        status, report = self._process_playbook_response(response)
+        if status:
+            LOG.debug("All playbooks runned without problems.")
+        else:
+            LOG.error("Something went wrong.")
             print(report.text())
 
 
@@ -117,7 +150,7 @@ class Setup(base.BaseCommand):
                               config=self.args.econfig)
 
 
-class Start(base.BaseCommand):
+class Start(CommandMixin):
 
     """Start a bcbio cluster."""
 
@@ -147,12 +180,21 @@ class Start(base.BaseCommand):
                                 config=self.args.econfig,
                                 no_setup=False)
 
-        if status == 0:
-            # Run bootstrap only if the start command successfully runned.
-            status = provider.bootstrap(cluster=self.args.cluster,
-                                        config=self.args.econfig,
-                                        reboot=not self.args.no_reboot)
-        return status
+        if status != 0:
+            LOG.error("Failed to create the cluster.")
+            return
+
+        # Run bootstrap only if the start command successfully runned.
+        response = provider.bootstrap(cluster=self.args.cluster,
+                                      config=self.args.econfig,
+                                      reboot=not self.args.no_reboot)
+
+        status, report = self._process_playbook_response(response)
+        if status:
+            LOG.debug("All playbooks runned without problems.")
+        else:
+            LOG.error("Something went wrong.")
+            print(report.text())
 
 
 class Stop(base.BaseCommand):
