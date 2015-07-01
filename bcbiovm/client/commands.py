@@ -11,7 +11,11 @@ from bcbio.workflow import template
 from bcbiovm.client import base
 from bcbiovm.client.subcommands import factory as command_factory
 from bcbiovm.common import constant
+from bcbiovm.common import utils
 from bcbiovm.provider import factory as cloud_factory
+
+
+LOG = utils.get_logger(__name__)
 
 
 class _Config(base.BaseCommand):
@@ -32,6 +36,37 @@ class _Config(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         pass
+
+
+class Info(base.BaseCommand):
+
+    """Information on existing cloud provider."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "info", help="Information on existing cloud provider.")
+        parser.add_argument("--econfig", default=None,
+                            help="Elasticluster bcbio configuration file")
+        parser.add_argument("-c", "--cluster", default="bcbio",
+                            help="Elasticluster cluster name")
+        parser.add_argument("-v", "--verbose", action="store_true",
+                            default=False, help="Emit verbose output")
+        parser.set_defaults(func=self.run)
+
+    def process(self):
+        """Run the command with the received information."""
+        provider_str = self.args.provider
+        provider = cloud_factory.get(provider_str)()
+        econf = self.args.econfig or constant.PATH.EC_CONFIG.format(
+            provider=provider_str)
+        info = provider.information(econf, self.args.cluster,
+                                    verbose=self.args.verbose)
+        if not info:
+            LOG.warning("No info from provider %(provider)s.",
+                        {"provider": self.args.provider})
+            return
+        print(info.text())
 
 
 class Graph(base.BaseCommand):
@@ -222,7 +257,7 @@ class AWSProvider(base.BaseCommand):
     sub_commands = [
         (ElastiCluster, "actions"),
         (ConfigAWS, "actions"),
-        # TODO(alexandrucoman): Add `info` command
+        (Info, "actions"),
         (command_factory.get("aws", "IAMBootstrap"), "actions"),
         (command_factory.get("aws", "VPCBoostrap"), "actions"),
         (ICELCommand, "actions"),
@@ -249,7 +284,7 @@ class AzureProvider(base.BaseCommand):
     sub_commands = [
         (ElastiCluster, "actions"),
         (ConfigAzure, "actions"),
-        # TODO(alexandrucoman): Add `info` command
+        (Info, "actions"),
         (Graph, "actions"),
         (command_factory.get("azure", "PrepareEnvironment"), "actions")
     ]

@@ -11,6 +11,7 @@ from elasticluster import main as ec_main
 import voluptuous
 
 from bcbiovm.common import constant
+from bcbiovm.common import exception
 from bcbiovm.common import utils
 
 LOG = utils.get_logger(__name__)
@@ -56,8 +57,9 @@ class ElastiCluster(object):
             self._config = ec_conf.Configurator.fromConfig(
                 self._config_file, storage_dir)
         except voluptuous.Error:
-            # FIXME(alexandrucoman): Raise InvalidConfig
-            return None
+            raise exception.InvalidConfig(
+                config_file=self._config_file,
+                storage_dir=storage_dir)
 
     def get_config(self, cluster_name=None):
         """Get the config."""

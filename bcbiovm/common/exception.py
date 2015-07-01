@@ -43,3 +43,11 @@ class NotFound(BCBioException):
     """The required object is not available in container."""
 
     template = "The %(object)r was not found in %(container)s."
+
+
+class InvalidConfig(BCBioException):
+
+    """Not available or invalid configuration."""
+
+    template = ("No clusters found or invalid configuration with config "
+                "file %(config_file)r and storage directory %(storage_dir)r")

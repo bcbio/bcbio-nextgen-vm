@@ -108,15 +108,17 @@ class BaseCommand(object):
 
     def command_done(self, result):
         """What to execute after successfully finished processing a command."""
-        pass
+        LOG.info("Execution successful with: %(result)s", result)
 
     def command_fail(self, exc):
         """What to do when the program fails processing a command."""
-        pass
+        # This should be the default behavior. If the error should
+        # be silenced, then it must be done from the derrived class.
+        raise exc
 
     def interrupted(self):
         """What to execute when keyboard interrupts arrive."""
-        pass
+        LOG.warning("Interrupted by the user.")
 
     def prologue(self):
         """Executed once before the arguments parsing."""
