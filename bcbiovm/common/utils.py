@@ -200,13 +200,14 @@ def get_logger(name=constant.LOG.NAME, format_string=None):
         if constant.LOG.FILE:
             file_handler = logging.FileHandler(constant.LOG.FILE)
             file_handler.setFormatter(formatter)
+            file_handler.setLevel(constant.LOG.FILE_LEVEL)
             logger.addHandler(file_handler)
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
+        stdout_handler.setLevel(constant.LOG.CLI_LEVEL)
         logger.addHandler(stdout_handler)
 
-    logger.setLevel(constant.LOG.LEVEL)
     return logger
 
 

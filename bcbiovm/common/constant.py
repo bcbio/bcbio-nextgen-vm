@@ -1,6 +1,8 @@
 """
 Shared constants across the bcbio-nextgen-vm project.
 """
+
+import logging
 import os
 import sys
 
@@ -132,6 +134,7 @@ class LOG:
     """Logging default values."""
 
     NAME = "bcbiovm"
-    LEVEL = 10
+    CLI_LEVEL = logging.INFO
+    FILE_LEVEL = logging.DEBUG
     FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     FILE = ""
