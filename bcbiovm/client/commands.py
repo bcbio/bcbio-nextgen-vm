@@ -177,6 +177,7 @@ class ElastiCluster(base.BaseCommand):
     """Run and manage a cluster using elasticluster."""
 
     sub_commands = [
+        (command_factory.get("cluster", "Bootstrap"), "actions"),
         (command_factory.get("cluster", "Start"), "actions"),
         (command_factory.get("cluster", "Stop"), "actions"),
         (command_factory.get("cluster", "Setup"), "actions"),
