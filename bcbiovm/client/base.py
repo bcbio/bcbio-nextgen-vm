@@ -142,7 +142,7 @@ class BaseCommand(object):
             self.command_fail(exc)
         else:
             self.command_done(result)
-        return result
+            return result
 
 
 @six.add_metaclass(abc.ABCMeta)
