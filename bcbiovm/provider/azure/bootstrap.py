@@ -20,4 +20,8 @@ class Bootstrap(base.Bootstrap):
         :param reboot:         whether to upgrade and restart the host OS
         """
         super(Bootstrap, self).__init__(provider, config, cluster_name, reboot)
-        self._playbook = playbook.AWSPlaybook()
+        self._playbook = playbook.AzurePlaybook()
+
+    def docker(self):
+        """Install docker."""
+        return self._run_playbook(self._playbook.docker)

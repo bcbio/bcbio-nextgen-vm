@@ -212,6 +212,7 @@ class BaseCloudProvider(object):
         client.close()
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Bootstrap(object):
 
     """
@@ -261,10 +262,6 @@ class Bootstrap(object):
         playbook_response = playbook.run()
         return self._RESPONSE(not any(playbook_response), *playbook_response)
 
-    def docker(self):
-        """Install docker."""
-        return self._run_playbook(self._playbook.docker)
-
     def bcbio(self):
         """Install bcbio_vm and docker container with tools.
         Set core and memory usage.
@@ -290,6 +287,11 @@ class Bootstrap(object):
                 "upgrade_host_os_and_reboot": self._reboot}
 
         return self._run_playbook(self._playbook.bcbio, _extra_vars)
+
+    @abc.abstractmethod
+    def docker(self):
+        """Install docker."""
+        pass
 
 
 @six.add_metaclass(abc.ABCMeta)

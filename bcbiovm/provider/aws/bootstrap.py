@@ -24,6 +24,10 @@ class Bootstrap(base.Bootstrap):
         super(Bootstrap, self).__init__(provider, config, cluster_name, reboot)
         self._playbook = playbook.AWSPlaybook()
 
+    def docker(self):
+        """Install docker."""
+        return self._run_playbook(self._playbook.docker)
+
     def gof3r(self):
         """Install gof3r."""
         return self._run_playbook(self._playbook.gof3r)
