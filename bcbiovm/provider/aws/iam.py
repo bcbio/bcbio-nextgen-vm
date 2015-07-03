@@ -8,10 +8,31 @@ import os
 import boto
 import toolz
 
-from bcbiovm.common import constant
 from bcbiovm.common import utils
 
 LOG = utils.get_logger(__name__)
+IAM_POLICY = """{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "*",
+      "Resource": "*"
+    }
+  ]
+}
+"""
+S3_POLICY = """{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "*"
+        }
+      ]
+}
+"""
 
 
 class IAMOps(object):
@@ -41,7 +62,7 @@ class IAMOps(object):
         except boto.exception.BotoServerError:
             self._connection.create_user(name)
             self._connection.put_user_policy(name, access_key_name,
-                                             constant.IAM_POLICY)
+                                             IAM_POLICY)
             credentials.update(self._connection.create_access_key(name))
 
     @staticmethod
@@ -116,7 +137,7 @@ class IAMOps(object):
             self._connection.get_role(name)
         except boto.exception.BotoServerError:
             self._connection.create_role(name)
-            self._connection.put_role_policy(name, name, constant.S3_POLICY)
+            self._connection.put_role_policy(name, name, S3_POLICY)
 
         roles = toolz.get_in(["get_instance_profile_response",
                               "get_instance_profile_result",
