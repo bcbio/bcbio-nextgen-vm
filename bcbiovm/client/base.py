@@ -2,6 +2,7 @@
 Client base-classes:
     (Beginning of) the contract that commands and parsers must follow.
 """
+# pylint: disable=no-self-use
 
 import abc
 import collections
@@ -108,6 +109,7 @@ class BaseCommand(object):
 
     def command_done(self, result):
         """What to execute after successfully finished processing a command."""
+
         LOG.info("Execution successful with: %(result)s", result)
 
     def command_fail(self, exc):
