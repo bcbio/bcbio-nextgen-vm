@@ -185,7 +185,6 @@ def run_docker_build(args):
         playbook_path=playbook_path,
         config=args.econfig,
         cluster=args.cluster,
-        verbose=args.verbose,
         extra_vars=extra_vars)
     return playbook.run()
 

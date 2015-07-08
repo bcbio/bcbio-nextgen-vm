@@ -45,7 +45,7 @@ class AWSProvider(base.BaseCloudProvider):
             "r3.8xlarge": objects.Flavor(cpus=32, memory=7000),
         }
 
-    def information(self, config, cluster, verbose=False):
+    def information(self, config, cluster):
         """
         Get all the information available for this provider.
 
@@ -54,9 +54,8 @@ class AWSProvider(base.BaseCloudProvider):
 
         :config:          elasticluster config file
         :cluster:         cluster name
-        :param verbose:   increase verbosity
         """
-        report = aws_resources.Report(config, cluster, verbose)
+        report = aws_resources.Report(config, cluster)
         report.add_cluster_info()
         report.add_iam_info()
         report.add_security_groups_info()
@@ -64,14 +63,13 @@ class AWSProvider(base.BaseCloudProvider):
         report.add_instance_info()
         return report.digest()
 
-    def colect_data(self, config, cluster, rawdir, verbose):
+    def colect_data(self, config, cluster, rawdir):
         """Collect from the each instances the files which contains
         information regarding resources consumption.
 
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param rawdir:    directory where to copy raw collectl data files.
-        :param verbose:   increase verbosity
 
         Notes:
             The current workflow is the following:
@@ -83,10 +81,10 @@ class AWSProvider(base.BaseCloudProvider):
             from bcbio runs. The statistics will contain information regarding
             CPU, memory, network, disk I/O usage.
         """
-        collector = aws_resources.Collector(config, cluster, rawdir, verbose)
+        collector = aws_resources.Collector(config, cluster, rawdir)
         collector.run()
 
-    def resource_usage(self, bcbio_log, rawdir, verbose):
+    def resource_usage(self, bcbio_log, rawdir):
         """Generate system statistics from bcbio runs.
 
         Parse the files obtained by the :meth colect_data: and put the
@@ -94,7 +92,6 @@ class AWSProvider(base.BaseCloudProvider):
 
         :param bcbio_log:   local path to bcbio log file written by the run
         :param rawdir:      directory to put raw data files
-        :param verbose:     increase verbosity
 
         :return: a tuple with two dictionaries, the first contains
                  an instance of :pandas.DataFrame: for each host and
@@ -102,21 +99,19 @@ class AWSProvider(base.BaseCloudProvider):
                  hardware configuration
         :type return: tuple
         """
-        parser = aws_resources.Parser(bcbio_log, rawdir, verbose)
+        parser = aws_resources.Parser(bcbio_log, rawdir)
         return parser.run()
 
-    def bootstrap(self, config, cluster, reboot, verbose):
+    def bootstrap(self, config, cluster, reboot):
         """Install or update the bcbio-nextgen code and the tools
         with the latest version available.
 
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
-        :param verbose:   increase verbosity
         """
         install = aws_bootstrap.Bootstrap(provider=self, config=config,
-                                          cluster_name=cluster, reboot=reboot,
-                                          verbose=verbose)
+                                          cluster_name=cluster, reboot=reboot)
         for playbook in (install.docker, install.gof3r, install.nfs,
                          install.bcbio):
             unreachable, failures = playbook()
@@ -171,32 +166,29 @@ class AWSProvider(base.BaseCloudProvider):
         :param recreate:    whether to remove and recreate the stack,
                             destroying all data stored on it
         :param setup:       whether to run again the configuration steps
-        :param verbose:     increase verbosity
         """
         icel = aws_icel.ICELOps(cluster, config)
         return icel.create(**kwargs)
 
-    def mount_lustre(self, cluster, config, stack_name, verbose):
+    def mount_lustre(self, cluster, config, stack_name):
         """Mount Lustre filesystem on all cluster nodes.
 
         :param config:      elasticluster config file
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
-        :param verbose:     increase verbosity
         """
         icel = aws_icel.ICELOps(cluster, config)
-        return icel.mount(stack_name, verbose)
+        return icel.mount(stack_name)
 
-    def unmount_lustre(self, cluster, config, stack_name, verbose):
+    def unmount_lustre(self, cluster, config, stack_name):
         """Unmount Lustre filesystem on all cluster nodes.
 
         :param config:      elasticluster config file
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
-        :param verbose:     increase verbosity
         """
         icel = aws_icel.ICELOps(cluster, config)
-        return icel.unmount(stack_name, verbose)
+        return icel.unmount(stack_name)
 
     def stop_lustre(self, cluster, config, stack_name):
         """Stop the running Lustre filesystem and clean up resources.

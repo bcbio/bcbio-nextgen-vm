@@ -102,9 +102,6 @@ class Graph(base.BaseCommand):
             "-e", "--econfig",
             help="Elasticluster bcbio configuration file",
             default=constant.PATH.EC_CONFIG)
-        parser.add_argument(
-            "-v", "--verbose", action="store_true", default=False,
-            help="Emit verbose output")
         parser.set_defaults(func=self.run)
         return parser
 
@@ -115,12 +112,10 @@ class Graph(base.BaseCommand):
                 self.args.cluster.lower() not in ("none", "false")):
             provider.colect_data(cluster=self.args.cluster,
                                  config=self.args.econfig,
-                                 rawdir=self.args.rawdir,
-                                 verbose=self.args.verbose)
+                                 rawdir=self.args.rawdir)
 
         resource_usage = provider.resource_usage(bcbio_log=self.args.log,
-                                                 rawdir=self.args.rawdir,
-                                                 verbose=self.args.verbose)
+                                                 rawdir=self.args.rawdir)
         if resource_usage:
             matplotlib.use('Agg')
             pylab.rcParams['figure.figsize'] = (35.0, 12.0)
@@ -128,8 +123,7 @@ class Graph(base.BaseCommand):
             graph.generate_graphs(data_frames=data,
                                   hardware_info=hardware,
                                   steps=steps,
-                                  outdir=self.args.outdir,
-                                  verbose=self.args.verbose)
+                                  outdir=self.args.outdir)
 
 
 class Template(base.BaseCommand):

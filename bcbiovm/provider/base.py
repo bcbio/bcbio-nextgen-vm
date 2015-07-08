@@ -53,7 +53,7 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def information(self, cluster, config, verbose=False):
+    def information(self, cluster, config):
         """
         Get all the information available for this provider.
 
@@ -62,21 +62,19 @@ class BaseCloudProvider(object):
 
         :config:    elasticluster config file
         :cluster:   cluster name
-        :param verbose:   increase verbosity
 
         :return:    an instance of :class bcbio.common.objects.Report:
         """
         pass
 
     @abc.abstractmethod
-    def colect_data(self, cluster, config, rawdir, verbose):
+    def colect_data(self, cluster, config, rawdir):
         """Collect from the each instances the files which contains
         information regarding resources consumption.
 
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param rawdir:    directory where to copy raw collectl data files.
-        :param verbose:   if is `False` the output will be suppressed
 
         Notes:
             The current workflow is the following:
@@ -91,7 +89,7 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def resource_usage(self, bcbio_log, rawdir, verbose):
+    def resource_usage(self, bcbio_log, rawdir):
         """Generate system statistics from bcbio runs.
 
         Parse the files obtained by the :meth colect_data: and put the
@@ -99,7 +97,6 @@ class BaseCloudProvider(object):
 
         :param bcbio_log:   local path to bcbio log file written by the run
         :param rawdir:      directory to put raw data files
-        :param verbose:     if is `False` the output will be suppressed
 
         :return: a tuple with two dictionaries, the first contains
                  an instance of :pandas.DataFrame: for each host and
@@ -110,14 +107,13 @@ class BaseCloudProvider(object):
         pass
 
     @abc.abstractmethod
-    def bootstrap(self, cluster, config, reboot, verbose):
+    def bootstrap(self, cluster, config, reboot):
         """Install or update the the bcbio code and the tools with
         the latest version available.
 
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
-        :param verbose:   increase verbosity
         """
         pass
 
@@ -137,19 +133,17 @@ class BaseCloudProvider(object):
         else:
             return self._flavor.get(machine)
 
-    def start(self, cluster, config=None, no_setup=False, verbose=False):
+    def start(self, cluster, config=None, no_setup=False):
         """Create a cluster using the supplied configuration.
 
         :param cluster:   Type of cluster. It refers to a
                           configuration stanza [cluster/<name>].
         :param config:    Elasticluster config file
         :param no_setup:  Only start the cluster, do not configure it.
-        :param verbose:   Increase verbosity.
         """
-        return self._ecluster.start(cluster, config, no_setup, verbose)
+        return self._ecluster.start(cluster, config, no_setup)
 
-    def stop(self, cluster, config=None, force=False, use_default=False,
-             verbose=False):
+    def stop(self, cluster, config=None, force=False, use_default=False):
         """Stop a cluster and all associated VM instances.
 
         :param cluster:     Type of cluster. It refers to a
@@ -158,35 +152,31 @@ class BaseCloudProvider(object):
         :param force:       Remove the cluster even if not all the nodes
                             have been terminated properly.
         :param use_default: Assume `yes` to all queries and do not prompt.
-        :param verbose:     Increase verbosity.
         """
-        return self._ecluster.stop(cluster, config, force, use_default,
-                                   verbose)
+        return self._ecluster.stop(cluster, config, force, use_default)
 
-    def setup(self, cluster, config=None, verbose=False):
+    def setup(self, cluster, config=None):
         """Configure the cluster.
 
         :param cluster:     Type of cluster. It refers to a
                             configuration stanza [cluster/<name>].
         :param config:      Elasticluster config file
-        :param verbose:     Increase verbosity.
         """
-        return self._ecluster.setup(cluster, config, verbose)
+        return self._ecluster.setup(cluster, config)
 
-    def ssh(self, cluster, config=None, ssh_args=None, verbose=False):
+    def ssh(self, cluster, config=None, ssh_args=None):
         """Connect to the frontend of the cluster using the `ssh` command.
 
         :param cluster:     Type of cluster. It refers to a
                             configuration stanza [cluster/<name>].
         :param config:      Elasticluster config file
         :ssh_args:          SSH command.
-        :param verbose:     Increase verbosity.
 
         Note:
             If the ssh_args are provided the command will be executed on
             the remote machine instead of opening an interactive shell.
         """
-        return self._ecluster.ssh(cluster, config, ssh_args, verbose)
+        return self._ecluster.ssh(cluster, config, ssh_args)
 
     def run_script(self, cluster, config, script):
         """Run a script on the frontend node inside a screen session.
@@ -227,19 +217,17 @@ class Bootstrap(object):
     Update or install the bcbio and its requirements.
     """
 
-    def __init__(self, provider, config, cluster_name, reboot, verbose):
+    def __init__(self, provider, config, cluster_name, reboot):
         """
         :param provider:       an instance of
                                :class bcbiovm.provider.base.BaseCloudProvider:
         :param config:         elasticluster config file
         :param cluster_name:   cluster name
         :param reboot:         whether to upgrade and restart the host OS
-        :param verbose:        increase verbosity
         """
         self._config = config
         self._cluster_name = cluster_name
         self._reboot = reboot
-        self._verbose = verbose
         self._provider = provider
 
         self._ecluster = clusterops.ElastiCluster(provider=self._provider.name)
@@ -264,7 +252,6 @@ class Bootstrap(object):
             playbook_path=playbook,
             config=self._config,
             cluster=self._cluster_name,
-            verbose=self._verbose,
             extra_vars=extra_vars,
             provider=self._provider.name)
         return playbook.run()

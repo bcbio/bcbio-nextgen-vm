@@ -114,4 +114,9 @@ class _Config(object):
             self._update_namespace(configurations)
 
 config = _Config()
+config.defaults = {
+    "log.enabled": True,
+    "log.verbosity": 0,
+}
+
 config.update()

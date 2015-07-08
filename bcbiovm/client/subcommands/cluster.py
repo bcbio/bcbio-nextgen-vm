@@ -25,9 +25,6 @@ class Bootstrap(base.BaseCommand):
         parser.add_argument(
             "-R", "--no-reboot", default=False, action="store_true",
             help="Don't upgrade the cluster host OS and reboot")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -38,8 +35,7 @@ class Bootstrap(base.BaseCommand):
         provider = cloud_factory.get(self.args.provider)()
         return provider.bootstrap(cluster=self.args.cluster,
                                   config=self.args.econfig,
-                                  reboot=not self.args.no_reboot,
-                                  verbose=self.args.verbose)
+                                  reboot=not self.args.no_reboot)
 
 
 class Command(base.BaseCommand):
@@ -91,9 +87,6 @@ class Setup(base.BaseCommand):
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -103,8 +96,7 @@ class Setup(base.BaseCommand):
                 provider=self.args.provider)
         provider = cloud_factory.get(self.args.provider)()
         return provider.setup(cluster=self.args.cluster,
-                              config=self.args.econfig,
-                              verbose=self.args.verbose)
+                              config=self.args.econfig)
 
 
 class Start(base.BaseCommand):
@@ -125,9 +117,6 @@ class Start(base.BaseCommand):
         parser.add_argument(
             "-R", "--no-reboot", default=False, action="store_true",
             help="Don't upgrade the cluster host OS and reboot")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -138,15 +127,13 @@ class Start(base.BaseCommand):
         provider = cloud_factory.get(self.args.provider)()
         status = provider.start(cluster=self.args.cluster,
                                 config=self.args.econfig,
-                                no_setup=False,
-                                verbose=self.args.verbose)
+                                no_setup=False)
 
         if status == 0:
             # Run bootstrap only if the start command successfully runned.
             status = provider.bootstrap(cluster=self.args.cluster,
                                         config=self.args.econfig,
-                                        reboot=not self.args.no_reboot,
-                                        verbose=self.args.verbose)
+                                        reboot=not self.args.no_reboot)
         return status
 
 
@@ -165,9 +152,6 @@ class Stop(base.BaseCommand):
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -179,8 +163,7 @@ class Stop(base.BaseCommand):
         return provider.stop(cluster=self.args.cluster,
                              config=self.args.econfig,
                              force=False,
-                             use_default=False,
-                             verbose=self.args.verbose)
+                             use_default=False)
 
 
 class SSHConnection(base.BaseCommand):
@@ -199,9 +182,6 @@ class SSHConnection(base.BaseCommand):
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
         parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
-        parser.add_argument(
             "args", metavar="ARG", nargs="*",
             help="Execute the following command on the remote "
                  "machine instead of opening an interactive shell.")
@@ -215,5 +195,4 @@ class SSHConnection(base.BaseCommand):
         provider = cloud_factory.get(self.args.provider)()
         return provider.ssh(cluster=self.args.cluster,
                             config=self.args.econfig,
-                            ssh_args=self.args.args,
-                            verbose=self.args.verbose)
+                            ssh_args=self.args.args)

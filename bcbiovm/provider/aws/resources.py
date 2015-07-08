@@ -31,7 +31,7 @@ class Collector(object):
 
     ::
         # The instance can be used as a function.
-        collector = Collector(config, cluster, rawdir, verbose)
+        collector = Collector(config, cluster, rawdir)
         collector()
 
         # Or the `meth: run` can be called
@@ -41,15 +41,13 @@ class Collector(object):
     COLLECTL_PATH = '/var/log/collectl/*.raw.gz'
     NATDevice = 'NATDevice'
 
-    def __init__(self, config, cluster, rawdir, verbose):
+    def __init__(self, config, cluster, rawdir):
         """
         :param config:    elasticluster config file
         :param cluster:   cluster name
         :param rawdir:    directory where to copy raw collectl data files.
-        :param verbose:   if is `False` the output will be suppressed
         """
         self._output = rawdir
-        self._verbose = verbose
         self._elasticluster = cluster_ops.ElastiCluster(
             provider=constant.PROVIDER.AWS)
         self._elasticluster.load_config(config)
@@ -63,11 +61,6 @@ class Collector(object):
     def __call__(self):
         """Allows an instance of a class to be called as a function."""
         return self.run()
-
-    @property
-    def verbose(self):
-        """Whether to increase the verbosity."""
-        return self._verbose
 
     def _get_ssh_client(self, host, user, port=22, bastion_host=None):
         """Setup and return an instance of :class bcbiovm.utils.SSHClient:."""
@@ -201,15 +194,13 @@ class Parser(object):
 
     COLLECTL_SUFFIX = '.raw.gz'
 
-    def __init__(self, bcbio_log, rawdir, verbose):
+    def __init__(self, bcbio_log, rawdir):
         """
         :param bcbio_log:   the bcbio log path
         :param rawdir:      directory to put raw data files
-        :param verbose:     increase verbosity.
         """
         self._bcbio_log = bcbio_log
         self._rawdir = rawdir
-        self._verbose = verbose
 
     def __call__(self):
         """Allows an instance of a class to be called as a function."""
@@ -268,18 +259,16 @@ class Report(object):
     with them.
     """
 
-    def __init__(self, config, cluster, verbose=True):
+    def __init__(self, config, cluster):
         """
         :param config:    elasticluster config file
         :param cluster:   cluster name
-        :param verbose:   increase verbosity
         """
         self._information = objects.Report()
         self._elasticluster = cluster_ops.ElastiCluster(
             provider=constant.PROVIDER.AWS)
         self._elasticluster.load_config(config)
         self._cluster_config = self._elasticluster.get_config(cluster)
-        self._verbose = verbose
 
     def add_cluster_info(self):
         """Add information regarding the cluster."""

@@ -10,6 +10,7 @@ from elasticluster import conf as ec_conf
 from elasticluster import main as ec_main
 import voluptuous
 
+from bcbiovm import config as bcbio_config
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import utils
@@ -81,9 +82,9 @@ class ElastiCluster(object):
         return self._config.load_cluster(cluster_name)
 
     @classmethod
-    def _add_common_options(cls, command, config=None, verbose=None):
+    def _add_common_options(cls, command, config=None):
         """Add common options to the command line."""
-        if verbose:
+        if bcbio_config.log["enabled"]:
             # Insert `--verbose` to the command
             command.insert(1, cls._VERBOSE[1])
 
@@ -139,24 +140,22 @@ class ElastiCluster(object):
             return exc.args[0]
 
     @classmethod
-    def start(cls, cluster, config=None, no_setup=False, verbose=False):
+    def start(cls, cluster, config=None, no_setup=False):
         """Create a cluster using the supplied configuration.
 
         :param cluster:   Type of cluster. It refers to a
                           configuration stanza [cluster/<name>].
         :param config:    Elasticluster config file
         :param no_setup:  Only start the cluster, do not configure it.
-        :param verbose:   Increase verbosity.
         """
         command = [cls._EC, cls._EC_START, cluster]
         if no_setup:
             command.append(cls._NO_SETUP)
 
-        return cls.execute(command, config=config, verbose=verbose)
+        return cls.execute(command, config=config)
 
     @classmethod
-    def stop(cls, cluster, config=None, force=False, use_default=False,
-             verbose=False):
+    def stop(cls, cluster, config=None, force=False, use_default=False):
         """Stop a cluster and all associated VM instances.
 
         :param cluster:     Type of cluster. It refers to a
@@ -165,7 +164,6 @@ class ElastiCluster(object):
         :param force:       Remove the cluster even if not all the nodes
                             have been terminated properly.
         :param use_default: Assume `yes` to all queries and do not prompt.
-        :param verbose:     Increase verbosity.
         """
         command = [cls._EC, cls._EC_STOP, cluster]
         if force:
@@ -173,29 +171,27 @@ class ElastiCluster(object):
         if use_default:
             command.append(cls._USE_DEFAULTS)
 
-        return cls.execute(command, config=config, verbose=verbose)
+        return cls.execute(command, config=config)
 
     @classmethod
-    def setup(cls, cluster, config=None, verbose=False):
+    def setup(cls, cluster, config=None):
         """Configure the cluster.
 
         :param cluster:     Type of cluster. It refers to a
                             configuration stanza [cluster/<name>].
         :param config:      Elasticluster config file
-        :param verbose:     Increase verbosity.
         """
         command = [cls._EC, cls._EC_SETUP, cluster]
-        return cls.execute(command, config=config, verbose=verbose)
+        return cls.execute(command, config=config)
 
     @classmethod
-    def ssh(cls, cluster, config=None, ssh_args=None, verbose=False):
+    def ssh(cls, cluster, config=None, ssh_args=None):
         """Connect to the frontend of the cluster using the `ssh` command.
 
         :param cluster:     Type of cluster. It refers to a
                             configuration stanza [cluster/<name>].
         :param config:      Elasticluster config file
         :ssh_args:          SSH command.
-        :param verbose:     Increase verbosity.
 
         Note:
             If the ssh_args are provided the command will be executed on
@@ -204,7 +200,7 @@ class ElastiCluster(object):
         command = [cls._EC, cls._EC_SSH, cluster]
         if ssh_args:
             command.extend(ssh_args)
-        return cls.execute(command, config=config, verbose=verbose)
+        return cls.execute(command, config=config)
 
 
 class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
@@ -262,21 +258,19 @@ class AnsiblePlaybook(object):
     HOST_KEY_CHECKING = 'ANSIBLE_HOST_KEY_CHECKING'
 
     def __init__(self, inventory_path, playbook_path, config=None,
-                 cluster=None, verbose=True, extra_vars=None,
-                 ansible_cfg=None, provider=constant.DEFAULT_PROVIDER):
+                 cluster=None, extra_vars=None, ansible_cfg=None,
+                 provider=constant.DEFAULT_PROVIDER):
         """
         :param inventory_path:  the path to the inventory hosts file
         :param playbook_path:   the path to a playbook file
         :param config:          elasticluster config file
         :param cluster_name:    cluster name
-        :param verbose:         increase verbosity
         :param extra_args:      is an option function that should return
                                 extra variables to pass to ansible given
                                 the arguments and cluster configuration
         """
         self._host_list = inventory_path
         self._playbook = playbook_path
-        self._verbose = verbose
         self._ansible_cfg = ansible_cfg
 
         self._callbacks = None
@@ -298,11 +292,11 @@ class AnsiblePlaybook(object):
         :param args:        arguments received from the client
         """
         self._stats = ansible.callbacks.AggregateStats()
-        if self._verbose:
+        if bcbio_config.log["enabled"]:
             self._callbacks = ansible.callbacks.PlaybookCallbacks()
             self._runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(
                 self._stats)
-            ansible.utils.VERBOSITY = self._verbose - 1
+            ansible.utils.VERBOSITY = bcbio_config.log["verbosity"] - 1
         else:
             self._callbacks = SilentPlaybook()
             self._runner_cb = ansible.callbacks.DefaultRunnerCallbacks()

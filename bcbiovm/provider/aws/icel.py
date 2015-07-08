@@ -362,7 +362,7 @@ class ICELOps(object):
                              timeout=900,   # 15 minutes
                              retry_interval=10)
 
-    def _mount(self, stack_name, mount=True, verbose=True):
+    def _mount(self, stack_name, mount=True):
         """Mount or unmount Lustre filesystem on all cluster nodes."""
         cluster = self._ecluster.get_cluster(self._cluster_name)
         inventory_path = os.path.join(
@@ -384,7 +384,6 @@ class ICELOps(object):
             playbook_path=playbook_path,
             config=self._config_path,
             cluster=self._cluster_name,
-            verbose=verbose,
             extra_vars=get_lustre_vars,
             provider=constant.PROVIDER.AWS)
         return playbook.run()
@@ -512,7 +511,6 @@ class ICELOps(object):
         :param recreate:    whether to remove and recreate the stack,
                             destroying all data stored on it
         :param setup:       whether to run again the configuration steps
-        :param verbose:     increase verbosity
         """
         # pylint: disable = too-many-locals
 
@@ -521,7 +519,6 @@ class ICELOps(object):
         lun_count = kwargs.pop("lun_count", 4)
         recreate = kwargs.pop("recreate", False)
         setup = kwargs.pop("setup", False)
-        verbose = kwargs.pop("verbose", True)
 
         self._check_network(network)
         cluster_storage_path = self._get_storage_path()
@@ -567,28 +564,23 @@ class ICELOps(object):
             playbook_path=aws_playbook.icel,
             config=self._config_path,
             cluster=self._cluster_name,
-            verbose=verbose,
             ansible_cfg=ansible_config_path,
             provider=constant.PROVIDER.AWS)
         return playbook.run()
 
-    def mount(self, stack_name, verbose):
+    def mount(self, stack_name):
         """Mount Lustre filesystem on all cluster nodes.
 
         :param stack_name:  CloudFormation name for the new stack
-        :param verbose:     increase verbosity
         """
-        return self._mount(stack_name=stack_name, mount=True,
-                           verbose=verbose)
+        return self._mount(stack_name=stack_name, mount=True)
 
-    def unmount(self, stack_name, verbose):
+    def unmount(self, stack_name):
         """Unmount Lustre filesystem on all cluster nodes.
 
         :param stack_name:  CloudFormation name for the new stack
-        :param verbose:     increase verbosity
         """
-        return self._mount(stack_name=stack_name, mount=False,
-                           verbose=verbose)
+        return self._mount(stack_name=stack_name, mount=False)
 
     def stop(self, stack_name):
         """Stop the running Lustre filesystem and clean up resources.

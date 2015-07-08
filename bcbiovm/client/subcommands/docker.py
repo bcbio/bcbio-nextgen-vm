@@ -72,9 +72,6 @@ class Build(base.BaseCommand):
         parser.add_argument(
             "-d", "--rundir", default="/tmp/bcbio-docker-build",
             help="Directory to run docker build in")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -105,9 +102,6 @@ class BiodataUpload(base.BaseCommand):
             "--aligners", help="Aligner indexes to download",
             action="append", default=[],
             choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -132,9 +126,6 @@ class SystemUpdate(base.BaseCommand):
         parser.add_argument(
             "memory",
             help="Target memory per core, in Mb (1000 = 1Gb)")
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):
@@ -157,9 +148,6 @@ class SetupInstall(base.BaseCommand):
         parser.add_argument(
             "-i", "--image", help="Image name to write updates to",
             default=constant.DOCKER_DEFAULT_IMAGE)
-        parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
         parser.set_defaults(func=self.run)
 
     def process(self):

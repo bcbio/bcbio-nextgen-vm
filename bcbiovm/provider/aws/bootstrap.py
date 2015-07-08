@@ -13,17 +13,15 @@ class Bootstrap(base.Bootstrap):
     Update or install the bcbio and its requirements.
     """
 
-    def __init__(self, provider, config, cluster_name, reboot, verbose):
+    def __init__(self, provider, config, cluster_name, reboot):
         """
         :param provider:       an instance of
                                :class bcbiovm.provider.base.BaseCloudProvider:
         :param config:         elasticluster config file
         :param cluster_name:   cluster name
         :param reboot:         whether to upgrade and restart the host OS
-        :param verbose:        increase verbosity
         """
-        super(Bootstrap, self).__init__(provider, config, cluster_name,
-                                        reboot, verbose)
+        super(Bootstrap, self).__init__(provider, config, cluster_name, reboot)
         self._playbook = playbook.AWSPlaybook()
 
     def gof3r(self):

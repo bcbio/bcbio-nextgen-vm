@@ -34,9 +34,6 @@ class Create(base.BaseCommand):
             "--setup", action="store_true", default=False,
             help="Rerun  configuration steps")
         parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
-        parser.add_argument(
             "-s", "--size", type=int, default="2048",
             help="Size of the Lustre filesystem, in gigabytes")
         parser.add_argument(
@@ -71,8 +68,7 @@ class Create(base.BaseCommand):
             size=self.args.size,
             oss_count=self.args.oss_count,
             lun_count=self.args.lun_count,
-            setup=self.args.setup,
-            verbose=self.args.verbose
+            setup=self.args.setup
         )
 
 
@@ -94,9 +90,6 @@ class Mount(base.BaseCommand):
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
         parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
-        parser.add_argument(
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
@@ -107,8 +100,7 @@ class Mount(base.BaseCommand):
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.mount_lustre(cluster=self.args.cluster,
                               config=self.args.econfig,
-                              stack_name=self.args.stack_name,
-                              verbose=self.args.verbose)
+                              stack_name=self.args.stack_name)
 
 
 class Unmount(base.BaseCommand):
@@ -129,9 +121,6 @@ class Unmount(base.BaseCommand):
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
         parser.add_argument(
-            "-q", "--quiet", dest="verbose", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
-        parser.add_argument(
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
@@ -142,8 +131,7 @@ class Unmount(base.BaseCommand):
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.unmount_lustre(cluster=self.args.cluster,
                                 config=self.args.econfig,
-                                stack_name=self.args.stack_name,
-                                verbose=self.args.verbose)
+                                stack_name=self.args.stack_name)
 
 
 class Stop(base.BaseCommand):

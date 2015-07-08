@@ -239,6 +239,11 @@ class BaseParser(object):
                 title="[sub-commands]")
             # ...
         """
+        pass
+
+    def epilogue(self):
+        """Executed once before the command running."""
+        pass
 
     def run(self):
         """Parse the command line."""
@@ -248,5 +253,7 @@ class BaseParser(object):
 
         # Parse the command line
         self._args = self._parser.parse_args(self.command_line)
+        self.epilogue()
+
         # pylint: disable=no-member
         return self._args.func()
