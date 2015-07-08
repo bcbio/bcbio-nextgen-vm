@@ -13,6 +13,7 @@ import time
 import paramiko
 import six
 
+from bcbiovm import config as global_config
 from bcbiovm.common import constant
 
 
@@ -180,7 +181,7 @@ class SSHClient(object):
         return output
 
 
-def get_logger(name=constant.LOG.NAME, format_string=None):
+def get_logger(name=None, format_string=None):
     """Obtain a new logger object.
 
     :param name:          the name of the logger
@@ -189,23 +190,24 @@ def get_logger(name=constant.LOG.NAME, format_string=None):
     If it is not given, the the one given at command
     line will be used, otherwise the default format.
     """
+    name = name or global_config.log["name"]
+    format_string = format_string or global_config.log["format"]
     logger = logging.getLogger(name)
-    formatter = logging.Formatter(
-        format_string or constant.LOG.FORMAT)
+    formatter = logging.Formatter(format_string)
 
     if not logger.handlers:
         # If the logger wasn't obtained another time,
         # then it shouldn't have any loggers
 
-        if constant.LOG.FILE:
-            file_handler = logging.FileHandler(constant.LOG.FILE)
+        if global_config.log["file"]:
+            file_handler = logging.FileHandler(global_config.log["file"])
             file_handler.setFormatter(formatter)
-            file_handler.setLevel(constant.LOG.FILE_LEVEL)
+            file_handler.setLevel(global_config.log["file_level"])
             logger.addHandler(file_handler)
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
-        stdout_handler.setLevel(constant.LOG.CLI_LEVEL)
+        stdout_handler.setLevel(global_config.log["cli_level"])
         logger.addHandler(stdout_handler)
 
     return logger
@@ -264,12 +266,13 @@ def execute(command, **kwargs):
     """
     # pylint: disable=too-many-locals
 
-    attempts = kwargs.pop("attempts", constant.MISC.ATTEMPTS)
+    attempts = kwargs.pop("attempts", global_config.misc["attempts"])
     binary = kwargs.pop('binary', False)
     check_exit_code = kwargs.pop('check_exit_code', [0])
     cwd = kwargs.pop('cwd', None)
     env_variables = kwargs.pop("env_variables", None)
-    retry_interval = kwargs.pop("retry_interval", constant.MISC.RETRY_INTERVAL)
+    retry_interval = kwargs.pop("retry_interval",
+                                global_config.misc["retry_interval"])
     shell = kwargs.pop("shell", False)
 
     command = [str(argument) for argument in command]

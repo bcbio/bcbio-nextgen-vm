@@ -1,6 +1,7 @@
 """Run bcbio-nextgen installations inside of virtual machines
 and containers.
 """
+from bcbiovm.common import common
 
 
 class _NameSpace(object):
@@ -63,12 +64,12 @@ class _Config(object):
     """Container for global config values."""
 
     defaults = {}
-    environment = None
+    environment = "production"
 
     def __init__(self):
         self._data = {}
         self._namespace = {}
-        self._environment = {}
+        self._environment = common.ENVIRONMENT.get(self.environment, {})
 
     def __str__(self):
         """String representation for current task."""

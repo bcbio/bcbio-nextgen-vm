@@ -31,14 +31,6 @@ class ANSIBLE:
     KEY_CHECKING = "False"
 
 
-class MISC:
-
-    """Miscellaneous settings."""
-
-    ATTEMPTS = 3
-    RETRY_INTERVAL = 0.1
-
-
 class PATH:
 
     """Default paths used across the project."""
@@ -84,12 +76,23 @@ class SSH:
              '%(user)s@%(bastion)s')
 
 
-class LOG:
-
-    """Logging default values."""
-
-    NAME = "bcbiovm"
-    CLI_LEVEL = logging.INFO
-    FILE_LEVEL = logging.DEBUG
-    FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    FILE = ""
+ENVIRONMENT = {
+    "development": {
+        "log.name": "bcbiovm-devel",
+        "log.cli_level": logging.DEBUG,
+        "log.file_level": logging.DEBUG,
+        "log.format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "log.file": None,
+        "misc.attempts": 3,
+        "misc.retry_interval": 0.1,
+    },
+    "production": {
+        "log.name": "bcbiovm",
+        "log.cli_level": logging.INFO,
+        "log.file_level": logging.INFO,
+        "log.format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "log.file": None,
+        "misc.attempts": 5,
+        "misc.retry_interval": 0.2,
+    }
+}
