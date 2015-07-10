@@ -1,7 +1,7 @@
 """Run bcbio-nextgen installations inside of virtual machines
 and containers.
 """
-from bcbiovm.common import common
+from bcbiovm.common import constant
 
 
 class _NameSpace(object):
@@ -69,7 +69,7 @@ class _Config(object):
     def __init__(self):
         self._data = {}
         self._namespace = {}
-        self._environment = common.ENVIRONMENT.get(self.environment, {})
+        self._environment = constant.ENVIRONMENT.get(self.environment, {})
 
     def __str__(self):
         """String representation for current task."""
