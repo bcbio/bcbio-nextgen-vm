@@ -1,63 +1,29 @@
 # Config file for automatic testing at travis-ci.org
 language: python
 python: 2.7
-
-virtualenv:
-  system_site_packages: true
+cache: apt
+addons:
+    apt:
+        packages:
+            - libatlas-dev
+            - libatlas-base-dev
+            - liblapack-dev
+            - gfortran
 
 before_install:
-  - echo "Update the system."
-  - sudo apt-get update -qqy &> /dev/null
-  - echo "Installing required packages."
-  - sudo apt-get install -qqy build-essential python-dev &> /dev/null
-  - echo "Installing requirements for openssl."
-  - sudo apt-get install -qqy libssl-dev libffi-dev &> /dev/null
-  - echo "Installing requirements for pycurl."
-  - sudo apt-get install -qqy libcurl4-openssl-dev &> /dev/null
-  - echo "Installing requirements for lxml."
-  - sudo apt-get install -qqy libxml2-dev libxslt1-dev &> /dev/null
-  - echo "Installing requirements for matplotlib."
-  - sudo apt-get install -qqy libxft-dev libpng-dev libfreetype6-dev &> /dev/null
-  - echo "Installing requirements for scipy."
-  - sudo apt-get install -qqy liblapack-dev gfortran &> /dev/null
-  - sudo apt-get install -qqy libgmp-dev libmpfr-dev &> /dev/null
-  - sudo apt-get install -qqy libblas-dev libblas3gf &> /dev/null
-  - echo "Installing requirements for matplotlib"
-  - sudo apt-get install -qqy inkscape libav-tools gdb mencoder dvipng &> /dev/null
-  - sudo apt-get install -qqy graphviz &> /dev/null
-  - echo "Installing requirements for pysam"
-  - sudo apt-get install -qqy gcc g++ zlib1g-dev libbz2-dev libpng12-dev &> /dev/null
-  - sudo apt-get install -qqy libatlas-dev libpq-dev r-base-dev libreadline-dev &> /dev/null
-  - sudo apt-get install -qqy libmysqlclient-dev libboost-dev libsqlite3-dev &> /dev/null
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - conda update --yes conda
+    - conda install --yes --quiet conda-build jinja2 toolz
+    - conda install --yes --quiet pep8 pylint
 
-cache:
-  directories:
-    - $HOME/.pip-cache/
 
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-  - pip install pip --upgrade
-  - sudo apt-get install -qqy python-numpy
-  - sudo apt-get install -qqy python-scipy
-  - sudo apt-get install -qqy python-matplotlib
-  - sudo apt-get install -qqy python-biopython
-  - sudo apt-get install -qqy python-sklearn
-  - pip install pylint pep8
-  - pip install -r requirements.txt --upgrade --cache-dir $HOME/.pip-cache 
-  - pip install pybedtools>=0.6.8
   - python setup.py install
 
-before_script:
-  # One of the dependencies require another version of pip
-  - python -m pip install --upgrade --force pip
 
 # command to run tests, e.g. python setup.py test
 script:
   - pylint --rcfile=pylintrc bcbiovm
   - pep8 bcbiovm
-
-after_script:
-  # List installed packages, including editables.
-  - pip list
-  # List outdated packages (excluding editables)
-  - pip list --outdated
