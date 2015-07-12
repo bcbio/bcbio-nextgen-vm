@@ -121,7 +121,7 @@ confidence=
 disable=missing-docstring, bad-builtin, abstract-class-little-used, star-args,
         too-many-ancestors, too-few-public-methods, fixme, too-many-instance-attributes,
         locally-disabled, too-many-arguments, invalid-name, duplicate-code,
-        broad-except, too-many-function-args, too-many-locals
+        broad-except, too-many-function-args, too-many-locals, abstract-class-not-used
 
 
 [BASIC]

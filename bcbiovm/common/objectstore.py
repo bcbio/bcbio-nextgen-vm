@@ -71,21 +71,18 @@ class AzureBlob(objectstore.AzureBlob):
             blob=blob_name, chunk_size=32)
         try:
             # pylint: disable=protected-access
-            blob_handle._download_chunk(chunk_offset=0)
+            blob_handle._download_chunk(chunk_offset=0, chunk_size=1024)
         except azure.WindowsAzureMissingResourceError:
             return False
 
         return True
 
     @classmethod
-    def connect(cls, account_name, account_key=None):
+    def connect(cls, account_name):
         """Returns a connection object pointing to the endpoint
         associated to the received blob service.
         """
-        if account_key is None:
-            # FIXME(alexandrucoman): Define the env variable name
-            account_key = os.getenv("BLOB_ACCOUNT_KEY", None)
-
+        account_key = os.getenv("BLOB_ACCOUNT_KEY", None)
         return storage.BlobService(account_name=account_name,
                                    account_key=account_key)
 

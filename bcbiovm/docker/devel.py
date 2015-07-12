@@ -79,10 +79,12 @@ def _upload_biodata(gbuild, target, all_dirs):
 
     target_dirs = [os.path.join(gbuild, x) for x in target_dirs]
     fname = objectstore.BIODATA_INFO["s3"].format(build=gbuild, target=target)
-    remotef = objectstore.parse_remote(fname)
-    conn = objectstore.connect(fname)
+    storage_manager = objectstore.AmazonS3()
+    remotef = storage_manager.parse_remote(fname)
+    conn = storage_manager.connect(fname)
     bucket = conn.get_bucket(remotef.bucket)
     key = bucket.get_key(remotef.key)
+
     if not key:
         keyname = remotef.key
         bucketname = remotef.bucket
