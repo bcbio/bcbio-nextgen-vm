@@ -5,6 +5,7 @@ cache: apt
 addons:
     apt:
         packages:
+            - git
             - libatlas-dev
             - libatlas-base-dev
             - liblapack-dev
@@ -12,18 +13,22 @@ addons:
 
 before_install:
     - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-    - bash miniconda.sh -b -p $HOME/miniconda
+    - bash miniconda.sh -b -p "$HOME/miniconda"
     - export PATH="$HOME/miniconda/bin:$PATH"
     - conda update --yes conda
-    - conda install --yes --quiet conda-build jinja2 toolz
+    - conda install --yes --quiet conda-build binstar jinja2 toolz
     - conda install --yes --quiet pep8 pylint
-
+    - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
+    - if [ "$TRAVIS_BRANCH" == "develop" ]; then
+        python build/build.py --branch "$TRAVIS_BRANCH" --upload --token "$BINSTAR_TOKEN";
+      else
+        python build/build.py --branch "$TRAVIS_BRANCH";
+      fi
+    - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm)
 
 install:
-  - python setup.py install
+  - conda install --yes "$PACKAGE"
 
-
-# command to run tests, e.g. python setup.py test
 script:
   - pylint --rcfile=pylintrc bcbiovm
   - pep8 bcbiovm
