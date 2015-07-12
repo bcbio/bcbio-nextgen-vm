@@ -20,9 +20,9 @@ before_install:
     - conda install --yes --quiet pep8 pylint
     - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
     - if [ "$TRAVIS_BRANCH" == "develop" ]; then
-        python build/build.py --branch "$TRAVIS_BRANCH" --upload --token "$BINSTAR_TOKEN";
+        python build/build.py --bcbio-repo "$BCBIO_REPO" --upload --token "$BINSTAR_TOKEN";
       else
-        python build/build.py --branch "$TRAVIS_BRANCH";
+        python build/build.py --bcbio-repo "$BCBIO_REPO" --bcbio-branch "$TRAVIS_BRANCH";
       fi
     - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm)
 
