@@ -16,19 +16,14 @@ before_install:
     - bash miniconda.sh -b -p "$HOME/miniconda"
     - export PATH="$HOME/miniconda/bin:$PATH"
     - conda update --yes conda
-    - conda install --yes --quiet conda-build jinja2 toolz anaconda-client
-    - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
-    - if [ "$TRAVIS_BRANCH" == "develop" ]; then
-        python build/build.py --bcbio-repo "$BCBIO_REPO" --upload --token "$BINSTAR_TOKEN" --numpy "$NUMPY";
-      else
-        python build/build.py --bcbio-repo "$BCBIO_REPO" --bcbio-branch "$TRAVIS_BRANCH" --numpy "$NUMPY";
-      fi
-    - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm --numpy "$NUMPY")
-    - source activate _test
+    - conda install --yes --quiet conda-build binstar jinja2 toolz
     - conda install --yes --quiet pep8 pylint
+    - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
+    - bash build/build.sh
+    - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm)
 
 install:
-  - conda install --yes --quiet "$PACKAGE"
+  - conda install --yes "$PACKAGE"
 
 script:
   - pylint --rcfile=pylintrc bcbiovm
