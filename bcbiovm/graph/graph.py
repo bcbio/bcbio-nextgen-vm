@@ -13,13 +13,17 @@ from bcbiovm.graph.elasticluster import fetch_collectl
 
 def bootstrap(args):
     if args.cluster and args.cluster.lower() not in ["none", "false"]:
-        fetch_collectl(args.econfig, args.cluster,
-                       utils.safe_makedir(args.rawdir),
-                       args.verbose)
+        data, hardware, steps = bcbio_graph.resource_usage(bcbio_log=args.log,
+                                                           rawdir=args.rawdir,
+                                                           verbose=args.verbose)
 
-    data, hardware, steps = bcbio_graph.resource_usage(bcbio_log=args.log,
-                                                       rawdir=args.rawdir,
-                                                       verbose=args.verbose)
+        if "local" in args.cluster:
+            fetch_collectl(hardware, args.cluster, args.rawdir)
+        else:
+            fetch_collectl(args.econfig, args.cluster,
+                           utils.safe_makedir(args.rawdir),
+                           args.verbose)
+
     bcbio_graph.generate_graphs(data_frames=data,
                                 hardware_info=hardware,
                                 steps=steps,
