@@ -37,7 +37,7 @@ ssh_hostkeys_from_console_output=True
 network_ids=bcbio_cluster
 security_group=bcbio_cluster_sg
 placement_group=bcbio_cluster_pg
-image_id=ami-9eaa1cf6
+image_id=ami-4dfb5d26
 # AWS Linux AMI
 # image_id=ami-b66ed3de
 setup_provider=ansible-slurm
