@@ -15,16 +15,17 @@ before_install:
     - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
     - bash miniconda.sh -b -p "$HOME/miniconda"
     - export PATH="$HOME/miniconda/bin:$PATH"
+    - export NUMPY=19
     - conda update --yes conda
     - conda install --yes --quiet conda-build jinja2 toolz anaconda-client
     - conda install --yes --quiet pep8 pylint
     - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
     - if [ "$TRAVIS_BRANCH" == "develop" ]; then
-        python build/build.py --bcbio-repo "$BCBIO_REPO" --upload --token "$BINSTAR_TOKEN";
+        python build/build.py --bcbio-repo "$BCBIO_REPO" --upload --token "$BINSTAR_TOKEN" --numpy "$NUMPY";
       else
-        python build/build.py --bcbio-repo "$BCBIO_REPO" --bcbio-branch "$TRAVIS_BRANCH";
+        python build/build.py --bcbio-repo "$BCBIO_REPO" --bcbio-branch "$TRAVIS_BRANCH" --numpy "$NUMPY";
       fi
-    - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm)
+    - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm --numpy "$NUMPY")
 
 install:
   - conda install --yes "$PACKAGE"
