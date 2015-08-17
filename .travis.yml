@@ -16,7 +16,7 @@ before_install:
     - bash miniconda.sh -b -p "$HOME/miniconda"
     - export PATH="$HOME/miniconda/bin:$PATH"
     - conda update --yes conda
-    - conda install --yes --quiet conda-build binstar jinja2 toolz
+    - conda install --yes --quiet conda-build jinja2 toolz anaconda-client
     - conda install --yes --quiet pep8 pylint
     - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
     - bash build/build.sh
