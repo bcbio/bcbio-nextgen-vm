@@ -4,7 +4,7 @@ a docker container.
 Exports processing of a specific function and arguments within docker using
 bcbio_nextgen.py runfn.
 """
-from IPython.parallel import require
+from ipyparallel import require
 
 from bcbio.distributed import ipython
 from bcbio.distributed.ipythontasks import _setup_logging
