@@ -17,6 +17,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     mounts = reduce(operator.add, (["-v", m] for m in list(set(mounts))), [])
     ports = reduce(operator.add, (["-p", p] for p in ports or []), [])
     envs = _get_pass_envs()
+    envs += ["-e", "PERL5LIB=/usr/local/lib/perl5"]
     networking = ["--net=host"]  # Use host-networking so Docker works correctly on AWS VPCs
 
     user = pwd.getpwuid(os.getuid())
