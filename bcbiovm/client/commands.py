@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 
 import matplotlib
+matplotlib.use('Agg')
 import pylab
 
 from bcbio.graph import graph
@@ -117,7 +118,6 @@ class Graph(base.BaseCommand):
         resource_usage = provider.resource_usage(bcbio_log=self.args.log,
                                                  rawdir=self.args.rawdir)
         if resource_usage:
-            matplotlib.use('Agg')
             pylab.rcParams['figure.figsize'] = (35.0, 12.0)
             data, hardware, steps = resource_usage
             graph.generate_graphs(data_frames=data,
