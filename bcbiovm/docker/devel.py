@@ -93,7 +93,8 @@ def _upload_biodata(gbuild, target, all_dirs):
                "gof3r put --no-md5 -k {keyname} -b {bucketname} "
                "-m x-amz-storage-class:REDUCED_REDUNDANCY -m "
                "x-amz-acl:public-read")
-        do.run(cmd.format(**locals()),
+        do.run(cmd.format(target_dirs=target_dirs, keyname=keyname,
+                          bucketname=bucketname),
                "Upload pre-prepared genome data: %s %s" % (gbuild, target))
 
 
