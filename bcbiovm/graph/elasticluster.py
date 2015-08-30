@@ -115,39 +115,41 @@ def fetch_collectl(econfig_file, cluster_name, datadir, verbose=False):
     # local cluster, bypassing elasticluster
     if "local" in cluster_name:
         import getpass
-#        key = paramiko.AgentKey.from_private_key_file("/Users/romanvg/.ssh/id_rsa")
+	#key = paramiko.AgentKey.from_private_key_file("/Users/romanvg/.ssh/id_rsa")
         with ssh_agent():
             ssh = paramiko.client.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
             #ssh.load_host_keys(cluster.known_hosts_file)
 
             # XXX: Get all nodes from hardware dictionary
-            _pull_collectl_data(econfig_file, getpass.getuser(), datadir, ssh,
-                                verbose=verbose)
+	    #        	for node in hardware_nodes():
+	    #	            _pull_collectl_data(host, getpass.getuser(), datadir, ssh,
+       	    #					verbose=verbose)
 
+    else:
     # elasticluster
-    config = ecluster_config(econfig_file)
-    cluster = config.load_cluster(cluster_name)
+	config = ecluster_config(econfig_file)
+	cluster = config.load_cluster(cluster_name)
 
-    keys = set()
-    for type in cluster.nodes:
-        for node in cluster.nodes[type]:
-            keys.add(node.user_key_private)
+	keys = set()
+	for type in cluster.nodes:
+	    for node in cluster.nodes[type]:
+		keys.add(node.user_key_private)
 
-    with ssh_agent(keys):
-        ssh = paramiko.client.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
-        ssh.load_host_keys(cluster.known_hosts_file)
+	with ssh_agent(keys):
+	    ssh = paramiko.client.SSHClient()
+	    ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
+	    ssh.load_host_keys(cluster.known_hosts_file)
 
-        for node in cluster.get_all_nodes():
-            if not node.preferred_ip:
-                # Instance is unavailable.
-                continue
-            _pull_collectl_data(
-                node.preferred_ip, node.image_user, datadir, ssh,
-                verbose=verbose)
+	    for node in cluster.get_all_nodes():
+		if not node.preferred_ip:
+		    # Instance is unavailable.
+		    continue
+		_pull_collectl_data(
+		    node.preferred_ip, node.image_user, datadir, ssh,
+		    verbose=verbose)
 
-        # FIXME: load SSH host keys from ICEL instances.
-        ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
-        aws_config = config.cluster_conf[cluster_name]['cloud']
-        _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose)
+	    # FIXME: load SSH host keys from ICEL instances.
+	    ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
+	    aws_config = config.cluster_conf[cluster_name]['cloud']
+	    _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose)
