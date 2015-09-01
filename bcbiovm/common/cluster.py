@@ -25,7 +25,6 @@ class ElastiCluster(object):
 
     _CONFIG = ("-c", "--config")
     _STORAGE = ("-s", "--storage")
-    _VERBOSE = ("-v", "--verbose")
     _FORCE = "--force"
     _NO_SETUP = "--no-setup"
     _USE_DEFAULTS = "--yes"
@@ -86,7 +85,8 @@ class ElastiCluster(object):
         """Add common options to the command line."""
         if bcbio_config.log["enabled"]:
             # Insert `--verbose` to the command
-            command.insert(1, cls._VERBOSE[1])
+            verbosity = "v" * bcbio_config.log["verbosity"]
+            command.insert(1, "-{verbosity}".format(verbosity=verbosity))
 
         if config:
             # Insert `--config config_file` to the command
@@ -210,40 +210,41 @@ class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
     """
     # pylint: disable=no-init
 
-    # TODO(alexandrucoman): Add debug messages for each callback
-    #                       overwritten below.
-
     def on_no_hosts_matched(self):
         """Callback for `no_hosts_matched` event."""
-        pass
+        LOG.debug("No hosts matched!")
 
     def on_no_hosts_remaining(self):
         """Callback for `no_hosts_remaining` event."""
-        pass
+        LOG.debug("No hosts remaining.")
 
     def on_task_start(self, name, is_conditional):
         """Callback for `task_start` event."""
-        pass
+        LOG.debug("Playbook starting task %(task)r:%(is_conditional)s",
+                  {"task": name, "is_conditional": is_conditional})
 
     def on_setup(self):
         """Callback for `setup` event."""
-        pass
+        LOG.debug("Playbook is setting up.")
 
     def on_import_for_host(self, host, imported_file):
         """Callback for `import_for_host` event."""
-        pass
+        LOG.debug("The following files %(files)s were imported from the host:"
+                  " %(host)s.", {"files": imported_file, "host": host})
 
     def on_not_import_for_host(self, host, missing_file):
         """Callback for `not_import_for_host` event."""
-        pass
+        LOG.debug("The following files %(files)s were missing from the host:"
+                  " %(host)s", {"files": missing_file, "host": host})
 
     def on_play_start(self, pattern):
         """Callback for `play_start` event."""
-        pass
+        LOG.debug("Playbook started playing: %(name)s", {"name": pattern})
 
     def on_stats(self, stats):
         """Callback for `stats` event."""
-        pass
+        LOG.debug("Statistics related to the playbock: %(stats)s",
+                  {"stats": stats})
 
 
 class AnsiblePlaybook(object):

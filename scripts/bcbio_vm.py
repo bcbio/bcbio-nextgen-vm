@@ -52,8 +52,8 @@ class BCBioParser(base.BaseParser):
             help="Directory with genome data and associated files.",
             type=lambda x: (os.path.abspath(os.path.expanduser(x))))
         self._parser.add_argument(
-            "-q", "--quiet", dest="quiet", action="store_false",
-            default=True, help="Quiet output when running Ansible playbooks")
+            "-q", "--quiet", dest="quiet", action="store_true",
+            default=False, help="Quiet output when running Ansible playbooks")
         self._parser.add_argument(
             "-v", "--verbosity", dest="verbosity", action="count",
             help="increase output verbosity")
