@@ -32,4 +32,4 @@ install:
 
 script:
   - pylint --rcfile=pylintrc bcbiovm
-  - pep8 bcbiovm
+  - pep8 --config=pep8 bcbiovm
