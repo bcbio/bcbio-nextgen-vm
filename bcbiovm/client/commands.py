@@ -295,3 +295,23 @@ class AzureProvider(base.BaseCommand):
     def process(self):
         """Run the command with the received information."""
         pass
+
+
+class Tools(base.BaseCommand):
+
+    """Tools and utilities."""
+
+    sub_commands = [
+        (command_factory.get("docker", "SystemUpdate"), "tools")
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._main_parser.add_parser(
+            "tools", help="Tools and utilities.")
+        tools = parser.add_subparsers(title="[available tools]")
+        self._register_parser("tools", tools)
+
+    def process(self):
+        """Run the command with the received information."""
+        pass
