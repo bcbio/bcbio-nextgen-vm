@@ -1,5 +1,6 @@
 """Utilities to help with developing using bcbio inside of docker."""
 from __future__ import print_function
+
 import copy
 import datetime
 import glob
@@ -24,14 +25,18 @@ from bcbiovm.provider import factory as provider_factory
 def _get_cur_mem(key, val):
     if key == "memory":
         cur_mem = val
+
     elif key == "jvm_opts":
         cur_mem = val[1].replace("-Xmx", "")
+
     cur_val = int(cur_mem[:-1])
     cur_mod = cur_mem[-1:]
+
     if cur_mod.lower() == "g":
         cur_val = cur_val * 1000
     else:
         assert cur_mod.lower() == "m"
+
     return cur_val, cur_mod
 
 
@@ -107,6 +112,30 @@ def _get_basedir(datadir, target_genome):
             return dirname
 
 
+def run_docker_build(container, build_type, run_directory, provider,
+                     account_name):
+    """Build a new docker image."""
+
+    def extra_vars(_):
+        """Extra variables to inject into a playbook."""
+        return {
+            "bcbio_container": container,
+            "docker_buildtype": build_type,
+            "bcbio_dir": run_directory,
+            "provider": provider,
+            "account_name": account_name,
+        }
+
+    playbook = clusterops.AnsiblePlaybook(
+        extra_vars=extra_vars,
+        playbook_path=provider_factory.get_playbook("docker_local"),
+        inventory_path=os.path.join(constant.PATH.ANSIBLE_BASE,
+                                    "standard_hosts.txt")
+    )
+
+    return playbook.run()
+
+
 def run_setup_install(args):
     """Install python code from a bcbio-nextgen development tree
     inside of docker.
@@ -166,30 +195,6 @@ def run_system_update(args):
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False,
                        allow_unicode=False)
-
-
-def run_docker_build(args):
-    # Build docker images
-    inventory_path = os.path.join(constant.PATH.ANSIBLE_BASE,
-                                  "standard_hosts.txt")
-    playbook_path = provider_factory.get_playbook("docker_local")
-
-    def extra_vars(cluster_config):
-        """Extra variables to inject into a playbook."""
-        # pylint: disable=unused-argument
-        return {
-            "bcbio_bucket": args.bucket,
-            "docker_buildtype": args.buildtype,
-            "bcbio_dir": args.rundir
-        }
-
-    playbook = clusterops.AnsiblePlaybook(
-        inventory_path=inventory_path,
-        playbook_path=playbook_path,
-        config=args.econfig,
-        cluster=args.cluster,
-        extra_vars=extra_vars)
-    return playbook.run()
 
 
 def run_biodata_upload(args):

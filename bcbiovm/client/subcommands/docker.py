@@ -55,16 +55,17 @@ def _install_or_upgrade(main_parser, callback, install=True):
 
 class Build(base.BaseCommand):
 
-    """Build docker image and export to S3."""
+    """Build docker image and export to the cloud provider."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
         parser = self._main_parser.add_parser(
             "dockerbuild",
-            help="Build docker image and export to S3")
+            help="Build docker image and export to the cloud provider.")
         parser.add_argument(
-            "-b", "--bucket", default="bcbio_nextgen",
-            help="S3 bucket to upload the gzipped docker image to")
+            "-c", "--container", default="bcbio_nextgen",
+            help="The container name where to upload the gzipped "
+                 "docker image to")
         parser.add_argument(
             "-t", "--buildtype", default="full", choices=["full", "code"],
             help=("Type of docker build to do. full is all code and third"
@@ -72,11 +73,24 @@ class Build(base.BaseCommand):
         parser.add_argument(
             "-d", "--rundir", default="/tmp/bcbio-docker-build",
             help="Directory to run docker build in")
+        parser.add_argument(
+            "-p", "--provider", default=constant.DEFAULT_PROVIDER,
+            help="The name of the cloud provider. (default=aws)")
+        parser.add_argument(
+            "--account_name", default=None,
+            help="The storage account name. All access to Azure Storage"
+                 " is done through a storage account.")
         parser.set_defaults(func=self.run)
 
     def process(self):
         """Run the command with the received information."""
-        return docker_devel.run_docker_build(self.args)
+        return docker_devel.run_docker_build(
+            container=self.args.container,
+            build_type=self.args.buildtype,
+            run_directory=self.args.rundir,
+            provider=self.args.provider,
+            account_name=self.args.account_name,
+        )
 
 
 class BiodataUpload(base.BaseCommand):

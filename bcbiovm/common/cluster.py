@@ -311,7 +311,7 @@ class AnsiblePlaybook(object):
                             extra variables to pass to ansible given
                             the arguments and cluster configuration
         """
-        if extra_vars and self._cluster:
+        if extra_vars:
             return extra_vars(self._cluster)
 
         return {}
