@@ -11,6 +11,7 @@ import paramiko
 
 from bcbiovm.aws.common import ecluster_config
 from bcbiovm.aws import icel
+from bcbio.graph import graph as bcbio_graph
 
 
 @contextlib.contextmanager
@@ -111,20 +112,18 @@ def _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose):
             bastion_host=icel_hosts['NATDevice'], verbose=verbose)
 
 
-def fetch_collectl(econfig_file, cluster_name, datadir, verbose=False):
+def fetch_collectl(econfig_file, cluster_name, bcbio_log, datadir, verbose=False):
     # local cluster, bypassing elasticluster
     if "local" in cluster_name:
-        import getpass
+	import getpass
 	#key = paramiko.AgentKey.from_private_key_file("/Users/romanvg/.ssh/id_rsa")
         with ssh_agent():
             ssh = paramiko.client.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
-            #ssh.load_host_keys(cluster.known_hosts_file)
+            ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
 
-            # XXX: Get all nodes from hardware dictionary
-	    #        	for node in hardware_nodes():
-	    #	            _pull_collectl_data(host, getpass.getuser(), datadir, ssh,
-       	    #					verbose=verbose)
+	    for host in bcbio_graph.get_bcbio_nodes(bcbio_log):
+		_pull_collectl_data(host, getpass.getuser(), datadir, ssh,
+				    verbose=verbose)
 
     else:
     # elasticluster

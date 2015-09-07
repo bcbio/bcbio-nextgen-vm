@@ -13,7 +13,7 @@ from bcbiovm.graph.elasticluster import fetch_collectl
 
 def bootstrap(args):
     if args.cluster and args.cluster.lower() not in ["none", "false"]:
-        fetch_collectl(args.econfig, args.cluster,
+        fetch_collectl(args.econfig, args.cluster, args.log,
                        utils.safe_makedir(args.rawdir),
                        args.verbose)
 
