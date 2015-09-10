@@ -63,10 +63,13 @@ class BCBioParser(base.BaseParser):
 
     def epilogue(self):
         """Executed once before the command running."""
+        super(BCBioParser, self).epilogue()
+
         if self.args.quiet:
             # Print only the errors and exceptions
             config.log["cli_level"] = 40
             config.log["enabled"] = False
+
         elif self.args.verbosity:
             cli_level = config.log["cli_level"] - 10 * self.args.verbosity
             config.log["cli_level"] = cli_level if cli_level > 0 else 0

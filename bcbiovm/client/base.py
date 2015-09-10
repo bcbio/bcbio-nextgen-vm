@@ -126,6 +126,10 @@ class BaseCommand(object):
         """Executed once before the arguments parsing."""
         pass
 
+    def epilogue(self):
+        """Executed once after the arguments parsing."""
+        pass
+
     @abc.abstractmethod
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -243,17 +247,21 @@ class BaseParser(object):
         """
         pass
 
-    def epilogue(self):
-        """Executed once before the command running."""
-        pass
-
-    def run(self):
-        """Parse the command line."""
+    def prologue(self):
+        """Executed once before the arguments parsing."""
         # Call prologue handle for all the registered commands
         for command in self._commands:
             command.prologue()
 
-        # Parse the command line
+    def epilogue(self):
+        """Executed once before the command running."""
+        # Call epilogue handle for all the registered commands
+        for command in self._commands:
+            command.epilogue()
+
+    def run(self):
+        """Parse the command line."""
+        self.prologue()
         self._args = self._parser.parse_args(self.command_line)
         self.epilogue()
 
