@@ -6,13 +6,67 @@ import os
 
 import azure
 import boto
+import yaml
 from azure import storage
+from bcbio import utils as bcbio_utils
 from bcbio.distributed import objectstore
 
 from bcbiovm.common import utils as common_utils
 
+_ACCESS_ERROR = (
+    "Cannot write to the parent directory of work directory %(cur_dir)s\n"
+    "bcbio wants to store prepared uploaded files to %(final_dir)s\n"
+    "We recommend structuring your project in a project specific "
+    "directory structure\n"
+    "with a specific work directory (mkdir -p your-project/work "
+    "&& cd your-project/work)."
+)
+_JAR_RESOURCES = {
+    "genomeanalysistk": "gatk",
+    "mutect": "mutect"
+}
 
-class AmazonS3(objectstore.AzureBlob):
+
+def _jar_resources(list_function, sample_config):
+    """Find uploaded jars for GATK and MuTect relative to input file.
+
+    Automatically puts these into the configuration file to make them available
+    for downstream processing. Searches for them in the specific project folder
+    and also a global jar directory for a bucket.
+    """
+    configuration = {}
+    jar_directory = os.path.join(os.path.dirname(sample_config), "jars")
+
+    for filename in list_function(jar_directory):
+        program = None
+        for marker in _JAR_RESOURCES:
+            if marker in filename.lower():
+                program = _JAR_RESOURCES[marker]
+                break
+        else:
+            continue
+
+        resources = configuration.setdefault("resources", {})
+        program = resources.setdefault(program, {})
+        program["jar"] = filename
+
+    return configuration
+
+
+def _export_config(list_function, config, sample_config, out_file):
+    """Move a sample configuration locally."""
+    if not os.access(os.pardir, os.W_OK | os.X_OK):
+        raise IOError(_ACCESS_ERROR % {
+            "final_dir": os.path.join(os.pardir, "final"),
+            "cur_dir": os.getcwd()})
+
+    config.update(_jar_resources(list_function, sample_config))
+    with open(out_file, "w") as out_handle:
+        yaml.dump(config, out_handle, default_flow_style=False,
+                  allow_unicode=False)
+
+
+class AmazonS3(objectstore.AmazonS3):
 
     """Amazon Simple Storage Service (Amazon S3) Manager."""
 
@@ -47,6 +101,31 @@ class AmazonS3(objectstore.AzureBlob):
              "-m", "x-amz-storage-class:REDUCED_REDUNDANCY",
              "-m", "x-amz-server-side-encryption:AES256"],
             check_exit_code=True)
+
+    @classmethod
+    def load_config(cls, sample_config):
+        """Move a sample configuration locally, providing remote upload."""
+        with cls.open(sample_config) as s3_handle:
+            config = yaml.load(s3_handle)
+
+        # The file_info is a namedtuple which contains the following fields:
+        # ["store", "bucket", "key", "region"]
+        file_info = cls.parse_remote(sample_config)
+        config["upload"] = {
+            "method": "s3",
+            "dir": os.path.join(os.pardir, "final"),
+            "container": file_info.bucket,
+            "folder": os.path.join(os.path.dirname(file_info.key), "final"),
+            "region": file_info.region or cls.get_region(),
+        }
+
+        out_file = os.path.join(
+            bcbio_utils.safe_makedir(os.path.join(os.getcwd(), "config")),
+            os.path.basename(file_info.key))
+        _export_config(list_function=cls.list, config=config,
+                       sample_config=sample_config, out_file=out_file)
+
+        return out_file
 
 
 class AzureBlob(objectstore.AzureBlob):
@@ -101,3 +180,28 @@ class AzureBlob(objectstore.AzureBlob):
         blob_service.put_block_blob_from_path(container_name=container,
                                               blob_name=blob_name,
                                               file_path=filename)
+
+    @classmethod
+    def load_config(cls, sample_config):
+        """Move a sample configuration locally, providing remote upload."""
+        with cls.open(sample_config) as blob_handle:
+            config = yaml.load(blob_handle)
+
+        # The file_info is a namedtuple which contains the following fields:
+        # ["store", "storage", "container", "blob"]
+        file_info = cls.parse_remote(sample_config)
+        config["upload"] = {
+            "method": "blob",
+            "dir": os.path.join(os.pardir, "final"),
+            "container": file_info.container,
+            "folder": os.path.join(os.path.dirname(file_info.blob), "final"),
+            "storage_account": file_info.storage,
+        }
+
+        out_file = os.path.join(
+            bcbio_utils.safe_makedir(os.path.join(os.getcwd(), "config")),
+            os.path.basename(file_info.blob))
+        _export_config(list_function=cls.list, config=config,
+                       sample_config=sample_config, out_file=out_file)
+
+        return out_file
