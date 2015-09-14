@@ -1,17 +1,20 @@
 """Utilities to help with develping using bcbion inside of docker."""
 from __future__ import print_function
+
 import os
 
 import yaml
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.docker import defaults as docker_defaults
+from bcbiovm.common import utils
 from bcbiovm.docker import devel as docker_devel
 from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import manage as docker_manage
 from bcbiovm.docker import run as docker_run
 from bcbiovm.provider import factory as provider_factory
+
+LOG = utils.get_logger(__name__)
 
 
 def _install_or_upgrade(main_parser, callback, install=True):
@@ -93,9 +96,14 @@ class Build(base.BaseCommand):
         )
 
 
-class BiodataUpload(base.BaseCommand):
+class BiodataUpload(base.DockerSubcommand):
 
     """Upload pre-prepared biological data to cache."""
+
+    def __init__(self, *args, **kwargs):
+        super(BiodataUpload, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -124,9 +132,14 @@ class BiodataUpload(base.BaseCommand):
         return docker_devel.run_biodata_upload(self.args)
 
 
-class SystemUpdate(base.BaseCommand):
+class SystemUpdate(base.DockerSubcommand):
 
     """Update bcbio system file with a given core and memory/core target."""
+
+    def __init__(self, *args, **kwargs):
+        super(SystemUpdate, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -171,9 +184,14 @@ class SetupInstall(base.BaseCommand):
         return docker_devel.run_setup_install(self.args)
 
 
-class Run(base.BaseCommand):
+class Run(base.DockerSubcommand):
 
     """Run an automated analysis on the local machine."""
+
+    def __init__(self, *args, **kwargs):
+        super(Run, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -198,15 +216,18 @@ class Run(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(self.args,
-                                                 "Could not run analysis.")
-        args = docker_install.docker_image_arg(args)
+        args = docker_install.docker_image_arg(self.args)
         docker_run.do_analysis(args, constant.DOCKER)
 
 
-class RunFunction(base.BaseCommand):
+class RunFunction(base.DockerSubcommand):
 
     """Run a specific bcbio-nextgen function with provided arguments."""
+
+    def __init__(self, *args, **kwargs):
+        super(RunFunction, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -241,9 +262,7 @@ class RunFunction(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(
-            self.args, "Could not run bcbio-nextgen function.")
-        args = docker_install.docker_image_arg(args)
+        args = docker_install.docker_image_arg(self.args)
 
         # FIXME(alexandrucoman): Taking cloud provider into consideration
         shipping_config = provider_factory.get_ship_config("S3", raw=False)
@@ -270,9 +289,13 @@ class RunFunction(base.BaseCommand):
         ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
 
 
-class Install(base.BaseCommand):
+class Install(base.DockerSubcommand):
 
     """Install bcbio-nextgen docker container and data."""
+
+    def __init__(self, *args, **kwargs):
+        super(Install, self).__init__(*args, **kwargs)
+        self._need_prologue = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -280,17 +303,23 @@ class Install(base.BaseCommand):
                             callback=self.run,
                             install=True)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        self._need_datadir = self.args.install_data
+        super(Install, self).epilogue()
+
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(
-            self.args, "bcbio-nextgen not upgraded.",
-            need_datadir=self.args.install_data)
-        docker_install.full(args, constant.DOCKER)
+        docker_install.full(self.args, constant.DOCKER)
 
 
-class Upgrade(base.BaseCommand):
+class Upgrade(base.DockerSubcommand):
 
     """Upgrade bcbio-nextgen docker container and data."""
+
+    def __init__(self, *args, **kwargs):
+        super(Upgrade, self).__init__(*args, **kwargs)
+        self._need_prologue = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -298,17 +327,24 @@ class Upgrade(base.BaseCommand):
                             callback=self.run,
                             install=False)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        self._need_datadir = self.args.install_data
+        super(Upgrade, self).epilogue()
+
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(
-            self.args, "bcbio-nextgen not upgraded.",
-            need_datadir=self.args.install_data)
-        docker_install.full(args, constant.DOCKER)
+        docker_install.full(self.args, constant.DOCKER)
 
 
-class Server(base.BaseCommand):
+class Server(base.DockerSubcommand):
 
     """Persistent REST server receiving requests via the specified port."""
+
+    def __init__(self, *args, **kwargs):
+        super(Server, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -323,9 +359,7 @@ class Server(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(self.args,
-                                                 "Could not run server.")
-        args = docker_install.docker_image_arg(args)
+        args = docker_install.docker_image_arg(self.args)
         ports = ["%s:%s" % (args.port, constant.DOCKER["port"])]
         print("Running server on port %s. Press ctrl-c to exit." % args.port)
         docker_manage.run_bcbio_cmd(
@@ -335,7 +369,7 @@ class Server(base.BaseCommand):
         )
 
 
-class SaveConfig(base.BaseCommand):
+class SaveConfig(base.DockerSubcommand):
 
     """Save standard configuration variables for current user."""
 
@@ -348,5 +382,15 @@ class SaveConfig(base.BaseCommand):
         parser.set_defaults(func=self.run)
 
     def process(self):
-        """Run the command with the received information."""
-        return docker_defaults.save(self.args)
+        """Save user specific defaults to a yaml configuration file."""
+        new_config = self._get_defaults()
+        for config, value in self._defaults:
+            args_value = getattr(self.args, config, None)
+            if args_value and args_value != value:
+                new_config[config] = args_value
+
+        if new_config:
+            config_file = self._get_config_file(just_filename=True)
+            with open(config_file, "w") as config_handle:
+                yaml.dump(new_config, config_handle, default_flow_style=False,
+                          allow_unicode=False)

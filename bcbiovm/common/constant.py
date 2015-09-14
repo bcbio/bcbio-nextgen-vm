@@ -37,9 +37,6 @@ class PATH:
 
     ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
     BCBIO = os.path.join(os.path.expanduser("~"), '.bcbio')
-    DATADIR = os.path.realpath(os.path.normpath(
-        os.path.join(os.path.dirname(sys.executable), os.pardir, os.pardir,
-                     "data")))
     EC = os.path.join(BCBIO, "elasticluster")
     EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share", "elasticluster",
                                       "providers", "ansible-playbooks",
@@ -52,9 +49,6 @@ class PATH:
     EC_CONFIG_TEMPLATE = os.path.join(sys.prefix, "share", "bcbio-vm",
                                       "elasticluster", "{provider}.config")
     SSH_TEMPLATE = os.path.join(ANSIBLE_BASE, "ssh_config-icel.template")
-
-    INSTALL_PARAMS = os.path.join(DATADIR, "config", "install-params.yaml")
-    BCBIO_SYSTEM = os.path.join(DATADIR, "galaxy", "bcbio_system.yaml")
 
 
 class PROVIDER:

@@ -5,8 +5,6 @@ the same arguments as standard IPython runs.
 """
 import os
 
-from bcbiovm.docker import defaults
-
 # names that indicate we're running on a dedicated AWS queue
 AWS_QUEUES = set(["cloud"])
 
@@ -32,7 +30,6 @@ def _get_ipython_cmdline(args):
 
 
 def submit_script(args):
-    args = defaults.update_check_args(args, "Could not prep batch scripts")
     out_file = os.path.join(os.getcwd(), "bcbio_submit.sh")
     with open(out_file, "w") as out_handle:
         out_handle.write("#!/bin/bash\n")

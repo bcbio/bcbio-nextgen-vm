@@ -18,7 +18,9 @@ from bcbio.provenance import do
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
 from bcbiovm.common import utils as common_utils
-from bcbiovm.docker import defaults, install, manage, mounts
+from bcbiovm.docker import install
+from bcbiovm.docker import manage
+from bcbiovm.docker import mounts
 from bcbiovm.provider import factory as provider_factory
 
 
@@ -168,8 +170,6 @@ def run_system_update(args):
     """
     # Update bcbio_system.yaml
     mem_types = set(["memory", "jvm_opts"])
-    args = defaults.update_check_args(
-        args, "Could not do upgrade of bcbio_system.yaml")
     system_file = os.path.join(args.datadir, "galaxy", "bcbio_system.yaml")
     with open(system_file) as in_handle:
         config = yaml.safe_load(in_handle)
@@ -202,7 +202,6 @@ def run_biodata_upload(args):
     to S3 in pieces.
     """
     # ## Upload pre-build biological data
-    args = defaults.update_check_args(args, "biodata not uploaded")
     args = install.docker_image_arg(args)
     for gbuild in args.genomes:
         print("Preparing %s" % gbuild)

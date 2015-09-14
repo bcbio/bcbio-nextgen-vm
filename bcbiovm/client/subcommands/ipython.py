@@ -8,7 +8,6 @@ from bcbio.pipeline import main
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.docker import defaults as docker_defaults
 from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import mounts as docker_mounts
 from bcbiovm.docker import run as docker_run
@@ -16,9 +15,14 @@ from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
 
 
-class IPython(base.BaseCommand):
+class IPython(base.DockerSubcommand):
 
     """Run on a cluster using IPython parallel."""
+
+    def __init__(self, *args, **kwargs):
+        super(IPython, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -68,9 +72,7 @@ class IPython(base.BaseCommand):
 
     def process(self):
         """Run the command with the received information."""
-        args = docker_defaults.update_check_args(
-            self.args, "Could not run IPython parallel analysis.")
-        args = docker_install.docker_image_arg(args)
+        args = docker_install.docker_image_arg(self.args)
 
         work_dir = os.getcwd()
         parallel = clargs.to_parallel(args, "bcbiovm.docker")
@@ -129,7 +131,7 @@ class IPython(base.BaseCommand):
         #              content.DOCKER)
 
 
-class IPythonPrep(base.BaseCommand):
+class IPythonPrep(base.DockerSubcommand):
 
     """Prepare a batch script to run bcbio on a scheduler."""
 
@@ -178,6 +180,11 @@ class IPythonPrep(base.BaseCommand):
             "--tmpdir",
             help="Path of local on-machine temporary directory to process in.")
         parser.set_defaults(func=self.run)
+
+    def __init__(self, *args, **kwargs):
+        super(IPythonPrep, self).__init__(*args, **kwargs)
+        self._need_prologue = True
+        self._need_datadir = True
 
     def process(self):
         """Run the command with the received information."""
