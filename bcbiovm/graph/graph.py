@@ -19,9 +19,9 @@ def bootstrap(args):
 
 
     data, hardware, steps = bcbio_graph.resource_usage(bcbio_log=args.log,
+                                                       cluster=args.cluster,
                                                        rawdir=args.rawdir,
                                                        verbose=args.verbose)
-
     bcbio_graph.generate_graphs(data_frames=data,
                                 hardware_info=hardware,
                                 steps=steps,

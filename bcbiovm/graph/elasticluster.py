@@ -32,7 +32,7 @@ def ssh_agent(private_key_paths=[]):
     with open('/dev/null', 'w') as dev_null:
         subprocess.call(['ssh-agent', '-k'], stdout=dev_null)
 
-def _pull_collectl_data(host, username, datadir, ssh_client,
+def _pull_collectl_data(host, username, datadir, bcbio_log, ssh_client,
                         bastion_host=None, verbose=False):
     if verbose:
         print('Connecting to {}{}...'.format(
@@ -54,26 +54,33 @@ def _pull_collectl_data(host, username, datadir, ssh_client,
     if not raws:
         return
 
+    # Only load filenames withing sampling timerage
+    time_frame = bcbio_graph.log_time_frame(bcbio_log)
+
     for raw in raws.split('\n'):
-        size, mtime, remote_raw = raw.split()
-        mtime = int(mtime)
-        size = int(size)
+        if bcbio_graph.rawfile_within_timeframe(raw, time_frame):
+            size, mtime, remote_raw = raw.split()
+            mtime = int(mtime)
+            size = int(size)
 
-        raw_basename = os.path.basename(remote_raw)
-        local_raw = os.path.join(datadir, raw_basename)
-        if (os.path.exists(local_raw) and
-            int(os.path.getmtime(local_raw)) == mtime and
-            os.path.getsize(local_raw) == size):
-            # Remote file hasn't changed, don't re-fetch it.
-            continue
+            raw_basename = os.path.basename(remote_raw)
+            local_raw = os.path.join(datadir, raw_basename)
+            if (os.path.exists(local_raw) and
+                int(os.path.getmtime(local_raw)) == mtime and
+                os.path.getsize(local_raw) == size):
+                # Remote file hasn't changed, don't re-fetch it.
+                continue
 
-        command = 'cat {}'.format(remote_raw)
-        if verbose:
-            print('Running "{}" on {}...'.format(command, host))
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        with open(local_raw, 'wb') as fp:
-            fp.write(stdout.read())
-        os.utime(local_raw, (mtime, mtime))
+            command = 'cat {}'.format(remote_raw)
+            # Only transfer the remote raw locally if it falls within our
+            # sampling timeframe.
+
+            if verbose:
+                print('Running "{}" on {}...'.format(command, host))
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            with open(local_raw, 'wb') as fp:
+                fp.write(stdout.read())
+            os.utime(local_raw, (mtime, mtime))
 
     ssh_client.close()
 
@@ -108,7 +115,7 @@ def _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose):
         if name == 'NATDevice':
             continue
         _pull_collectl_data(
-            addr, 'ec2-user', datadir, ssh,
+            addr, 'ec2-user', datadir, bcbio_log, ssh,
             bastion_host=icel_hosts['NATDevice'], verbose=verbose)
 
 
@@ -116,17 +123,16 @@ def fetch_collectl(econfig_file, cluster_name, bcbio_log, datadir, verbose=False
     # local cluster, bypassing elasticluster
     if "local" in cluster_name:
 	import getpass
-	#key = paramiko.AgentKey.from_private_key_file("/Users/romanvg/.ssh/id_rsa")
         with ssh_agent():
             ssh = paramiko.client.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
 
 	    for host in bcbio_graph.get_bcbio_nodes(bcbio_log):
-		_pull_collectl_data(host, getpass.getuser(), datadir, ssh,
-				    verbose=verbose)
+		_pull_collectl_data(host, getpass.getuser(), datadir, 
+                                    bcbio_log, ssh, verbose=verbose)
 
-    else:
     # elasticluster
+    else:
 	config = ecluster_config(econfig_file)
 	cluster = config.load_cluster(cluster_name)
 
@@ -145,8 +151,8 @@ def fetch_collectl(econfig_file, cluster_name, bcbio_log, datadir, verbose=False
 		    # Instance is unavailable.
 		    continue
 		_pull_collectl_data(
-		    node.preferred_ip, node.image_user, datadir, ssh,
-		    verbose=verbose)
+		    node.preferred_ip, node.image_user, datadir, 
+                    bcbio_log, ssh, verbose=verbose)
 
 	    # FIXME: load SSH host keys from ICEL instances.
 	    ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
