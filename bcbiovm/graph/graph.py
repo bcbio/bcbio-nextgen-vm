@@ -2,7 +2,9 @@ from __future__ import print_function
 
 import matplotlib
 matplotlib.use('Agg')
+import os
 import pylab
+import cPickle as pickle
 pylab.rcParams['figure.figsize'] = (35.0, 12.0)
 
 from bcbio import utils
@@ -22,6 +24,14 @@ def bootstrap(args):
                                                        cluster=args.cluster,
                                                        rawdir=args.rawdir,
                                                        verbose=args.verbose)
+
+    if args.serialize:
+        # Useful to regenerate and slice graphs quickly
+        collectl_info = (data, hardware, steps)
+
+        with open(os.path.join(args.outdir, "collectl_info.pickle"), "w") as f:
+            pickle.dump(collectl_info, f)
+ 
     bcbio_graph.generate_graphs(data_frames=data,
                                 hardware_info=hardware,
                                 steps=steps,
