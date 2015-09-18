@@ -26,12 +26,12 @@ def bootstrap(args):
                                                        verbose=args.verbose)
 
     if args.serialize:
-        # Useful to regenerate and slice graphs quickly
+        # Useful to regenerate and slice graphs quickly and/or inspect locally
         collectl_info = (data, hardware, steps)
 
-        with open(os.path.join(args.outdir, "collectl_info.pickle"), "w") as f:
+        with open(os.path.join(args.outdir, "collectl_info.pickle"), "wb") as f:
             pickle.dump(collectl_info, f)
- 
+
     bcbio_graph.generate_graphs(data_frames=data,
                                 hardware_info=hardware,
                                 steps=steps,
