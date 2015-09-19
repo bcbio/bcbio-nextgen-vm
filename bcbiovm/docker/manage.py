@@ -40,9 +40,10 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     try:
         do.run(["docker", "attach", "--no-stdin", cid], "Running in docker container: %s" % cid,
                log_stdout=True)
-    except:
+    except subprocess.CalledProcessError as e:
         print("Stopping docker container")
         subprocess.call(["docker", "kill", cid], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        raise e
     finally:
         subprocess.call(["docker", "kill", cid], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         subprocess.call(["docker", "rm", cid], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
