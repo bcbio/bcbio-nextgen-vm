@@ -222,6 +222,8 @@ def _graph_cmd(subparsers):
                         default=common.DEFAULT_EC_CONFIG)
     parser.add_argument("-v", "--verbose", action="store_true", default=False,
                         help="Emit verbose output")
+    parser.add_argument("-s", "--serialize", action="store_true", default=False,
+                        help="Serialize plot information for later faster inspection")
     parser.set_defaults(func=graph.bootstrap)
 
 def _aws_cmd(subparsers):
