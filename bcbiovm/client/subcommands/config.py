@@ -10,17 +10,15 @@ import six
 from bcbiovm.client import base
 from bcbiovm.common import constant
 
-__all__ = ["EditAWS", "EditAzure"]
-
 
 @six.add_metaclass(abc.ABCMeta)
-class EditConfig(base.BaseCommand):
+class EditConfig(base.Command):
 
     """Edit cluster configuration."""
 
     def __init__(self, parent, parser, name=None):
         super(EditConfig, self).__init__(parent, parser, name)
-        self._parser = six.moves.configparser.RawConfigParser()
+        self._raw_parser = six.moves.configparser.RawConfigParser()
         self._frontend_section = None
         self._cluster_section = None
         self._frontend = None
@@ -38,7 +36,7 @@ class EditConfig(base.BaseCommand):
         """Return a directory with all the option available in
         the given section.
         """
-        return dict(self._parser.items(section))
+        return dict(self._raw_parser.items(section))
 
     def _backup_config(self):
         """Make a copy of the current config file."""
@@ -52,7 +50,7 @@ class EditConfig(base.BaseCommand):
         """Update the config file."""
         self._backup_config()
         with open(self.args.econfig, "w") as file_handle:
-            self._parser.write(file_handle)
+            self._raw_parser.write(file_handle)
 
     def _instances_types(self):
         """Ask user for information regarding the instances types."""
@@ -74,17 +72,17 @@ class EditConfig(base.BaseCommand):
                 message="Machine type for compute nodes",
                 default=self._cluster["flavor"])
 
-        self._parser.set(self._frontend_section,
-                         "flavor", frontend_flavor)
-        self._parser.set(self._cluster_section,
-                         "compute_nodes", compute_nodes)
+        self._raw_parser.set(self._frontend_section,
+                             "flavor", frontend_flavor)
+        self._raw_parser.set(self._cluster_section,
+                             "compute_nodes", compute_nodes)
         if compute_flavor:
-            self._parser.set(self._cluster_section,
-                             "flavor", compute_flavor)
+            self._raw_parser.set(self._cluster_section,
+                                 "flavor", compute_flavor)
 
-    def process(self):
+    def work(self):
         """Setup parser using the received information."""
-        self._parser.read([self.args.econfig])
+        self._raw_parser.read([self.args.econfig])
         self._frontend_section = "cluster/{cluster}/frontend".format(
             cluster=self.args.cluster)
         self._cluster_section = "cluster/{cluster}".format(
@@ -119,16 +117,16 @@ class EditAWS(EditConfig):
         # 30 IOPS/Gb, maximum 4000 IOPS http://aws.amazon.com/ebs/details/
         iops = min(int(nfs_size) * 30, 4000)
 
-        self._parser.set(self._frontend_section,
-                         "encrypted_volume_size", nfs_size)
-        self._parser.set(self._frontend_section,
-                         "encrypted_volume_type", "io1")
-        self._parser.set(self._frontend_section,
-                         "encrypted_volume_iops", iops)
+        self._raw_parser.set(self._frontend_section,
+                             "encrypted_volume_size", nfs_size)
+        self._raw_parser.set(self._frontend_section,
+                             "encrypted_volume_type", "io1")
+        self._raw_parser.set(self._frontend_section,
+                             "encrypted_volume_iops", iops)
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "edit", help="Edit cluster configuration")
         parser.add_argument(
             "--econfig", help="Elasticluster bcbio configuration file",
@@ -137,7 +135,7 @@ class EditAWS(EditConfig):
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
     def _process(self):
         """Run the command with the received information."""
@@ -147,8 +145,8 @@ class EditAWS(EditConfig):
         else:
             setup_provider = "ansible-slurm"
 
-        self._parser.set(self._cluster_section, "setup_provider",
-                         setup_provider)
+        self._raw_parser.set(self._cluster_section, "setup_provider",
+                             setup_provider)
 
 
 class EditAzure(EditConfig):
@@ -157,7 +155,7 @@ class EditAzure(EditConfig):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "edit", help="Edit cluster configuration")
         parser.add_argument(
             "--econfig", help="Elasticluster bcbio configuration file",
@@ -166,7 +164,7 @@ class EditAzure(EditConfig):
         parser.add_argument(
             "-c", "--cluster", default="bcbio",
             help="elasticluster cluster name")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
     def _process(self):
         """Run the command with the received information."""

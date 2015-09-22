@@ -8,14 +8,13 @@ from bcbio.pipeline import main
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import mounts as docker_mounts
 from bcbiovm.docker import run as docker_run
 from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
 
 
-class IPython(base.DockerSubcommand):
+class IPython(base.Command):
 
     """Run on a cluster using IPython parallel."""
 
@@ -26,7 +25,7 @@ class IPython(base.DockerSubcommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "ipython",
             help="Run on a cluster using IPython parallel.")
         parser.add_argument(
@@ -68,40 +67,39 @@ class IPython(base.DockerSubcommand):
         parser.add_argument(
             "--tmpdir",
             help="Path of local on-machine temporary directory to process in.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
-        args = docker_install.docker_image_arg(self.args)
-
         work_dir = os.getcwd()
-        parallel = clargs.to_parallel(args, "bcbiovm.docker")
+        parallel = clargs.to_parallel(self.args, "bcbiovm.docker")
         parallel["wrapper"] = "runfn"
 
-        with open(args.sample_config) as in_handle:
+        with open(self.args.sample_config) as in_handle:
             ready_config, _ = docker_mounts.normalize_config(
-                yaml.load(in_handle), args.fcdir)
+                yaml.load(in_handle), self.args.fcdir)
 
         ready_config_file = os.path.join(
             work_dir, "%s-ready%s" %
-            (os.path.splitext(os.path.basename(args.sample_config))))
+            (os.path.splitext(os.path.basename(self.args.sample_config))))
 
         with open(ready_config_file, "w") as out_handle:
             yaml.safe_dump(ready_config, out_handle, default_flow_style=False,
                            allow_unicode=False)
 
         systemconfig = docker_run.local_system_config(
-            args.systemconfig, args.datadir, work_dir)
+            self.args.systemconfig, self.args.datadir, work_dir)
         ship_conf = provider_factory.get_ship_config("shared")
 
-        parallel["wrapper_args"] = [
+        parallel["wrapper_self.args"] = [
             constant.DOCKER,
             {
                 "sample_config": ready_config_file,
-                "fcdir": args.fcdir,
-                "pack": ship_conf(work_dir, args.datadir, args.tmpdir),
+                "fcdir": self.args.fcdir,
+                "pack": ship_conf(work_dir, self.args.datadir,
+                                  self.args.tmpdir),
                 "systemconfig": systemconfig,
-                "image": args.image
+                "image": self.args.image
             }]
 
         # For testing, run on a local ipython cluster
@@ -110,7 +108,7 @@ class IPython(base.DockerSubcommand):
         main.run_main(work_dir,
                       run_info_yaml=ready_config_file,
                       config_file=systemconfig,
-                      fc_dir=args.fcdir,
+                      fc_dir=self.args.fcdir,
                       parallel=parallel)
 
         # Approach for running main function inside of docker.
@@ -131,13 +129,13 @@ class IPython(base.DockerSubcommand):
         #              content.DOCKER)
 
 
-class IPythonPrep(base.DockerSubcommand):
+class IPythonPrep(base.Command):
 
     """Prepare a batch script to run bcbio on a scheduler."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "ipythonprep",
             help="Prepare a batch script to run bcbio on a scheduler.")
         parser.add_argument(
@@ -179,13 +177,8 @@ class IPythonPrep(base.DockerSubcommand):
         parser.add_argument(
             "--tmpdir",
             help="Path of local on-machine temporary directory to process in.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def __init__(self, *args, **kwargs):
-        super(IPythonPrep, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         return batchprep.submit_script(self.args)

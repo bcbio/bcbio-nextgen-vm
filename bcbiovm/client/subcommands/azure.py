@@ -6,13 +6,13 @@ from bcbiovm.common import constant
 from bcbiovm.common import utils
 
 
-class ECConfig(base.BaseCommand):
+class ECConfig(base.Command):
 
     """Write Elasticluster configuration file with user information."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "ec-config",
             help="Write Elasticluster configuration file.")
         parser.add_argument(
@@ -20,16 +20,16 @@ class ECConfig(base.BaseCommand):
             default=constant.PATH.EC_CONFIG.format(
                 provider=constant.PROVIDER.AZURE))
 
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         return utils.write_elasticluster_config(
             config={}, output=self.args.econfig,
             provider=constant.PROVIDER.AZURE)
 
 
-class ManagementCertificate(base.BaseCommand):
+class ManagementCertificate(base.Command):
 
     """Generate a management certificate."""
 
@@ -59,7 +59,7 @@ class ManagementCertificate(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "management-cert",
             help="Generate a management certificate.")
         parser.add_argument(
@@ -78,9 +78,9 @@ class ManagementCertificate(base.BaseCommand):
             "-e", "--email", default=None,
             help="Email Address")
 
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         if not os.path.exists(self._ssh_path):
             os.makedirs(self._ssh_path)
@@ -105,7 +105,7 @@ class ManagementCertificate(base.BaseCommand):
                       cwd=self._ssh_path)
 
 
-class PrivateKey(base.BaseCommand):
+class PrivateKey(base.Command):
 
     """Create a private key file that matches your management
     certificate.
@@ -122,7 +122,7 @@ class PrivateKey(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "pkey",
             help="Create a private key file that matches the management cert.")
         parser.add_argument(
@@ -130,9 +130,9 @@ class PrivateKey(base.BaseCommand):
             help=("The management certificate name. "
                   "[default: managementCert.pem]"))
 
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         utils.execute(["openssl", "rsa",
                        "-in", self.args.cert,
@@ -142,7 +142,7 @@ class PrivateKey(base.BaseCommand):
                       cwd=self._ssh_path)
 
 
-class PrepareEnvironment(base.BaseCommand):
+class PrepareEnvironment(base.Container):
 
     sub_commands = [
         (ManagementCertificate, "actions"),
@@ -152,12 +152,8 @@ class PrepareEnvironment(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "prepare",
             help=("Utilities to help with environment configuration."))
         actions = parser.add_subparsers(title="[devel commands]")
         self._register_parser("actions", actions)
-
-    def process(self):
-        """Run the command with the received information."""
-        pass

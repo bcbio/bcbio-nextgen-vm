@@ -53,16 +53,16 @@ def _install_or_upgrade(main_parser, callback, install=True):
         "--image", default=None,
         help=("Docker image name to use, could point to compatible "
               "pre-installed image."))
-    parser.set_defaults(func=callback)
+    parser.set_defaults(work=callback)
 
 
-class Build(base.BaseCommand):
+class Build(base.Command):
 
     """Build docker image and export to the cloud provider."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "dockerbuild",
             help="Build docker image and export to the cloud provider.")
         parser.add_argument(
@@ -83,9 +83,9 @@ class Build(base.BaseCommand):
             "--account_name", default=None,
             help="The storage account name. All access to Azure Storage"
                  " is done through a storage account.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         return docker_devel.run_docker_build(
             container=self.args.container,
@@ -96,18 +96,13 @@ class Build(base.BaseCommand):
         )
 
 
-class BiodataUpload(base.DockerSubcommand):
+class BiodataUpload(base.Command):
 
     """Upload pre-prepared biological data to cache."""
 
-    def __init__(self, *args, **kwargs):
-        super(BiodataUpload, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "biodata",
             help="Upload pre-prepared biological data to cache")
         parser.add_argument(
@@ -124,26 +119,21 @@ class BiodataUpload(base.DockerSubcommand):
             "--aligners", help="Aligner indexes to download",
             action="append", default=[],
             choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Manage preparation of biodata on a local machine, uploading
         to S3 in pieces."""
         return docker_devel.run_biodata_upload(self.args)
 
 
-class SystemUpdate(base.DockerSubcommand):
+class SystemUpdate(base.Command):
 
     """Update bcbio system file with a given core and memory/core target."""
 
-    def __init__(self, *args, **kwargs):
-        super(SystemUpdate, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "system",
             help=("Update bcbio system file with a given core "
                   "and memory/core target"))
@@ -153,49 +143,44 @@ class SystemUpdate(base.DockerSubcommand):
         parser.add_argument(
             "memory",
             help="Target memory per core, in Mb (1000 = 1Gb)")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Update bcbio_system.yaml file with a given target of cores
         and memory.
         """
         return docker_devel.run_system_update(self.args)
 
 
-class SetupInstall(base.BaseCommand):
+class SetupInstall(base.Command):
 
     """Run a python setup.py install inside of the current directory."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "setup_install",
             help=("Run a python setup.py install inside of "
                   "the current directory"))
         parser.add_argument(
             "-i", "--image", help="Image name to write updates to",
             default=constant.DOCKER_DEFAULT_IMAGE)
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Install python code from a bcbio-nextgen development tree
         inside of docker.
         """
         return docker_devel.run_setup_install(self.args)
 
 
-class Run(base.DockerSubcommand):
+class Run(base.Command):
 
     """Run an automated analysis on the local machine."""
 
-    def __init__(self, *args, **kwargs):
-        super(Run, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "run",
             help="Run an automated analysis on the local machine.")
         parser.add_argument(
@@ -212,26 +197,20 @@ class Run(base.DockerSubcommand):
         parser.add_argument(
             "-n", "--numcores", type=int, default=1,
             help="Total cores to use for processing")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
-        args = docker_install.docker_image_arg(self.args)
-        docker_run.do_analysis(args, constant.DOCKER)
+        docker_run.do_analysis(self.args, constant.DOCKER)
 
 
-class RunFunction(base.DockerSubcommand):
+class RunFunction(base.Command):
 
     """Run a specific bcbio-nextgen function with provided arguments."""
 
-    def __init__(self, *args, **kwargs):
-        super(RunFunction, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "runfn",
             help=("Run a specific bcbio-nextgen function with provided"
                   " arguments"))
@@ -258,30 +237,28 @@ class RunFunction(base.DockerSubcommand):
         parser.add_argument(
             "runargs",
             help="JSON/YAML file with arguments to the function")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
-        args = docker_install.docker_image_arg(self.args)
-
         # FIXME(alexandrucoman): Taking cloud provider into consideration
         shipping_config = provider_factory.get_ship_config("S3", raw=False)
         ship = provider_factory.get_ship("S3")
 
-        with open(args.parallel) as in_handle:
+        with open(self.args.parallel) as in_handle:
             parallel = yaml.safe_load(in_handle)
 
-        with open(args.runargs) as in_handle:
+        with open(self.args.runargs) as in_handle:
             runargs = yaml.safe_load(in_handle)
 
         cmd_args = {
-            "systemconfig": args.systemconfig,
-            "image": args.image,
+            "systemconfig": self.args.systemconfig,
+            "image": self.args.image,
             "pack": shipping_config(parallel["pack"]),
         }
-        out = docker_run.do_runfn(args.fn_name, runargs, cmd_args,
+        out = docker_run.do_runfn(self.args.fn_name, runargs, cmd_args,
                                   parallel, constant.DOCKER)
-        out_file = "%s-out%s" % os.path.splitext(args.runargs)
+        out_file = "%s-out%s" % os.path.splitext(self.args.runargs)
         with open(out_file, "w") as out_handle:
             yaml.safe_dump(out, out_handle, default_flow_style=False,
                            allow_unicode=False)
@@ -289,31 +266,22 @@ class RunFunction(base.DockerSubcommand):
         ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
 
 
-class Install(base.DockerSubcommand):
+class Install(base.Command):
 
     """Install bcbio-nextgen docker container and data."""
 
-    def __init__(self, *args, **kwargs):
-        super(Install, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        _install_or_upgrade(main_parser=self._main_parser,
+        _install_or_upgrade(main_parser=self._parser,
                             callback=self.run,
                             install=True)
 
-    def prologue(self):
-        """Executed once before the arguments parsing."""
-        self._need_datadir = self.args.install_data
-        super(Install, self).epilogue()
-
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         docker_install.full(self.args, constant.DOCKER)
 
 
-class Upgrade(base.DockerSubcommand):
+class Upgrade(base.Command):
 
     """Upgrade bcbio-nextgen docker container and data."""
 
@@ -323,65 +291,55 @@ class Upgrade(base.DockerSubcommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        _install_or_upgrade(main_parser=self._main_parser,
+        _install_or_upgrade(main_parser=self._parser,
                             callback=self.run,
                             install=False)
 
-    def prologue(self):
-        """Executed once before the arguments parsing."""
-        self._need_datadir = self.args.install_data
-        super(Upgrade, self).epilogue()
-
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         docker_install.full(self.args, constant.DOCKER)
 
 
-class Server(base.DockerSubcommand):
+class Server(base.Command):
 
     """Persistent REST server receiving requests via the specified port."""
 
-    def __init__(self, *args, **kwargs):
-        super(Server, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "server",
             help=("Persistent REST server receiving requests "
                   "via the specified port."))
         parser.add_argument(
             "--port", default=8085,
             help="External port to connect to docker image.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
-        args = docker_install.docker_image_arg(self.args)
-        ports = ["%s:%s" % (args.port, constant.DOCKER["port"])]
-        print("Running server on port %s. Press ctrl-c to exit." % args.port)
+        ports = ["%s:%s" % (self.args.port, constant.DOCKER["port"])]
+        print("Running server on port %s. Press ctrl-c to exit." %
+              self.args.port)
         docker_manage.run_bcbio_cmd(
-            image=args.image, mounts=[], ports=ports,
+            image=self.args.image, mounts=[], ports=ports,
             bcbio_nextgen_args=["server", "--port",
                                 str(constant.DOCKER["port"])],
         )
 
 
-class SaveConfig(base.DockerSubcommand):
+class SaveConfig(base.Command):
 
     """Save standard configuration variables for current user."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "saveconfig",
             help="Save standard configuration variables for current user. "
                  "Avoids need to specify on the command line in future runs.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Save user specific defaults to a yaml configuration file."""
         new_config = self._get_defaults()
         for config, value in self._defaults:

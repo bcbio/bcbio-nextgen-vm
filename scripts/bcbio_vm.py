@@ -17,28 +17,23 @@ from bcbiovm.client.subcommands import factory
 from bcbiovm.common import cluster
 
 
-class BCBioParser(base.BaseParser):
+class BCBioClient(base.Client):
 
     """bcbio-nextgen-vm command line application."""
 
     commands = [
-        factory.get('docker', 'Run'),
-        factory.get('docker', 'Install'),
-        factory.get('docker', 'Upgrade'),
-        factory.get('ipython', 'IPython'),
-        factory.get('ipython', 'IPythonPrep'),
-        client_commands.Template,
-        client_commands.AWSProvider,
-        client_commands.AzureProvider,
-        # TODO(alexandrucoman): Add elasticluster command
-        factory.get('docker', 'RunFunction'),
-        client_commands.DockerDevel,
-        factory.get('docker', 'SaveConfig')
+        (factory.get('docker', 'Run'), "commands"),
+        (factory.get('docker', 'Install'), "commands"),
+        (factory.get('docker', 'Upgrade'), "commands"),
+        (factory.get('ipython', 'IPython'), "commands"),
+        (factory.get('ipython', 'IPythonPrep'), "commands"),
+        (client_commands.Template, "commands"),
+        (client_commands.AWSProvider, "commands"),
+        (client_commands.AzureProvider, "commands"),
+        (factory.get('docker', 'RunFunction'), "commands"),
+        (client_commands.DockerDevel, "commands"),
+        (factory.get('docker', 'SaveConfig'), "commands"),
     ]
-
-    def check_command(self, command):
-        """Check if the received command is valid and can be used property."""
-        return isinstance(command, base.BaseCommand)
 
     def setup(self):
         """Extend the parser configuration in order to expose all
@@ -58,12 +53,13 @@ class BCBioParser(base.BaseParser):
             "-v", "--verbosity", dest="verbosity", action="count",
             help="increase output verbosity")
 
-        self._subparser = self._parser.add_subparsers(
-            title="[sub-commands]", dest="provider")
+        commands = self._parser.add_subparsers(
+            title="[commands]", dest="provider")
+        self._register_parser(commands, "commands")
 
     def epilogue(self):
         """Executed once before the command running."""
-        super(BCBioParser, self).epilogue()
+        super(BCBioClient, self).epilogue()
 
         if self.args.quiet:
             # Print only the errors and exceptions
@@ -81,7 +77,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "elasticluster":
         sys.exit(cluster.ElastiCluster.execute(sys.argv[1:]))
 
-    bcbio = BCBioParser(sys.argv[1:])
+    bcbio = BCBioClient(sys.argv[1:])
     bcbio.run()
 
 

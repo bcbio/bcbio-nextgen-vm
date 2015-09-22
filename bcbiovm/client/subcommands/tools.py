@@ -4,7 +4,7 @@ from bcbiovm.client import base
 from bcbiovm.common import objectstore
 
 
-class _S3Upload(base.BaseCommand):
+class _S3Upload(base.Command):
 
     """Upload file to Amazon Simple Storage Service (Amazon S3)."""
 
@@ -14,7 +14,7 @@ class _S3Upload(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "aws", help="Amazon Simple Storage Service (Amazon S3)")
         parser.add_argument(
             "--file", required=True,
@@ -26,16 +26,16 @@ class _S3Upload(base.BaseCommand):
             "--bucket", required=True,
             help="The name of the container that contains the file.")
 
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         return self._storage.upload(filename=self.args.file,
                                     key=self.args.key,
                                     container=self.args.bucket)
 
 
-class _BlobUpload(base.BaseCommand):
+class _BlobUpload(base.Command):
 
     """Upload file to Azure Blob storage service."""
 
@@ -45,7 +45,7 @@ class _BlobUpload(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "azure", help="Azure Blob storage service")
         parser.add_argument(
             "--file", required=True,
@@ -62,9 +62,9 @@ class _BlobUpload(base.BaseCommand):
             help="The storage account name. All access to Azure Storage"
                  " is done through a storage account.")
 
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         return self._storage.upload(filename=self.args.file,
                                     account_name=self.args.account_name,
@@ -72,7 +72,7 @@ class _BlobUpload(base.BaseCommand):
                                     blob_name=self.args.blob)
 
 
-class Upload(base.BaseCommand):
+class Upload(base.Command):
 
     """Upload file to the file storage provider."""
 
@@ -83,13 +83,13 @@ class Upload(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "upload",
             help=("Utilities to help with develping using bcbion"
                   "inside of docker."))
         storage_manager = parser.add_subparsers(title="[storage manager]")
         self._register_parser("storage_manager", storage_manager)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         pass

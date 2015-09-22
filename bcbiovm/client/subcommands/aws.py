@@ -6,23 +6,20 @@ import textwrap
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.docker import install as docker_install
 from bcbiovm.provider import factory as cloud_factory
 from bcbiovm.provider.aws.clusterk import main as clusterk_main
 
 
-class ClusterK(base.DockerSubcommand):
+class ClusterK(base.Command):
 
     """Run on Amazon web services using Clusterk."""
 
     def __init__(self, *args, **kwargs):
         super(ClusterK, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-        self._need_datadir = True
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "clusterk",
             help="Run on Amazon web services using Clusterk.")
         parser.add_argument(
@@ -49,15 +46,14 @@ class ClusterK(base.DockerSubcommand):
         parser.add_argument(
             "-q", "--queue", default="default",
             help="Clusterk queue to run jobs on.")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
-        args = docker_install.docker_image_arg(self.args)
-        clusterk_main.run(args, constant.DOCKER)
+        clusterk_main.run(self.args, constant.DOCKER)
 
 
-class IAMBootstrap(base.BaseCommand):
+class IAMBootstrap(base.Command):
 
     """Create IAM user and policies."""
 
@@ -88,7 +84,7 @@ class IAMBootstrap(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "iam", help="Create IAM user and policies")
         parser.add_argument(
             "--econfig", help="Elasticluster bcbio configuration file",
@@ -100,9 +96,9 @@ class IAMBootstrap(base.BaseCommand):
             "--nocreate", action="store_true", default=False,
             help=("Do not create a new IAM user, just generate a configuration"
                   " file. Useful for users without full permissions to IAM."))
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(self.args.provider)()
         provider.bootstrap_iam(config=self.args.econfig,
@@ -112,13 +108,13 @@ class IAMBootstrap(base.BaseCommand):
             print(textwrap.dedent(self.NOIAM_MSG))
 
 
-class VPCBoostrap(base.BaseCommand):
+class VPCBoostrap(base.Command):
 
     """Create VPC and associated resources."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "vpc",
             help="Create VPC and associated resources",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -135,9 +131,9 @@ class VPCBoostrap(base.BaseCommand):
         parser.add_argument(
             "-n", "--network", default="10.0.0.0/16",
             help="network to use for the VPC, in CIDR notation (a.b.c.d/e)")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(self.args.provider)()
         return provider.bootstrap_vpc(cluster=self.args.cluster,

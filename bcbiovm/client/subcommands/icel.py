@@ -9,13 +9,13 @@ from bcbiovm.common import constant
 from bcbiovm.provider import factory as cloud_factory
 
 
-class Create(base.BaseCommand):
+class Create(base.Command):
 
     """Create scratch filesystem using Intel Cloud Edition for Lustre."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "create", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             help=("Create scratch filesystem using "
                   "Intel Cloud Edition for Lustre"))
@@ -53,9 +53,9 @@ class Create(base.BaseCommand):
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         # NOTE(alexandrucoman): Command available only for AWS Provider
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
@@ -72,13 +72,13 @@ class Create(base.BaseCommand):
         )
 
 
-class Mount(base.BaseCommand):
+class Mount(base.Command):
 
     """Mount Lustre filesystem on all cluster nodes"""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "mount",
             help="Mount Lustre filesystem on all cluster nodes",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -93,9 +93,9 @@ class Mount(base.BaseCommand):
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.mount_lustre(cluster=self.args.cluster,
@@ -103,13 +103,13 @@ class Mount(base.BaseCommand):
                               stack_name=self.args.stack_name)
 
 
-class Unmount(base.BaseCommand):
+class Unmount(base.Command):
 
     """Unmount Lustre filesystem on all cluster nodes."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "unmount",
             help="Unmount Lustre filesystem on all cluster nodes",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -124,9 +124,9 @@ class Unmount(base.BaseCommand):
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.unmount_lustre(cluster=self.args.cluster,
@@ -134,13 +134,13 @@ class Unmount(base.BaseCommand):
                                 stack_name=self.args.stack_name)
 
 
-class Stop(base.BaseCommand):
+class Stop(base.Command):
 
     """Stop the running Lustre filesystem and clean up resources."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "stop",
             help="Stop the running Lustre filesystem and clean up resources",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -155,9 +155,9 @@ class Stop(base.BaseCommand):
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the new stack")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         provider.stop_lustre(cluster=self.args.cluster,
@@ -165,13 +165,13 @@ class Stop(base.BaseCommand):
                              stack_name=self.args.stack_name)
 
 
-class Specification(base.BaseCommand):
+class Specification(base.Command):
 
     """Get the filesystem spec for a running filesystem."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "fs_spec",
             help="Get the filesystem spec for a running filesystem",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -186,9 +186,9 @@ class Specification(base.BaseCommand):
             metavar="STACK_NAME", dest="stack_name", nargs="?",
             default="bcbiolustre",
             help="CloudFormation name for the stack")
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(constant.PROVIDER.AWS)()
         print(provider.lustre_spec(cluster=self.args.cluster,

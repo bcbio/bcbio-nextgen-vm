@@ -1,5 +1,6 @@
 """The commands used by the command line parser."""
 from __future__ import print_function
+
 import argparse
 
 import matplotlib
@@ -19,33 +20,13 @@ from bcbiovm.provider import factory as cloud_factory
 LOG = utils.get_logger(__name__)
 
 
-class _Config(base.BaseCommand):
-
-    """Manipulate elasticluster configuration files, providing easy
-    ways to edit in place.
-    """
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
-            "config",
-            help="Define configuration details for running a cluster")
-        actions = parser.add_subparsers(
-            title="[configuration specific actions]")
-        self._register_parser("actions", actions)
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
-
-
-class Info(base.BaseCommand):
+class Info(base.Command):
 
     """Information on existing cloud provider."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "info", help="Information on existing cloud provider.")
         parser.add_argument("--econfig", default=None,
                             help="Elasticluster bcbio configuration file")
@@ -53,9 +34,10 @@ class Info(base.BaseCommand):
                             help="Elasticluster cluster name")
         parser.add_argument("-v", "--verbose", action="store_true",
                             default=False, help="Emit verbose output")
-        parser.set_defaults(func=self.run)
 
-    def process(self):
+        parser.set_defaults(work=self.run)
+
+    def work(self):
         """Run the command with the received information."""
         provider_str = self.args.provider
         provider = cloud_factory.get(provider_str)()
@@ -70,7 +52,7 @@ class Info(base.BaseCommand):
         print(info.text())
 
 
-class Graph(base.BaseCommand):
+class Graph(base.Command):
 
     """
     Generate system graphs (CPU/memory/network/disk I/O consumption)
@@ -82,7 +64,7 @@ class Graph(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "graph",
             help="Generate system graphs (CPU/memory/network/disk I/O "
                  "consumption) from bcbio runs",
@@ -103,10 +85,10 @@ class Graph(base.BaseCommand):
             "-e", "--econfig",
             help="Elasticluster bcbio configuration file",
             default=constant.PATH.EC_CONFIG)
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(work=self.run)
         return parser
 
-    def process(self):
+    def work(self):
         """Run the command with the received information."""
         provider = cloud_factory.get(self.args.provider)()
         if (self.args.cluster and
@@ -126,13 +108,13 @@ class Graph(base.BaseCommand):
                                   outdir=self.args.outdir)
 
 
-class Template(base.BaseCommand):
+class Template(base.Command):
 
     """Create a bcbio sample.yaml file from a standard template and inputs."""
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "template",
             help=("Create a bcbio sample.yaml file from a "
                   "standard template and inputs"))
@@ -140,61 +122,28 @@ class Template(base.BaseCommand):
         parser.add_argument(
             '--relpaths', action='store_true', default=False,
             help="Convert inputs into relative paths to the work directory")
-        parser.set_defaults(func=self.run)
 
-    def process(self):
+        parser.set_defaults(work=self.run)
+
+    def work(self):
         """Run the command with the received information."""
         return template.setup
 
 
-class DockerDevel(base.BaseCommand):
+class _Config(base.Container):
 
-    """Utilities to help with develping using bcbion inside of docker."""
-
-    sub_commands = [
-        (command_factory.get("docker", "Build"), "actions"),
-        (command_factory.get("docker", "BiodataUpload"), "actions"),
-        (command_factory.get("docker", "SetupInstall"), "actions"),
-        (command_factory.get("docker", "SystemUpdate"), "actions")
-    ]
+    """Manipulate elasticluster configuration files, providing easy
+    ways to edit in place.
+    """
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
-            "devel",
-            help=("Utilities to help with develping using bcbion"
-                  "inside of docker."))
-        actions = parser.add_subparsers(title="[devel commands]")
+        parser = self._parser.add_parser(
+            "config",
+            help="Define configuration details for running a cluster")
+        actions = parser.add_subparsers(
+            title="[configuration specific actions]")
         self._register_parser("actions", actions)
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
-
-
-class ElastiCluster(base.BaseCommand):
-
-    """Run and manage a cluster using elasticluster."""
-
-    sub_commands = [
-        (command_factory.get("cluster", "Bootstrap"), "actions"),
-        (command_factory.get("cluster", "Start"), "actions"),
-        (command_factory.get("cluster", "Stop"), "actions"),
-        (command_factory.get("cluster", "Setup"), "actions"),
-        (command_factory.get("cluster", "SSHConnection"), "actions"),
-        (command_factory.get("cluster", "Command"), "actions"),
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
-            "cluster", help="Run and manage AWS clusters")
-        actions = parser.add_subparsers(title="[cluster specific actions]")
-        self._register_parser("actions", actions)
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
 
 
 class ConfigAWS(_Config):
@@ -219,11 +168,53 @@ class ConfigAzure(_Config):
     ]
 
 
-class ICELCommand(base.BaseCommand):
+class DockerDevel(base.Container):
+
+    """Utilities to help with develping using bcbion inside of docker."""
+
+    items = [
+        (command_factory.get("docker", "Build"), "actions"),
+        (command_factory.get("docker", "BiodataUpload"), "actions"),
+        (command_factory.get("docker", "SetupInstall"), "actions"),
+        (command_factory.get("docker", "SystemUpdate"), "actions")
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "devel",
+            help=("Utilities to help with develping using bcbion"
+                  "inside of docker."))
+        actions = parser.add_subparsers(title="[devel commands]")
+        self._register_parser("actions", actions)
+
+
+class ElastiCluster(base.Container):
+
+    """Run and manage a cluster using elasticluster."""
+
+    items = [
+        (command_factory.get("cluster", "Bootstrap"), "actions"),
+        (command_factory.get("cluster", "Start"), "actions"),
+        (command_factory.get("cluster", "Stop"), "actions"),
+        (command_factory.get("cluster", "Setup"), "actions"),
+        (command_factory.get("cluster", "SSHConnection"), "actions"),
+        (command_factory.get("cluster", "Command"), "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "cluster", help="Run and manage AWS clusters")
+        actions = parser.add_subparsers(title="[cluster specific actions]")
+        self._register_parser("actions", actions)
+
+
+class ICELCommand(base.Container):
 
     """Create scratch filesystem using Intel Cloud Edition for Lustre."""
 
-    sub_commands = [
+    items = [
         (command_factory.get("icel", "Create"), "actions"),
         (command_factory.get("icel", "Specification"), "actions"),
         (command_factory.get("icel", "Mount"), "actions"),
@@ -233,23 +224,19 @@ class ICELCommand(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "icel",
             help=("Create scratch filesystem using Intel Cloud Edition"
                   "for Lustre"))
         actions = parser.add_subparsers(title="[icel create]")
         self._register_parser("actions", actions)
 
-    def process(self):
-        """Run the command with the received information."""
-        pass
 
-
-class AWSProvider(base.BaseCommand):
+class AWSProvider(base.Container):
 
     """Automate resources for running bcbio on AWS."""
 
-    sub_commands = [
+    items = [
         (ElastiCluster, "actions"),
         (ConfigAWS, "actions"),
         (Info, "actions"),
@@ -262,21 +249,17 @@ class AWSProvider(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "aws",
             help="Automate resources for running bcbio on AWS")
         actions = parser.add_subparsers(title="[aws commands]")
         self._register_parser("actions", actions)
 
-    def process(self):
-        """Run the command with the received information."""
-        pass
 
-
-class AzureProvider(base.BaseCommand):
+class AzureProvider(base.Container):
 
     """Automate resources for running bcbio on Azure."""
-    sub_commands = [
+    items = [
         (ElastiCluster, "actions"),
         (ConfigAzure, "actions"),
         (Info, "actions"),
@@ -286,32 +269,24 @@ class AzureProvider(base.BaseCommand):
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "azure",
             help="Automate resources for running bcbio on Azure")
         actions = parser.add_subparsers(title="[azure commands]")
         self._register_parser("actions", actions)
 
-    def process(self):
-        """Run the command with the received information."""
-        pass
 
-
-class Tools(base.BaseCommand):
+class Tools(base.Container):
 
     """Tools and utilities."""
 
-    sub_commands = [
+    items = [
         (command_factory.get("docker", "SystemUpdate"), "tools")
     ]
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
-        parser = self._main_parser.add_parser(
+        parser = self._parser.add_parser(
             "tools", help="Tools and utilities.")
         tools = parser.add_subparsers(title="[available tools]")
         self._register_parser("tools", tools)
-
-    def process(self):
-        """Run the command with the received information."""
-        pass
