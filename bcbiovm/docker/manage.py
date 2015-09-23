@@ -16,6 +16,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     """
     mounts = reduce(operator.add, (["-v", m] for m in list(set(mounts))), [])
     ports = reduce(operator.add, (["-p", p] for p in ports or []), [])
+    privileged = ['--privileged'] if os.environ.get('BCBIO_DOCKER_PRIVILEGED', None) else []
     envs = _get_pass_envs()
     envs += ["-e", "PERL5LIB=/usr/local/lib/perl5"]
     networking = ["--net=host"]  # Use host-networking so Docker works correctly on AWS VPCs
@@ -23,7 +24,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     user = pwd.getpwuid(os.getuid())
     group = grp.getgrgid(os.getgid())
 
-    cmd = ["docker", "run", "-d", "-i"] + networking + ports + mounts + envs + [image]
+    cmd = ["docker", "run", "-d", "-i"] + privileged + networking + ports + mounts + envs + [image]
     # On Mac OSX boot2docker runs the docker server inside VirtualBox, which maps
     # the root user there to the external user. In this case we want to run the job
     # as root so it will have permission to access user directories. Since the Docker server
