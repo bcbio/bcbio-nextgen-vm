@@ -9,6 +9,14 @@ from bcbiovm.common import constant
 from bcbiovm.provider import factory as cloud_factory
 from bcbiovm.provider.aws.clusterk import main as clusterk_main
 
+# Because the tool namespace is injected in the parent
+# command, pylint thinks that the arguments from the tool's
+# namespace did not exist.
+# In order to avoid `no-memeber` error we will disable this
+# error.
+
+# pylint: disable=no-member
+
 
 class ClusterK(base.Command):
 
@@ -47,6 +55,15 @@ class ClusterK(base.Command):
             "-q", "--queue", default="default",
             help="Clusterk queue to run jobs on.")
         parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not run Clusterk parallel analysis.")
 
     def work(self):
         """Run the command with the received information."""

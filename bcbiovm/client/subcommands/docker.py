@@ -16,6 +16,14 @@ from bcbiovm.provider import factory as provider_factory
 
 LOG = utils.get_logger(__name__)
 
+# Because the tool namespace is injected in the parent
+# command, pylint thinks that the arguments from the tool's
+# namespace did not exist.
+# In order to avoid `no-memeber` error we will disable this
+# error.
+
+# pylint: disable=no-member
+
 
 def _install_or_upgrade(main_parser, callback, install=True):
     """Add to the received parser the install or the upgrade
@@ -121,6 +129,15 @@ class BiodataUpload(base.Command):
             choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
         parser.set_defaults(work=self.run)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Biodata not uploaded.")
+
     def work(self):
         """Manage preparation of biodata on a local machine, uploading
         to S3 in pieces."""
@@ -144,6 +161,15 @@ class SystemUpdate(base.Command):
             "memory",
             help="Target memory per core, in Mb (1000 = 1Gb)")
         parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not do upgrade of bcbio_system.yaml.")
 
     def work(self):
         """Update bcbio_system.yaml file with a given target of cores
@@ -199,6 +225,15 @@ class Run(base.Command):
             help="Total cores to use for processing")
         parser.set_defaults(work=self.run)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not run analysis.")
+
     def work(self):
         """Run the command with the received information."""
         docker_run.do_analysis(self.args, constant.DOCKER)
@@ -239,6 +274,15 @@ class RunFunction(base.Command):
             help="JSON/YAML file with arguments to the function")
         parser.set_defaults(work=self.run)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not run bcbio-nextgen function.")
+
     def work(self):
         """Run the command with the received information."""
         # FIXME(alexandrucoman): Taking cloud provider into consideration
@@ -276,6 +320,16 @@ class Install(base.Command):
                             callback=self.run,
                             install=True)
 
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        if self.args.install_data:
+            # Check if the datadir exists
+            self.defaults.datadir("bcbio-nextgen not installed.")
+
     def work(self):
         """Run the command with the received information."""
         docker_install.full(self.args, constant.DOCKER)
@@ -285,15 +339,21 @@ class Upgrade(base.Command):
 
     """Upgrade bcbio-nextgen docker container and data."""
 
-    def __init__(self, *args, **kwargs):
-        super(Upgrade, self).__init__(*args, **kwargs)
-        self._need_prologue = True
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
         _install_or_upgrade(main_parser=self._parser,
                             callback=self.run,
                             install=False)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        if self.args.install_data:
+            # Check if the datadir exists
+            self.defaults.datadir("bcbio-nextgen not upgraded.")
 
     def work(self):
         """Run the command with the received information."""
@@ -314,6 +374,15 @@ class Server(base.Command):
             "--port", default=8085,
             help="External port to connect to docker image.")
         parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not run server.")
 
     def work(self):
         """Run the command with the received information."""
@@ -341,14 +410,5 @@ class SaveConfig(base.Command):
 
     def work(self):
         """Save user specific defaults to a yaml configuration file."""
-        new_config = self._get_defaults()
-        for config, value in self._defaults:
-            args_value = getattr(self.args, config, None)
-            if args_value and args_value != value:
-                new_config[config] = args_value
-
-        if new_config:
-            config_file = self._get_config_file(just_filename=True)
-            with open(config_file, "w") as config_handle:
-                yaml.dump(new_config, config_handle, default_flow_style=False,
-                          allow_unicode=False)
+        # defaults.save is alias for tools.DockerDefaults.save_defaults
+        self.defaults.save()

@@ -13,6 +13,14 @@ from bcbiovm.docker import run as docker_run
 from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
 
+# Because the tool namespace is injected in the parent
+# command, pylint thinks that the arguments from the tool's
+# namespace did not exist.
+# In order to avoid `no-memeber` error we will disable this
+# error.
+
+# pylint: disable=no-member
+
 
 class IPython(base.Command):
 
@@ -68,6 +76,15 @@ class IPython(base.Command):
             "--tmpdir",
             help="Path of local on-machine temporary directory to process in.")
         parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not run IPython parallel analysis.")
 
     def work(self):
         """Run the command with the received information."""
@@ -178,6 +195,15 @@ class IPythonPrep(base.Command):
             "--tmpdir",
             help="Path of local on-machine temporary directory to process in.")
         parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.datadir("Could not prep batch scripts.")
 
     def work(self):
         """Run the command with the received information."""
