@@ -7,9 +7,9 @@ import yaml
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
+from bcbiovm.common import exception
 from bcbiovm.common import utils
 from bcbiovm.docker import devel as docker_devel
-from bcbiovm.docker import install as docker_install
 from bcbiovm.docker import manage as docker_manage
 from bcbiovm.docker import run as docker_run
 from bcbiovm.provider import factory as provider_factory
@@ -25,43 +25,140 @@ LOG = utils.get_logger(__name__)
 # pylint: disable=no-member
 
 
-def _install_or_upgrade(main_parser, callback, install=True):
-    """Add to the received parser the install or the upgrade
-    command.
-    """
-    action = "Install" if install else "Upgrade"
-    parser = main_parser.add_parser(
-        action.lower(),
-        help="{action} bcbio-nextgen docker container and data.".format(
-            action=action))
-    parser.add_argument(
-        "sample_config",
-        help="YAML file with details about samples to process.")
-    parser.add_argument(
-        "--fcdir",
-        help="A directory of Illumina output or fastq files to process",
-        type=lambda path: (os.path.abspath(os.path.expanduser(path))))
-    parser.add_argument(
-        "--systemconfig",
-        help=("Global YAML configuration file specifying system details. "
-              "Defaults to installed bcbio_system.yaml."))
-    parser.add_argument(
-        "-n", "--numcores", type=int, default=1,
-        help="Total cores to use for processing")
-    parser.add_argument(
-        "--data", help="Install or upgrade data dependencies",
-        dest="install_data", action="store_true", default=False)
-    parser.add_argument(
-        "--tools", help="Install or upgrade tool dependencies",
-        dest="install_tools", action="store_true", default=False)
-    parser.add_argument(
-        "--wrapper", help="Update wrapper bcbio-nextgen-vm code",
-        action="store_true", default=False)
-    parser.add_argument(
-        "--image", default=None,
-        help=("Docker image name to use, could point to compatible "
-              "pre-installed image."))
-    parser.set_defaults(work=callback)
+class _Action(base.Command):
+
+    """Install or upgrade the bcbio-nextgen docker container and data."""
+
+    _NO_GENOMES = ("Data not installed, no genomes provided with "
+                   "`--genomes` flag")
+    _NO_ALIGNERS = ("Data not installed, no aligners provided with "
+                    "`--aligners` flag")
+
+    def __init__(self, install, *args, **kwargs):
+        super(_Action, self).__init__(*args, **kwargs)
+        self._action = "Install" if install else "Upgrade"
+        self._updates = []
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            self._action.lower(),
+            help="{action} bcbio-nextgen docker container "
+                 "and data.".format(action=self._action))
+        parser.add_argument(
+            "sample_config",
+            help="YAML file with details about samples to process.")
+        parser.add_argument(
+            "--fcdir",
+            help="A directory of Illumina output or fastq files to process",
+            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
+        parser.add_argument(
+            "--systemconfig",
+            help=("Global YAML configuration file specifying system details. "
+                  "Defaults to installed bcbio_system.yaml."))
+        parser.add_argument(
+            "-n", "--numcores", type=int, default=1,
+            help="Total cores to use for processing")
+        parser.add_argument(
+            "--data", help="Install or upgrade data dependencies",
+            dest="install_data", action="store_true", default=False)
+        parser.add_argument(
+            "--tools", help="Install or upgrade tool dependencies",
+            dest="install_tools", action="store_true", default=False)
+        parser.add_argument(
+            "--wrapper", help="Update wrapper bcbio-nextgen-vm code",
+            action="store_true", default=False)
+        parser.add_argument(
+            "--image", default=None,
+            help=("Docker image name to use, could point to compatible "
+                  "pre-installed image."))
+        parser.set_defaults(work=self.run)
+
+    def _check_install_data(self):
+        """Check if the command line contains all the required
+        information in order to install the data."""
+        if not self.args.install_data:
+            return
+
+        if len(self.args.genomes) == 0:
+            raise exception.BCBioException(self._NO_GENOMES)
+
+        if len(self.args.aligners) == 0:
+            raise exception.BCBioException(self._NO_ALIGNERS)
+
+    def _get_command_line(self):
+        """Prepare the command line for upgrade the biodata."""
+        arguments = ["upgrade"]
+        if self.args.install_data:
+            arguments.append("--data")
+            for genome in self.args.genomes:
+                arguments.extend(["--genomes", genome])
+            for aligner in self.args.aligners:
+                arguments.extend(["--aligners", aligner])
+        return arguments
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        if self.args.install_data:
+            # Check if the datadir exists
+            self.defaults.datadir("bcbio-nextgen not installed or upgrade.")
+
+        # Add previously saved installation defaults to command line
+        # arguments.
+        self.install.defaults()
+
+    def work(self):
+        """Run the command with the received information."""
+        mounts = self.common.prepare_system(self.args.datadir,
+                                            constant.DOCKER["biodata_dir"])
+
+        if self.args.wrapper:
+            self._updates.append("wrapper scripts")
+            self.common.upgrade_bcbio_vm()
+
+        if self.args.install_tools:
+            self._updates.append("bcbio-nextgen code and third party tools")
+            self.common.pull_image(constant.DOCKER)
+            # Ensure external galaxy configuration in sync when
+            # doing tool upgrade
+            docker_manage.run_bcbio_cmd(self.args.image, mounts, ["upgrade"])
+
+        if self.args.install_data:
+            self._updates.append("biological data")
+            self.common.check_image()
+            docker_manage.run_bcbio_cmd(self.args.image, mounts,
+                                        self._get_command_line())
+
+        self.install.save_defaults()
+
+    def epilogue(self):
+        if self._updates:
+            LOG.info("bcbio-nextgen-vm updated with latest %(updates)s",
+                     {"updates": " and ".join(self._updates)})
+        else:
+            LOG.warning("No update targets specified, need '--wrapper', "
+                        "'--tools' or '--data'")
+            LOG.info("See 'bcbio_vm.py upgrade -h' for more details.")
+
+
+class Install(_Action):
+
+    """Install bcbio-nextgen docker container and data."""
+
+    def __init__(self, *args, **kwargs):
+        super(Install, self).__init__(install=True, *args, **kwargs)
+
+
+class Upgrade(_Action):
+
+    """Upgrade bcbio-nextgen docker container and data."""
+
+    def __init__(self, *args, **kwargs):
+        super(Upgrade, self).__init__(install=False, *args, **kwargs)
 
 
 class Build(base.Command):
@@ -137,11 +234,17 @@ class BiodataUpload(base.Command):
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
         self.defaults.datadir("Biodata not uploaded.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
+        # Check if the docker image exists.
+        self.common.check_image()
 
     def work(self):
         """Manage preparation of biodata on a local machine, uploading
         to S3 in pieces."""
-        return docker_devel.run_biodata_upload(self.args)
+        mounts = self.common.prepare_system(self.args.datadir,
+                                            constant.DOCKER["biodata_dir"])
+        return docker_devel.run_biodata_upload(self.args, mounts)
 
 
 class SystemUpdate(base.Command):
@@ -236,7 +339,9 @@ class Run(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        docker_run.do_analysis(self.args, constant.DOCKER)
+        mounts = self.common.prepare_system(self.args.datadir,
+                                            constant.DOCKER["biodata_dir"])
+        docker_run.do_analysis(self.args, constant.DOCKER, mounts)
 
 
 class RunFunction(base.Command):
@@ -308,56 +413,6 @@ class RunFunction(base.Command):
                            allow_unicode=False)
 
         ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
-
-
-class Install(base.Command):
-
-    """Install bcbio-nextgen docker container and data."""
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        _install_or_upgrade(main_parser=self._parser,
-                            callback=self.run,
-                            install=True)
-
-    def prologue(self):
-        """Executed once before the arguments parsing."""
-        # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
-        # Retrieve supported remote inputs specified on the command line.
-        self.defaults.retrieve()
-        if self.args.install_data:
-            # Check if the datadir exists
-            self.defaults.datadir("bcbio-nextgen not installed.")
-
-    def work(self):
-        """Run the command with the received information."""
-        docker_install.full(self.args, constant.DOCKER)
-
-
-class Upgrade(base.Command):
-
-    """Upgrade bcbio-nextgen docker container and data."""
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        _install_or_upgrade(main_parser=self._parser,
-                            callback=self.run,
-                            install=False)
-
-    def prologue(self):
-        """Executed once before the arguments parsing."""
-        # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
-        # Retrieve supported remote inputs specified on the command line.
-        self.defaults.retrieve()
-        if self.args.install_data:
-            # Check if the datadir exists
-            self.defaults.datadir("bcbio-nextgen not upgraded.")
-
-    def work(self):
-        """Run the command with the received information."""
-        docker_install.full(self.args, constant.DOCKER)
 
 
 class Server(base.Command):

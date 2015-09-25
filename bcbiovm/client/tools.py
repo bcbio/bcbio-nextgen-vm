@@ -6,6 +6,7 @@ import types
 import yaml
 import six
 
+from bcbiovm import config as bconfig
 from bcbiovm.common import exception
 from bcbiovm.common import utils
 from bcbiovm.common import objectstore
@@ -204,6 +205,73 @@ class Injector(Tool):
                 self._inject_item(parent, namespace, item)
 
 
+class Common(Tool):
+
+    """A collection of common tools used across the commands."""
+
+    def __init__(self):
+        super(Common, self).__init__()
+        self._executable = os.path.dirname(os.path.realpath(sys.executable))
+
+    @expose(alias=["common.pull_image"])
+    def pull(self, dockerconf):
+        """Pull down latest docker image, using export uploaded to S3 bucket.
+
+        Long term plan is to use the docker index server but upload size is
+        currently smaller with an exported gzipped image.
+        """
+        LOG.info("Retrieving bcbio-nextgen docker image with code and tools")
+        if not self.args.image:
+            raise exception.BCBioException("Unspecified image name for "
+                                           "docker import")
+
+        utils.execute(["docker", "import", dockerconf["image_url"],
+                       self.args.image], check_exit_code=0)
+
+    @expose(alias=["common.check_image"])
+    def check_docker_image(self):
+        """Check if the docker image exists."""
+        output, _ = utils.execute(["docker", "images"], check_exit_code=0)
+        for image in output.splitlines():
+            parts = image.split()
+            if len(parts) > 1 and parts[0] == self.args.image:
+                return
+
+        raise exception.NotFound(object="docker image %s" % self.args.image,
+                                 container="local repository")
+
+    @expose(alias=["common.upgrade_bcbio_vm"])
+    def upgrade_bcbio_vm(self):
+        """Upgrade bcbio-nextgen-vm wrapper code."""
+        conda_bin = os.path.join(self._executable, "conda")
+        if not os.path.exists(conda_bin):
+            LOG.warning("Cannot update bcbio-nextgen-vm; "
+                        "not installed with conda")
+        else:
+            utils.execute([conda_bin, "install", "--yes",
+                           "-c", bconfig.conda["channel"],
+                           bconfig.conda["package"]],
+                          check_exit_code=0)
+
+    @expose(alias=["common.prepare_system"])
+    @staticmethod
+    def prepare_system(data_directory, biodata_directory):
+        """Create set of system mountpoints to link into Docker container."""
+        mounts = []
+        for directory in ("genomes", "liftOver", "gemini_data", "galaxy"):
+            curent_directory = os.path.normpath(os.path.realpath(
+                os.path.join(data_directory, directory)))
+
+            mounts.append("{curent}:{biodata}/{directory}".format(
+                curent=curent_directory, biodata=biodata_directory,
+                directory=directory))
+
+            if not os.path.exists(curent_directory):
+                os.makedirs(curent_directory)
+
+        return mounts
+
+
 class DockerDefaults(Tool):
 
     """Save and retrieve default locations associated with a
@@ -328,3 +396,91 @@ class DockerDefaults(Tool):
             raise exception.BCBioException(
                 "Must specify a `--datadir` or save the default location "
                 "with `saveconfig`. %(reason)s", reason=reason)
+
+
+class DockerInstall(Tool):
+
+    """Retrieve default information required for interacting
+    with docker images.
+    """
+
+    def _get_config_file(self):
+        """Retrieve docker image configuration file."""
+        config_dir = os.path.join(self.args.datadir, "config")
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+
+        return os.path.join(config_dir, "install-params.yaml")
+
+    def _get_install_defaults(self):
+        """Retrieve saved default configurations."""
+        defaults = None
+        install_config = self._get_config_file()
+
+        if install_config and os.path.exists(install_config):
+            with open(install_config) as in_handle:
+                defaults = yaml.load(in_handle)
+        return defaults if defaults else {}
+
+    @expose(alias=["install.defaults"])
+    def add_install_defaults(self):
+        """Add previously saved installation defaults to command line
+        arguments.
+        """
+        default_args = self._get_install_defaults()
+        for attribute in ("genomes", "aligners"):
+            for default_value in default_args.get(attribute, []):
+                current_value = getattr(self.args, attribute)
+                if default_value not in getattr(self.args, attribute):
+                    current_value.append(default_value)
+                setattr(self.args, attribute, current_value)
+
+        self.add_docker_defaults(default_args)
+
+    @expose(alias=["install.docker_defaults"])
+    def add_docker_defaults(self, defaults):
+        """Add user configured defaults to supplied command line arguments."""
+        if hasattr(self.args, "image") and self.args.image:
+            return
+
+        if defaults["image"] and not defaults.get("images") == "None":
+            self.args.image = defaults["image"]
+        else:
+            self.args.image = bconfig.docker["image"]
+
+    @expose(alias=["install.image_defaults"])
+    def docker_image_arg(self):
+        """Add all the missing arguments related to docker image."""
+        if hasattr(self.args, "image") and self.args.image:
+            return
+
+        default_args = self._get_install_defaults()
+        self.args = self.add_docker_defaults(default_args)
+
+    @expose(alias=["install.save_defaults"])
+    def save_install_defaults(self):
+        """Save arguments passed to installation to be used on subsequent upgrades.
+
+        Avoids needing to re-include genomes and aligners on command line.
+        """
+        current_config = {}
+        install_config = self._get_config_file()
+
+        if os.path.exists(install_config):
+            with open(install_config) as in_handle:
+                current_config = yaml.load(in_handle)
+
+        for attribute in ("genomes", "aligners"):
+            if not current_config.get(attribute):
+                current_config[attribute] = []
+
+            for value in getattr(self.args, attribute):
+                if value not in current_config[attribute]:
+                    current_config[attribute].append(str(value))
+
+        if self.args.image and self.args.image != bconfig.docker["image"]:
+            current_config["image"] = self.args.image
+
+        with open(install_config, "w") as out_handle:
+            yaml.dump(current_config, out_handle, default_flow_style=False,
+                      allow_unicode=False)

@@ -20,7 +20,6 @@ DOCKER = {
     "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
                   "bcbio-nextgen-docker-image.gz")
 }
-DOCKER_DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
 
 
 class ANSIBLE:
@@ -70,8 +69,16 @@ class SSH:
              '%(user)s@%(bastion)s')
 
 
+DEFAULTS = {
+    "docker.image": "chapmanb/bcbio-nextgen-devel",
+    "log.enabled": True,
+    "log.verbosity": 0,
+}
+
 ENVIRONMENT = {
     "development": {
+        "conda.channel": "https://conda.binstar.org/bcbio-dev",
+        "conda.package": "bcbio-nextgen-vm",
         "log.name": "bcbiovm-devel",
         "log.cli_level": logging.DEBUG,
         "log.file_level": logging.DEBUG,
@@ -80,7 +87,10 @@ ENVIRONMENT = {
         "misc.attempts": 3,
         "misc.retry_interval": 0.1,
     },
+
     "production": {
+        "conda.channel": "https://conda.binstar.org/bcbio",
+        "conda.package": "bcbio-nextgen-vm",
         "log.name": "bcbiovm",
         "log.cli_level": logging.INFO,
         "log.file_level": logging.INFO,

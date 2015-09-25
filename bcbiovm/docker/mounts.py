@@ -8,18 +8,6 @@ import six
 from bcbiovm.docker import remap
 
 
-def prepare_system(datadir, docker_biodata_dir):
-    """Create set of system mountpoints to link into Docker container."""
-    mounts = []
-    for d in ["genomes", "liftOver", "gemini_data", "galaxy"]:
-        cur_d = os.path.normpath(os.path.realpath(os.path.join(datadir, d)))
-        if not os.path.exists(cur_d):
-            os.makedirs(cur_d)
-        mounts.append("{cur_d}:{docker_biodata_dir}/{d}".format(
-            cur_d=cur_d, docker_biodata_dir=docker_biodata_dir, d=d))
-    return mounts
-
-
 def update_config(config, fcdir=None):
     """Resolve relative and symlinked path, providing mappings for
     docker container.

@@ -18,9 +18,7 @@ from bcbio.provenance import do
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
 from bcbiovm.common import utils as common_utils
-from bcbiovm.docker import install
-from bcbiovm.docker import manage
-from bcbiovm.docker import mounts
+from bcbiovm.docker import manage as docker_manage
 from bcbiovm.provider import factory as provider_factory
 
 
@@ -197,12 +195,11 @@ def run_system_update(args):
                        allow_unicode=False)
 
 
-def run_biodata_upload(args):
+def run_biodata_upload(args, dmounts):
     """Manage preparation of biodata on a local machine, uploading
     to S3 in pieces.
     """
     # ## Upload pre-build biological data
-    args = install.docker_image_arg(args)
     for gbuild in args.genomes:
         print("Preparing %s" % gbuild)
         if args.prepped:
@@ -215,9 +212,8 @@ def run_biodata_upload(args):
         cmdline = ["upgrade", "--genomes", gbuild]
         for aligner in args.aligners:
             cmdline += ["--aligners", aligner]
-        dmounts = mounts.prepare_system(args.datadir,
-                                        constant.DOCKER['biodata_dir'])
-        manage.run_bcbio_cmd(args.image, dmounts, cmdline)
+
+        docker_manage.run_bcbio_cmd(args.image, dmounts, cmdline)
         print("Uploading %s" % gbuild)
         gdir = _get_basedir(args.datadir, gbuild)
         basedir, genomedir = os.path.split(gdir)
