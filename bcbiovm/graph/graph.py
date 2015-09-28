@@ -4,7 +4,6 @@ import matplotlib
 matplotlib.use('Agg')
 import os
 import pylab
-import cPickle as pickle
 pylab.rcParams['figure.figsize'] = (35.0, 12.0)
 
 from bcbio import utils
@@ -33,4 +32,4 @@ def bootstrap(args):
                                                 verbose=args.verbose)
 
     if args.serialize:
-        bcbio_graph.serialize_plot_data(collectl_info, "collectl_info.pickle.gz")
+        bcbio_graph.serialize_plot_data(collectl_info, args.outdir, "collectl_info.pickle.gz")
