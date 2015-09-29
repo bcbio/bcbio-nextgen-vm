@@ -26,7 +26,7 @@ if "--record=/dev/null" in sys.argv:  # conda build
 else:
     install_requires = [
         "matplotlib", "pandas", "paramiko", "six", "PyYAML",
-        "bcbio-nextgen"]
+        "pythonpy", "bcbio-nextgen"]
 
 setup(name="bcbio-nextgen-vm",
       version=version,
