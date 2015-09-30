@@ -18,11 +18,11 @@ def bootstrap(args):
                        utils.safe_makedir(args.rawdir),
                        args.verbose)
 
-
     data, hardware, steps = bcbio_graph.resource_usage(bcbio_log=args.log,
                                                        cluster=args.cluster,
                                                        rawdir=args.rawdir,
                                                        verbose=args.verbose)
+
 
     # Collectl_info is cleaned up data ready to be plotted/mangled
     collectl_info = bcbio_graph.generate_graphs(data_frames=data,
@@ -31,5 +31,7 @@ def bootstrap(args):
                                                 outdir=utils.safe_makedir(args.outdir),
                                                 verbose=args.verbose)
 
+    pre_graph_info = (data, hardware, steps)
+
     if args.serialize:
-        bcbio_graph.serialize_plot_data(collectl_info, args.outdir, "collectl_info.pickle.gz")
+        bcbio_graph.serialize_plot_data(collectl_info, pre_graph_info, args.outdir, "collectl_info.pickle.gz")
