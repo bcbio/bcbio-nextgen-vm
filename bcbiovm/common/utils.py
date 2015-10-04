@@ -2,12 +2,14 @@
 # pylint: disable=too-many-arguments
 
 import collections
+import contextlib
 import datetime
 import logging
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 
 import paramiko
@@ -351,3 +353,98 @@ def write_elasticluster_config(config, output,
                 content.append(line)
 
     write_file(output, "\n".join(content), open_mode="w")
+
+
+def backup(path, backup_dir=None, delete=False, maximum=0):
+    """
+    Make a copy of the received file.
+
+    :param path:     The absolute path of the file.
+    :param backup:   The absolute path to the location on the filesystem
+                     wherethe file should be written.
+    :param delete:   Delete the source file.
+    :param maximum:  The maximum number of backup files allowed.
+    """
+    backup_files = []
+    now = datetime.datetime.now()
+    template = "{filename}_{timestamp}.bak"
+
+    path = os.path.abspath(path)
+    filename = os.path.basename(path)
+    backup_dir = backup_dir or os.path.dirname(path)
+    action = shutil.move if delete else shutil.copy
+
+    if maximum > 0:
+        for backup_file in os.listdir(backup_dir):
+            source, _ = backup_file.rsplit("_", 1)
+            if backup_file.endswith(".bak") and filename == source:
+                backup_files.append(backup_file)
+
+        backup_files.sort()
+        for backup_file in backup_files[maximum - 1:]:
+            os.remove(backup_file)
+
+    filename = template.format(filename=filename,
+                               timestamp=now.strftime("%Y-%m-%d-%H-%M-%S"))
+    action(path, os.path.join(backup_dir, filename))
+
+
+def predict_unit(unit):
+    """Predit the symbol set for the received unit."""
+    symbol_value = 1
+    _symbol = collections.namedtuple("Symbol", ["name", "set", "value"])
+
+    for set_name, symbol_set in constant.SYMBOLS.items():
+        if unit in symbol_set:
+            break
+    else:
+        if unit == 'k':
+            # Treat `k` as an alias for `K`
+            symbol_set = constant.SYMBOLS['customary_symbols']
+            unit = unit.upper()
+        else:
+            raise ValueError("Invalid unit name %(unit)s", {"unit": unit})
+
+    if unit != symbol_set[0]:
+        symbol_value = 1 << symbol_set.index(unit) * 10
+
+    return _symbol(set_name, symbol_set, symbol_value)
+
+
+def predict_size(size, convert="K"):
+    """Attempts to guess the string format based on default symbols
+    set and return the corresponding bytes as an integer.
+    """
+    initial_size = size.strip()
+    numerical = ""
+    while (initial_size and initial_size[0:1].isdigit() or
+            initial_size[0:1] == '.'):
+        numerical += initial_size[0]
+        initial_size = initial_size[1:]
+    numerical = float(numerical)
+
+    symbol = predict_unit(initial_size.strip())
+    new_symbol = predict_unit(convert)
+    return int(numerical * symbol.value) / new_symbol.value
+
+
+def compress(source, destination=None, compression="gz"):
+    """Saves many files together into a single tape or disk archive,
+    and can restore individual files from the archive.
+
+    :param source:      the path of the files that will be saved together
+    :param destination: the path of the output
+    :param compression: the compression level of the file
+
+    :raises:
+        If a compression method is not supported, CompressionError is raised.
+    """
+    open_mode = "w:{0}".format(compression) if compression else "w"
+    source = source if isinstance(source, (list, tuple)) else (source, )
+    destination = destination or source[0].join((".tar", compression))
+
+    with contextlib.closing(tarfile.open(destination, open_mode)) as archive:
+        for path in source:
+            archive.add(source, arcname=os.path.basename(source))
+
+    return destination

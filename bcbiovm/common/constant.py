@@ -21,6 +21,17 @@ DOCKER = {
                   "bcbio-nextgen-docker-image.gz")
 }
 
+SYMBOLS = {
+    'customary_symbols': ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
+    'customary_names': ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta',
+                        'exa', 'zetta', 'iotta'),
+    # Note(alexandrucoman): More information can be found on the following link
+    #                       http://goo.gl/uyQruU
+    'IEC_symbols': ('Bi', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+    'IEC_names': ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
+                  'zebi', 'yobi'),
+}
+
 
 class ANSIBLE:
 

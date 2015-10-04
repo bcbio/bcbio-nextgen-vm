@@ -241,7 +241,13 @@ class BiodataUpload(base.Command):
 
     def work(self):
         """Manage preparation of biodata on a local machine, uploading
-        to S3 in pieces."""
+        to a storage manager in pieces."""
+        if self.args.prepped:
+            docker_devel.prepare_genomes(genomes=self.args.genomes,
+                                         aligners=self.args.aligners,
+                                         prepped=self.args.prepped)
+            return
+
         mounts = self.common.prepare_system(self.args.datadir,
                                             constant.DOCKER["biodata_dir"])
         return docker_devel.run_biodata_upload(self.args, mounts)
@@ -278,7 +284,9 @@ class SystemUpdate(base.Command):
         """Update bcbio_system.yaml file with a given target of cores
         and memory.
         """
-        return docker_devel.run_system_update(self.args)
+        return docker_devel.run_system_update(datadir=self.args.datadir,
+                                              cores=self.args.cores,
+                                              memory=self.args.memory)
 
 
 class SetupInstall(base.Command):
@@ -300,7 +308,12 @@ class SetupInstall(base.Command):
         """Install python code from a bcbio-nextgen development tree
         inside of docker.
         """
-        return docker_devel.run_setup_install(self.args)
+        return docker_devel.run_setup_install(image=self.args.image)
+
+    def epilogue(self):
+        """Executed once after the command running."""
+        print("Updated bcbio-nextgen install in docker container: %s" %
+              self.args.image)
 
 
 class Run(base.Command):

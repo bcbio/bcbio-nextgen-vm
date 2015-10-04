@@ -88,7 +88,7 @@ class BaseContainer(object):
         pass
 
     def epilogue(self):
-        """Executed once before the command running."""
+        """Executed once after the command running."""
         pass
 
     @abc.abstractmethod
