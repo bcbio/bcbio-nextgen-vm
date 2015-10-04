@@ -61,12 +61,13 @@ class BlobPack(base.Pack):
         :param folder:  The name of the folder where the file will be stored.
         :param path:    The name of the container from the storage service.
         """
+        context = {"account_name": account}
         blob_name = BLOB_NAME.format(folder=folder,
                                      filename=os.path.basename(path))
 
-        if not self._storage.exists(account, container, blob_name):
-            self._storage.upload(filename=path, account_name=account,
-                                 container=container, blob_name=blob_name)
+        if not self._storage.exists(container, blob_name, context):
+            self._storage.upload(path=path, container=container,
+                                 filename=blob_name, context=context)
 
     def _remap_and_ship(self, orig_fname, context, remap_dict):
         """Remap a file into an Azure blob and key, shipping if not present.
@@ -105,11 +106,12 @@ class BlobPack(base.Pack):
 
         :param config: an instances of :class objects.ShippingConf:
         """
+        context = {"account_name": config.storage_account}
         blob_name = BLOB_NAME.format(folder=config.folders["output"],
                                      filename=os.path.basename(out_file))
-        self._storage.upload(filename=out_file, blob_name=blob_name,
-                             account_name=config.storage_account,
-                             container=config.container["run"])
+        self._storage.upload(path=out_file, filename=blob_name,
+                             container=config.container["run"],
+                             context=context)
 
     def send_run(self, args, config):
         """Ship required processing files to the storage service for running

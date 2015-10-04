@@ -30,8 +30,8 @@ class _S3Upload(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        return self._storage.upload(filename=self.args.file,
-                                    key=self.args.key,
+        return self._storage.upload(path=self.args.file,
+                                    filename=self.args.key,
                                     container=self.args.bucket)
 
 
@@ -66,15 +66,16 @@ class _BlobUpload(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        return self._storage.upload(filename=self.args.file,
-                                    account_name=self.args.account_name,
+        context = {"account_name": self.args.account_name}
+        return self._storage.upload(path=self.args.file,
                                     container=self.args.container,
-                                    blob_name=self.args.blob)
+                                    filename=self.args.blob,
+                                    context=context)
 
 
-class Upload(base.Command):
+class Upload(base.CommandContainer):
 
-    """Upload file to the file storage provider."""
+    """Upload file to a storage manager."""
 
     sub_commands = [
         (_S3Upload, "storage_manager"),
@@ -84,12 +85,7 @@ class Upload(base.Command):
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
         parser = self._parser.add_parser(
-            "upload",
-            help=("Utilities to help with develping using bcbion"
-                  "inside of docker."))
+            "upload", help="Upload file to a storage manager.")
+
         storage_manager = parser.add_subparsers(title="[storage manager]")
         self._register_parser("storage_manager", storage_manager)
-
-    def work(self):
-        """Run the command with the received information."""
-        pass

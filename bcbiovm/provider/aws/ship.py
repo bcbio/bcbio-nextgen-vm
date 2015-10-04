@@ -67,7 +67,7 @@ class S3Pack(base.Pack):
         for filename in utils.file_plus_index(orig_fname):
             keyname = "%s/%s" % (store["folder"], os.path.basename(filename))
             if not self._storage.exists(store["container"], keyname):
-                self._storage.upload(filename=filename, key=keyname,
+                self._storage.upload(path=filename, filename=keyname,
                                      container=store["container"])
 
         # Drop directory information since we only deal with files in S3
