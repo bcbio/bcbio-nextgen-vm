@@ -45,6 +45,7 @@ setup_provider=ansible-slurm
 frontend_nodes=1
 compute_nodes=2
 flavor=c3.xlarge
+location = East US
 
 [cluster/bcbio/frontend]
 flavor=c3.large
