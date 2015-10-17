@@ -19,6 +19,7 @@ import yaml
 import warnings
 warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
+from bcbio.cwl import main as cwl_main
 from bcbio.distributed import clargs
 from bcbio.workflow import template
 from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
@@ -136,6 +137,13 @@ def _run_cmd(subparsers):
     parser_r = subparsers.add_parser("run", help="Run an automated analysis on the local machine.")
     parser_r = _std_run_args(parser_r)
     parser_r.set_defaults(func=cmd_run)
+
+def _cwl_cmd(subparsers):
+    parser = subparsers.add_parser("cwl", help="Prepare a common workflow language (CWL) input")
+    parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
+                        "Defaults to installed bcbio_system.yaml.")
+    parser.add_argument("sample_config", help="YAML file with details about samples to process.")
+    parser.set_defaults(func=cwl_main.run)
 
 def _add_ipython_args(parser):
     parser = _std_run_args(parser)
@@ -276,6 +284,7 @@ if __name__ == "__main__":
     _run_ipython_cmd(subparsers)
     _run_ipythonprep_cmd(subparsers)
     _template_cmd(subparsers)
+    _cwl_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
     _graph_cmd(subparsers)
