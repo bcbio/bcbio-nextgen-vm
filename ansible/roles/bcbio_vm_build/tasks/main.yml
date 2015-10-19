@@ -11,8 +11,6 @@
 - set_fact: image_name=chapmanb/bcbio-nextgen-devel
   when: docker_buildtype == "code"
 
-- set_fact: docker_image=bcbio-nextgen-docker-image.gz
-
 - name: Update code in bcbio docker container
   shell: "bcbio_vm.py devel setup_install"
   register: bcbio_docker_build
@@ -46,19 +44,3 @@
   args:
     chdir: "{{ bcbio_dir }}"
     creates: "{{ docker_image }}"
-
-- name: Upload gzipped bcbio docker container to Amazon S3
-  when: bcbio_docker_gzip|success and bcbio_docker_build|success and provider == "aws"
-  ignore_errors: true
-  shell: >
-    gof3r put -p {{ docker_image }} -k {{ docker_image }} -b {{ bcbio_container }} -m x-amz-storage-class:REDUCED_REDUNDANCY -m x-amz-acl:public-read
-  args:
-    chdir: "{{ bcbio_dir }}"
-
-- name: Upload gzipped bcbio docker container to Microsoft Azure Blob
-  when: bcbio_docker_gzip|success and bcbio_docker_build|success and provider == "azure"
-  ignore_errors: true
-  shell: >
-    bcbio_vm.py tools upload azure --file {{ docker_image }} --blob {{ docker_image }} --container {{ bcbio_container }} --account_name {{account_name}}
-  args:
-    chdir: "{{ bcbio_dir }}"

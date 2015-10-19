@@ -5,7 +5,7 @@ import os
 
 import six
 
-from bcbiovm.docker import remap
+from bcbiovm.container.docker import remap
 
 
 def update_config(config, fcdir=None):
@@ -48,30 +48,6 @@ def normalize_config(config, fcdir=None):
             os.makedirs(config["upload"]["dir"])
     config["details"] = absdetails
     return config, directories
-
-
-def find_genome_directory(dirname):
-    """Handle external non-docker installed biodata located relative to
-    config directory.
-    """
-    mounts = []
-    sam_loc = os.path.join(dirname, "tool-data", "sam_fa_indices.loc")
-    genome_dirs = {}
-    if os.path.exists(sam_loc):
-        with open(sam_loc) as in_handle:
-            for line in in_handle:
-                if line.startswith("index"):
-                    parts = line.split()
-                    genome_dirs[parts[1].strip()] = parts[-1].strip()
-    for genome_dir in sorted(list(set(genome_dirs.values()))):
-        # Special case used in testing -- relative paths
-        if genome_dir and not os.path.isabs(genome_dir):
-            rel_genome_dir = os.path.dirname(os.path.dirname(
-                os.path.dirname(genome_dir)))
-            full_genome_dir = os.path.normpath(os.path.join(
-                os.path.dirname(sam_loc), rel_genome_dir))
-            mounts.append("%s:%s" % (full_genome_dir, full_genome_dir))
-    return mounts
 
 
 def _get_directories(xs, ignore):
