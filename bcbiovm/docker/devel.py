@@ -27,16 +27,23 @@ DOCKER = {"port": 8085,
           "work_dir": "/mnt/work",
           "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
 
+# Available genomes and indexes
+SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
+                     "rn6", "rn5", "canFam3", "dm3", "galGal4", "phix",
+                     "pseudomonas_aeruginosa_ucbpp_pa14", "sacCer3", "TAIR10",
+                     "WBcel235", "xenTro3", "Zv9", "GRCz10"]
+SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "rtg", "snap",
+                     "star", "ucsc", "seq", "hisat2"]
+
 def add_biodata_args(parser):
     """Add standard arguments for preparing biological data to a command line arg parser.
     """
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[],
-                        choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3", "Zv9", "phix",
-                                 "sacCer3", "xenTro3", "TAIR10", "WBcel235"])
+                        choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+                        choices=SUPPORTED_INDEXES)
     return parser
 
 def setup_cmd(subparsers):
