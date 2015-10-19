@@ -5,12 +5,14 @@ import os
 import yaml
 from bcbio.pipeline import main
 
-from bcbiovm.docker import manage, mounts
+from bcbiovm.container.docker import docker_container
+from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.provider import factory as provider_factory
 
 
 def run(args, docker_config):
     work_dir = os.getcwd()
+    container = docker_container.Docker()
     parallel = {
         "type": "clusterk",
         "queue": args.queue,
@@ -20,8 +22,8 @@ def run(args, docker_config):
     }
 
     with open(args.sample_config) as in_handle:
-        ready_config, _ = mounts.normalize_config(yaml.load(in_handle),
-                                                  args.fcdir)
+        ready_config, _ = docker_mounts.normalize_config(yaml.load(in_handle),
+                                                         args.fcdir)
 
     ready_config_file = os.path.splitext(os.path.basename(args.sample_config))
     ready_config_file = os.path.join(work_dir,
@@ -42,9 +44,10 @@ def run(args, docker_config):
                                  "datadir": args.datadir,
                                  "systemconfig": args.systemconfig}]
     workdir_mount = "%s:%s" % (work_dir, docker_config["work_dir"])
-    manage.run_bcbio_cmd(args.image, [workdir_mount],
-                         ["version",
-                          "--workdir=%s" % docker_config["work_dir"]])
+    container.run_command(image=args.image,
+                          mounts=[workdir_mount],
+                          arguments=["version", "--workdir=%s" %
+                                     docker_config["work_dir"]])
 
     main.run_main(work_dir, run_info_yaml=ready_config_file,
                   config_file=args.systemconfig, fc_dir=args.fcdir,

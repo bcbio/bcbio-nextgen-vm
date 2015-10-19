@@ -7,8 +7,8 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import objects
-from bcbiovm.common import objectstore
-from bcbiovm.docker import remap
+from bcbiovm.provider.aws import storage as aws_storage
+from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import base
 
 
@@ -41,7 +41,7 @@ class S3Pack(base.Pack):
     """
 
     def __init__(self):
-        self._storage = objectstore.AmazonS3()
+        self._storage = aws_storage.AmazonS3()
 
     def _remap_and_ship(self, orig_fname, context, remap_dict):
         """Remap a file into an S3 bucket and key, shipping if not present.
@@ -82,7 +82,7 @@ class S3Pack(base.Pack):
         """
         keyname = "%s/%s" % (config.folders["output"],
                              os.path.basename(out_file))
-        self._storage.upload(filename=out_file, key=keyname,
+        self._storage.upload(path=out_file, filename=keyname,
                              container=config.containers["run"])
 
     def send_run(self, args, config):
@@ -92,8 +92,8 @@ class S3Pack(base.Pack):
         :param config: an instances of :class objects.ShippingConf:
         """
         directories = self._map_directories(args, shipping_config(config))
-        files = remap.walk_files(args, self._remap_and_ship,
-                                 directories, pass_dirs=True)
+        files = docker_remap.walk_files(args, self._remap_and_ship,
+                                        directories, pass_dirs=True)
         return self._remove_empty(files)
 
 
@@ -109,7 +109,7 @@ class ReconstituteS3(base.Reconstitute):
 
     def __init__(self):
         super(ReconstituteS3, self).__init__()
-        self._storage = objectstore.AmazonS3()
+        self._storage = aws_storage.AmazonS3()
         self._s3_url = "s3://{bucket}{region}/{key}"
 
     def _download(self, source, destination):
@@ -146,7 +146,8 @@ class ReconstituteS3(base.Reconstitute):
 
             return orig_fname.replace(remote_key, cur_dir)
 
-        new_args = remap.walk_files(args, _callback, {remote_key: local_dir})
+        new_args = docker_remap.walk_files(args, _callback,
+                                           {remote_key: local_dir})
         return local_dir, new_args
 
     def prepare_workdir(self, pack, parallel, args):

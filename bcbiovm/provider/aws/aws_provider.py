@@ -1,48 +1,70 @@
 """AWS Cloud Provider for bcbiovm."""
+# pylint: disable=no-self-use
+
+import os
+
+from bcbio.distributed import objectstore
 
 from bcbiovm.common import objects
 from bcbiovm.common import constant
-from bcbiovm.common import utils
+from bcbiovm.common import utils as common_utils
 from bcbiovm.provider import base
 from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources as aws_resources
 from bcbiovm.provider.aws import iam as aws_iam
 from bcbiovm.provider.aws import icel as aws_icel
+from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.aws import vpc as aws_vpc
 
-# pylint: disable=no-self-use
+LOG = common_utils.get_logger(__name__)
 
 
 class AWSProvider(base.BaseCloudProvider):
 
-    """AWS Provider for bcbiovm."""
+    """AWS Provider for bcbiovm.
+
+    :ivar flavors: A dictionary with all the flavors available for
+                   the current cloud provider.
+
+    Example:
+    ::
+        flavors = {
+            "m3.large": Flavor(cpus=2, memory=3500),
+            "m3.xlarge": Flavor(cpus=4, memory=3500),
+            "m3.2xlarge": Flavor(cpus=8, memory=3500),
+        }
+    """
+
+    flavors = {
+        "m3.large": objects.Flavor(cpus=2, memory=3500),
+        "m3.xlarge": objects.Flavor(cpus=4, memory=3500),
+        "m3.2xlarge": objects.Flavor(cpus=8, memory=3500),
+        "c3.large": objects.Flavor(cpus=2, memory=1750),
+        "c3.xlarge": objects.Flavor(cpus=4, memory=1750),
+        "c3.2xlarge": objects.Flavor(cpus=8, memory=1750),
+        "c3.4xlarge": objects.Flavor(cpus=16, memory=1750),
+        "c3.8xlarge": objects.Flavor(cpus=32, memory=1750),
+        "c4.xlarge": objects.Flavor(cpus=4, memory=1750),
+        "c4.2xlarge": objects.Flavor(cpus=8, memory=1750),
+        "c4.4xlarge": objects.Flavor(cpus=16, memory=1750),
+        "c4.8xlarge": objects.Flavor(cpus=36, memory=1600),
+        "r3.large": objects.Flavor(cpus=2, memory=7000),
+        "r3.xlarge": objects.Flavor(cpus=4, memory=7000),
+        "r3.2xlarge": objects.Flavor(cpus=8, memory=7000),
+        "r3.4xlarge": objects.Flavor(cpus=16, memory=7000),
+        "r3.8xlarge": objects.Flavor(cpus=32, memory=7000),
+    }
+    _STORAGE = {"AmazonS3": aws_storage.AmazonS3}
 
     def __init__(self):
         super(AWSProvider, self).__init__(name=constant.PROVIDER.AWS)
 
-    def _set_flavors(self):
-        """Returns a dictionary with all the flavors available for the current
-        cloud provider.
+    def get_storage_manager(self, name="AmazonS3"):
+        """Return a cloud provider specific storage manager.
+
+        :param name: The name of the required storage manager.
         """
-        return {
-            "m3.large": objects.Flavor(cpus=2, memory=3500),
-            "m3.xlarge": objects.Flavor(cpus=4, memory=3500),
-            "m3.2xlarge": objects.Flavor(cpus=8, memory=3500),
-            "c3.large": objects.Flavor(cpus=2, memory=1750),
-            "c3.xlarge": objects.Flavor(cpus=4, memory=1750),
-            "c3.2xlarge": objects.Flavor(cpus=8, memory=1750),
-            "c3.4xlarge": objects.Flavor(cpus=16, memory=1750),
-            "c3.8xlarge": objects.Flavor(cpus=32, memory=1750),
-            "c4.xlarge": objects.Flavor(cpus=4, memory=1750),
-            "c4.2xlarge": objects.Flavor(cpus=8, memory=1750),
-            "c4.4xlarge": objects.Flavor(cpus=16, memory=1750),
-            "c4.8xlarge": objects.Flavor(cpus=36, memory=1600),
-            "r3.large": objects.Flavor(cpus=2, memory=7000),
-            "r3.xlarge": objects.Flavor(cpus=4, memory=7000),
-            "r3.2xlarge": objects.Flavor(cpus=8, memory=7000),
-            "r3.4xlarge": objects.Flavor(cpus=16, memory=7000),
-            "r3.8xlarge": objects.Flavor(cpus=32, memory=7000),
-        }
+        return self._STORAGE.get(name)()
 
     def information(self, config, cluster):
         """
@@ -120,6 +142,39 @@ class AWSProvider(base.BaseCloudProvider):
 
         return result
 
+    def upload_biodata(self, genome, target, source):
+        """Upload biodata for a specific genome build and target to a storage
+        manager.
+
+        :param genome: Genome which should be uploaded.
+        :param target: The pice from the genome that should be uploaded.
+        :param source: A list of directories which contain the information
+                       that should be uploaded.
+        """
+        storage_manager = self.get_storage_manager()
+        biodata_info = objectstore.BIODATA_INFO["s3"].format(build=genome,
+                                                             target=target)
+        context = {"arguments": ["--no-md5"], "headers": {
+            "x-amz-storage-class": "REDUCED_REDUNDANCY",
+            "x-amz-acl": "public-read"
+        }}
+
+        try:
+            archive = common_utils.compress(source)
+            file_info = storage_manager.parse_remote(biodata_info)
+            if storage_manager.exists(file_info.bucket, file_info.key):
+                LOG.info("The %(biodata)r build already exist",
+                         {"biodata": file_info.key})
+                return
+            LOG.info("Upload pre-prepared genome data: %(genome)s, "
+                     "%(target)s:", {"genome": genome, "target": target})
+            storage_manager.upload(path=archive, filename=file_info.key,
+                                   container=file_info.bucket,
+                                   context=context)
+        finally:
+            if os.path.exists(archive):
+                os.remove(archive)
+
     def bootstrap_iam(self, config, create, recreate):
         """Create IAM users and instance profiles for running bcbio on AWS.
 
@@ -134,7 +189,8 @@ class AWSProvider(base.BaseCloudProvider):
         configuration.update(iam.create_keypair(config))
         configuration.update(iam.bcbio_iam_user(create, recreate))
         configuration.update(iam.bcbio_s3_instance_profile(create))
-        utils.write_elasticluster_config(configuration, config, self._name)
+        common_utils.write_elasticluster_config(configuration, config,
+                                                self._name)
         return configuration
 
     def bootstrap_vpc(self, cluster, config, network, recreate):

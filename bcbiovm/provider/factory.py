@@ -7,8 +7,10 @@ from bcbiovm.provider import playbook as bcbio_playbook
 from bcbiovm.provider import ship as shared_ship
 from bcbiovm.provider.aws import aws_provider
 from bcbiovm.provider.aws import ship as aws_ship
+from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.azure import azure_provider
 from bcbiovm.provider.azure import ship as azure_ship
+from bcbiovm.provider.azure import storage as azure_storage
 
 _Ship = collections.namedtuple("Ship", ["pack", "reconstitute"])
 
@@ -29,6 +31,10 @@ SHIP_CONFIG = {
     "S3": (aws_ship.shipping_config, aws_ship.get_shipping_config)
 }
 
+STORAGE = {
+    constant.PROVIDER.AWS: aws_storage.AmazonS3,
+    constant.PROVIDER.AZURE: azure_storage.AzureBlob,
+}
 
 PLAYBOOK = {
     "AWS": bcbio_playbook.AWSPlaybook(),
@@ -70,3 +76,12 @@ def get_playbook(playbook, provider="default"):
     """Return the path of the received playbook."""
     playbook_provider = PLAYBOOK.get(provider)
     return getattr(playbook_provider, playbook)
+
+
+def get_storage(cloud_provider):
+    """Return the storage manager for the received provider."""
+    storage_manager = STORAGE.get(cloud_provider)
+    if not storage_manager:
+        raise exception.NotFound(object=storage_manager,
+                                 container=STORAGE.keys())
+    return storage_manager

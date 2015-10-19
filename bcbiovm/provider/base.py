@@ -1,5 +1,4 @@
-"""
-Provider base-classes:
+"""Provider base-classes:
     (Beginning of) the contract that cloud providers must follow, and shared
     types that support that contract.
 """
@@ -17,20 +16,34 @@ from bcbio.distributed import ipython
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import cluster as clusterops
-from bcbiovm.docker import remap
+from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import playbook as provider_playbook
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BaseCloudProvider(object):
 
+    """Contract class for all cloud providers.
+
+    :ivar flavors: A dictionary with all the flavors available for
+                   the current cloud provider.
+
+    Example:
+    ::
+        flavors = {
+            "m3.large": Flavor(cpus=2, memory=3500),
+            "m3.xlarge": Flavor(cpus=4, memory=3500),
+            "m3.2xlarge": Flavor(cpus=8, memory=3500),
+        }
+    """
+
     _CHMOD = "chmod %(mode)s %(file)s"
     _HOME_DIR = "echo $HOME"
     _SCREEN = "screen -d -m -S %(name)s bash -c '%(script)s &> %(output)s'"
+    flavors = {}
 
     def __init__(self, name=None):
         self._name = name or self.__class__.__name__
-        self._flavor = self._set_flavors()
         self._ecluster = clusterops.ElastiCluster(self._name)
 
     @property
@@ -39,17 +52,10 @@ class BaseCloudProvider(object):
         return self._name
 
     @abc.abstractmethod
-    def _set_flavors(self):
-        """Returns a dictionary with all the flavors available for the current
-        cloud provider.
+    def get_storage_manager(self, name):
+        """Return a cloud provider specific storage manager.
 
-        Example:
-        ::
-            return {
-                "m3.large": Flavor(cpus=2, memory=3500),
-                "m3.xlarge": Flavor(cpus=4, memory=3500),
-                "m3.2xlarge": Flavor(cpus=8, memory=3500),
-            }
+        :param name: The name of the required storage manager.
         """
         pass
 
@@ -128,11 +134,12 @@ class BaseCloudProvider(object):
 
         return (stdout.read(), stderr.read())
 
-    def flavors(self, machine=None):
+    def get_flavor(self, machine=None):
+        """Get the flavor for received machine type."""
         if not machine:
-            return self._flavor.keys()
+            return self.flavors.keys()
         else:
-            return self._flavor.get(machine)
+            return self.flavors.get(machine)
 
     def start(self, cluster, config=None, no_setup=False):
         """Create a cluster using the supplied configuration.
@@ -211,6 +218,18 @@ class BaseCloudProvider(object):
                               "output": ouput_file})
         client.close()
 
+    @abc.abstractmethod
+    def upload_biodata(self, genome, target, source):
+        """Upload biodata for a specific genome build and target to a storage
+        manager.
+
+        :param genome: Genome which should be uploaded.
+        :param target: The pice from the genome that should be uploaded.
+        :param source: A list of directories which contain the information
+                       that should be uploaded.
+        """
+        pass
+
 
 @six.add_metaclass(abc.ABCMeta)
 class Bootstrap(object):
@@ -278,7 +297,7 @@ class Bootstrap(object):
             else:
                 machine = toolz.get_in(["nodes", "frontend", "flavor"],
                                        cluster_config)
-            flavor = self._provider.flavors(machine=machine)
+            flavor = self._provider.get_flavor(machine=machine)
             cores = ipython.per_machine_target_cores(flavor.cpus,
                                                      compute_nodes)
             return {
@@ -358,7 +377,7 @@ class Pack(object):
             directory = os.path.dirname(os.path.abspath(filename))
             directories.add(os.path.normpath(directory))
 
-        remap.walk_files(args, _callback, {}, pass_dirs=True)
+        docker_remap.walk_files(args, _callback, {}, pass_dirs=True)
         for directory in sorted(directories):
             if work_dir and directory.startswith(work_dir):
                 folder = directory.replace(work_dir, "").strip("/")

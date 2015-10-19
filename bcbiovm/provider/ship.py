@@ -10,7 +10,7 @@ from bcbio import utils
 from bcbio.log import logger
 
 from bcbiovm.common import objects
-from bcbiovm.docker import remap
+from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import base
 
 
@@ -70,7 +70,7 @@ class ReconstituteShared(base.Reconstitute):
             utils.safe_makedir(local_dir)
             output[dirname] = local_dir
 
-        remap.walk_files(args, _callback, {})
+        docker_remap.walk_files(args, _callback, {})
         return output
 
     def _remap_copy_file(self, parallel):
@@ -80,7 +80,7 @@ class ReconstituteShared(base.Reconstitute):
         """
         def _callback(fname, context, orig_to_temp):
             """Callback for bcbio.docker.remap.walk_files."""
-            new_fname = remap.remap_fname(fname, context, orig_to_temp)
+            new_fname = docker_remap.remap_fname(fname, context, orig_to_temp)
             if os.path.isfile(fname):
                 if self.is_required_resource(context, parallel):
                     logger.info("YES: %s: %s" % (context, fname))
@@ -112,7 +112,7 @@ class ReconstituteShared(base.Reconstitute):
         utils.safe_makedir(new_workdir)
 
         remap_dict = self._remap_dict(workdir, new_workdir, args)
-        new_args = remap.walk_files(args, callback, remap_dict)
+        new_args = docker_remap.walk_files(args, callback, remap_dict)
         return (new_workdir, remap_dict, new_args)
 
     def _shared_finalizer(self, workdir, remap_dict, parallel):
@@ -129,7 +129,8 @@ class ReconstituteShared(base.Reconstitute):
 
             if output:
                 callback = self._remap_copy_file(parallel)
-                new_output = remap.walk_files(output, callback, new_remap_dict)
+                new_output = docker_remap.walk_files(output, callback,
+                                                     new_remap_dict)
 
             if os.path.exists(workdir):
                 shutil.rmtree(workdir)

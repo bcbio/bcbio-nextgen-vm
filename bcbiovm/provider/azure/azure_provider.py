@@ -1,74 +1,92 @@
 """Azure Cloud Provider for bcbiovm."""
+# pylint: disable=no-self-use
 
+from bcbiovm.common import constant
+from bcbiovm.common import exception
 from bcbiovm.common import objects
 from bcbiovm.provider import base
 from bcbiovm.provider.azure import bootstrap as azure_bootstrap
-# pylint: disable=no-self-use
+from bcbiovm.provider.azure import storage as azure_storage
 
 
 class AzureProvider(base.BaseCloudProvider):
 
-    """Azure Provider for bcbiovm."""
+    """Azure Provider for bcbiovm.
+
+    :ivar flavors: A dictionary with all the flavors available for
+                   the current cloud provider.
+
+    Example:
+    ::
+        flavors = {
+            "m3.large": Flavor(cpus=2, memory=3500),
+            "m3.xlarge": Flavor(cpus=4, memory=3500),
+            "m3.2xlarge": Flavor(cpus=8, memory=3500),
+        }
+    """
+
+    # More information regarding Azure instances types can be found on the
+    # following link: https://goo.gl/mEjiC5
+    flavors = {
+        "ExtraSmall": objects.Flavor(cpus=1, memory=768),
+        "Small": objects.Flavor(cpus=1, memory=1792),
+        "Medium": objects.Flavor(cpus=2, memory=3584),
+        "Large": objects.Flavor(cpus=4, memory=7168),
+        "ExtraLarge": objects.Flavor(cpus=8, memory=14336),
+
+        # General Purpose: For websites, small-to-medium databases,
+        #                  and other everyday applications.
+        "A0": objects.Flavor(cpus=1, memory=768),        # 0.75 GB
+        "A1": objects.Flavor(cpus=1, memory=1792),       # 1.75 GB
+        "A2": objects.Flavor(cpus=2, memory=3584),       # 3.50 GB
+        "A3": objects.Flavor(cpus=4, memory=7168),       # 7.00 GB
+        "A4": objects.Flavor(cpus=8, memory=14336),      # 14.00 GB
+
+        # Memory Intensive: For large databases, SharePoint server farms,
+        #                   and high-throughput applications.
+        "A5": objects.Flavor(cpus=2, memory=14336),      # 14.00 GB
+        "A6": objects.Flavor(cpus=4, memory=28672),      # 28.00 GB
+        "A7": objects.Flavor(cpus=8, memory=57344),      # 56.00 GB
+
+        # Network optimized: Ideal for Message Passing Interface (MPI)
+        #                    applications, high-performance clusters,
+        #                    modeling and simulations and other compute
+        #                    or network intensive scenarios.
+        "A8": objects.Flavor(cpus=8, memory=57344),      # 56.00 GB
+        "A9": objects.Flavor(cpus=16, memory=114688),    # 112.00 GB
+
+        # Compute Intensive: For high-performance clusters, modeling
+        #                    and simulations, video encoding, and other
+        #                    compute or network intensive scenarios.
+        "A10": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
+        "A11": objects.Flavor(cpus=16, memory=114688),   # 112.00 GB
+
+        # Optimized compute: 60% faster CPUs, more memory, and local SSD
+        # General Purpose: For websites, small-to-medium databases,
+        #                  and other everyday applications.
+        "D1": objects.Flavor(cpus=1, memory=3584),       # 3.50 GB
+        "D2": objects.Flavor(cpus=2, memory=7168),       # 7.00 GB
+        "D3": objects.Flavor(cpus=4, memory=14336),      # 14.00 GB
+        "D4": objects.Flavor(cpus=8, memory=28672),      # 28.00 GB
+
+        # Memory Intensive: For large databases, SharePoint server farms,
+        #                   and high-throughput applications.
+        "D11": objects.Flavor(cpus=2, memory=14336),     # 14.00 GB
+        "D12": objects.Flavor(cpus=4, memory=28672),     # 28.00 GB
+        "D13": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
+        "D14": objects.Flavor(cpus=16, memory=114688),   # 112.00 GB
+    }
+    _STORAGE = {"AzureBlob": azure_storage.AzureBlob}
 
     def __init__(self):
-        super(AzureProvider, self).__init__()
+        super(AzureProvider, self).__init__(name=constant.PROVIDER.AZURE)
 
-    def _set_flavors(self):
-        """Returns a dictionary with all the flavors available for the current
-        cloud provider.
+    def get_storage_manager(self, name="AzureBlob"):
+        """Return a cloud provider specific storage manager.
+
+        :param name: The name of the required storage manager.
         """
-        # More information regarding Azure instances types can be found on the
-        # following link: https://goo.gl/mEjiC5
-
-        return {
-            "ExtraSmall": objects.Flavor(cpus=1, memory=768),
-            "Small": objects.Flavor(cpus=1, memory=1792),
-            "Medium": objects.Flavor(cpus=2, memory=3584),
-            "Large": objects.Flavor(cpus=4, memory=7168),
-            "ExtraLarge": objects.Flavor(cpus=8, memory=14336),
-
-            # General Purpose: For websites, small-to-medium databases,
-            #                  and other everyday applications.
-            "A0": objects.Flavor(cpus=1, memory=768),       # 0.75 GB
-            "A1": objects.Flavor(cpus=1, memory=1792),      # 1.75 GB
-            "A2": objects.Flavor(cpus=2, memory=3584),      # 3.50 GB
-            "A3": objects.Flavor(cpus=4, memory=7168),      # 7.00 GB
-            "A4": objects.Flavor(cpus=8, memory=14336),     # 14.00 GB
-
-            # Memory Intensive: For large databases, SharePoint server farms,
-            #                   and high-throughput applications.
-            "A5": objects.Flavor(cpus=2, memory=14336),     # 14.00 GB
-            "A6": objects.Flavor(cpus=4, memory=28672),     # 28.00 GB
-            "A7": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
-
-            # Network optimized: Ideal for Message Passing Interface (MPI)
-            #                    applications, high-performance clusters,
-            #                    modeling and simulations and other compute
-            #                    or network intensive scenarios.
-            "A8": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
-            "A9": objects.Flavor(cpus=16, memory=114688),   # 112.00 GB
-
-            # Compute Intensive: For high-performance clusters, modeling
-            #                    and simulations, video encoding, and other
-            #                    compute or network intensive scenarios.
-            "A10": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
-            "A11": objects.Flavor(cpus=16, memory=114688),   # 112.00 GB
-
-            # Optimized compute: 60% faster CPUs, more memory, and local SSD
-            # General Purpose: For websites, small-to-medium databases,
-            #                  and other everyday applications.
-            "D1": objects.Flavor(cpus=1, memory=3584),      # 3.50 GB
-            "D2": objects.Flavor(cpus=2, memory=7168),      # 7.00 GB
-            "D3": objects.Flavor(cpus=4, memory=14336),     # 14.00 GB
-            "D4": objects.Flavor(cpus=8, memory=28672),     # 28.00 GB
-
-            # Memory Intensive: For large databases, SharePoint server farms,
-            #                   and high-throughput applications.
-            "D11": objects.Flavor(cpus=2, memory=14336),     # 14.00 GB
-            "D12": objects.Flavor(cpus=4, memory=28672),     # 28.00 GB
-            "D13": objects.Flavor(cpus=8, memory=57344),     # 56.00 GB
-            "D14": objects.Flavor(cpus=16, memory=114688),   # 112.00 GB
-        }
+        return self._STORAGE.get(name)()
 
     def information(self, config, cluster):
         """
@@ -80,7 +98,8 @@ class AzureProvider(base.BaseCloudProvider):
         :config:          elasticluster config file
         :cluster:         cluster name
         """
-        pass
+        raise exception.NotSupported(feature="Method information",
+                                     context="Azure provider")
 
     def colect_data(self, config, cluster, rawdir):
         """Collect from the each instances the files which contains
@@ -100,7 +119,8 @@ class AzureProvider(base.BaseCloudProvider):
             from bcbio runs. The statistics will contain information regarding
             CPU, memory, network, disk I/O usage.
         """
-        pass
+        raise exception.NotSupported(feature="Method collect_data",
+                                     context="Azure provider")
 
     def resource_usage(self, bcbio_log, rawdir):
         """Generate system statistics from bcbio runs.
@@ -117,7 +137,8 @@ class AzureProvider(base.BaseCloudProvider):
                  hardware configuration
         :type return: tuple
         """
-        pass
+        raise exception.NotSupported(feature="Method resource_usage",
+                                     context="Azure provider")
 
     def bootstrap(self, config, cluster, reboot):
         """Install or update the bcbio-nextgen code and the tools
@@ -139,3 +160,15 @@ class AzureProvider(base.BaseCloudProvider):
                 break
 
         return result
+
+    def upload_biodata(self, genome, target, source):
+        """Upload biodata for a specific genome build and target to a storage
+        manager.
+
+        :param genome: Genome which should be uploaded.
+        :param target: The pice from the genome that should be uploaded.
+        :param source: A list of directories which contain the information
+                       that should be uploaded.
+        """
+        raise exception.NotSupported(feature="Upload biodata",
+                                     context="Azure provider")

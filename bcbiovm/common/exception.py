@@ -45,6 +45,13 @@ class NotFound(BCBioException):
     template = "The %(object)r was not found in %(container)s."
 
 
+class NotSupported(BCBioException):
+
+    """The functionality required is not available in the current context."""
+
+    template = "%(feature)s is not available in %(context)s."
+
+
 class InvalidConfig(BCBioException):
 
     """Not available or invalid configuration."""

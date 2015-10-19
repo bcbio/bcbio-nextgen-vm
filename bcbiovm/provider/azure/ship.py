@@ -8,9 +8,9 @@ from bcbio import utils
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import objects
-from bcbiovm.common import objectstore
-from bcbiovm.docker import remap
+from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import base
+from bcbiovm.provider.azure import storage as azure_storage
 
 BLOB_NAME = "{folder}/{filename}"
 BLOB_FILE = ("https://{storage}.blob.core.windows.net/"
@@ -49,7 +49,7 @@ class BlobPack(base.Pack):
 
     def __init__(self):
         super(BlobPack, self).__ini__()
-        self._storage = objectstore.AzureBlob()
+        self._storage = azure_storage.AzureBlob()
 
     def _upload_if_not_exists(self, account, container, folder, path):
         """Upload the received file if not exists.
@@ -120,8 +120,8 @@ class BlobPack(base.Pack):
         :param config: an instances of :class objects.ShippingConf:
         """
         directories = self._map_directories(args, shipping_config(config))
-        files = remap.walk_files(args, self._remap_and_ship,
-                                 directories, pass_dirs=True)
+        files = docker_remap.walk_files(args, self._remap_and_ship,
+                                        directories, pass_dirs=True)
         return self._remove_empty(files)
 
 
@@ -137,7 +137,7 @@ class ReconstituteBlob(base.Reconstitute):
 
     def __init__(self):
         super(ReconstituteBlob, self).__init__()
-        self._storage = objectstore.AzureBlob()
+        self._storage = azure_storage.AzureBlob()
 
     def _download(self, source, destination):
         """Download file from Azure Blob Storage Service."""
@@ -176,7 +176,8 @@ class ReconstituteBlob(base.Reconstitute):
 
             return regexp.sub(cur_dir, orig_fname)
 
-        new_args = remap.walk_files(args, _callback, {suffix: local_dir})
+        new_args = docker_remap.walk_files(args, _callback,
+                                           {suffix: local_dir})
         return (local_dir, new_args)
 
     def prepare_workdir(self, pack, parallel, args):
