@@ -16,8 +16,8 @@ class EditConfig(base.Command):
 
     """Edit cluster configuration."""
 
-    def __init__(self, parent, parser, name=None):
-        super(EditConfig, self).__init__(parent, parser, name)
+    def __init__(self, parent, parser):
+        super(EditConfig, self).__init__(parent, parser)
         self._raw_parser = six.moves.configparser.RawConfigParser()
         self._frontend_section = None
         self._cluster_section = None

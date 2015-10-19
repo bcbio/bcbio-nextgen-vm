@@ -33,8 +33,8 @@ class ManagementCertificate(base.Command):
 
     """Generate a management certificate."""
 
-    def __init__(self, parent, parser, name=None):
-        super(ManagementCertificate, self).__init__(parent, parser, name)
+    def __init__(self, parent, parser):
+        super(ManagementCertificate, self).__init__(parent, parser)
         self._ssh_path = os.path.join(os.path.expanduser("~"), ".ssh")
 
     @property
@@ -111,8 +111,8 @@ class PrivateKey(base.Command):
     certificate.
     """
 
-    def __init__(self, parent, parser, name=None):
-        super(PrivateKey, self).__init__(parent, parser, name)
+    def __init__(self, parent, parser):
+        super(PrivateKey, self).__init__(parent, parser)
         self._ssh_path = os.path.join(os.path.expanduser("~"), ".ssh")
 
     @property

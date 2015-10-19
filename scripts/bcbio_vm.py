@@ -21,7 +21,7 @@ class BCBioClient(base.Client):
 
     """bcbio-nextgen-vm command line application."""
 
-    commands = [
+    items = [
         (factory.get('docker', 'Run'), "commands"),
         (factory.get('docker', 'Install'), "commands"),
         (factory.get('docker', 'Upgrade'), "commands"),
@@ -55,7 +55,7 @@ class BCBioClient(base.Client):
 
         commands = self._parser.add_subparsers(
             title="[commands]", dest="provider")
-        self._register_parser(commands, "commands")
+        self._register_parser(name="commands", item=commands)
 
     def epilogue(self):
         """Executed once before the command running."""

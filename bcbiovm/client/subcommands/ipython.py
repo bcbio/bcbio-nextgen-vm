@@ -8,26 +8,18 @@ from bcbio.pipeline import main
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.docker import mounts as docker_mounts
-from bcbiovm.docker import run as docker_run
+from bcbiovm.container.docker import common as docker_common
+from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
-
-# Because the tool namespace is injected in the parent
-# command, pylint thinks that the arguments from the tool's
-# namespace did not exist.
-# In order to avoid `no-memeber` error we will disable this
-# error.
-
-# pylint: disable=no-member
 
 
 class IPython(base.Command):
 
     """Run on a cluster using IPython parallel."""
 
-    def __init__(self, *args, **kwargs):
-        super(IPython, self).__init__(*args, **kwargs)
+    def __init__(self, parent, parser):
+        super(IPython, self).__init__(parent, parser)
         self._need_prologue = True
         self._need_datadir = True
 
@@ -80,16 +72,17 @@ class IPython(base.Command):
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not run IPython parallel analysis.")
+        self.defaults.check_datadir("Could not run IPython parallel "
+                                    "analysis.")
 
     def work(self):
         """Run the command with the received information."""
         work_dir = os.getcwd()
-        parallel = clargs.to_parallel(self.args, "bcbiovm.docker")
+        parallel = clargs.to_parallel(self.args, "bcbiovm.container.docker")
         parallel["wrapper"] = "runfn"
 
         with open(self.args.sample_config) as in_handle:
@@ -104,7 +97,7 @@ class IPython(base.Command):
             yaml.safe_dump(ready_config, out_handle, default_flow_style=False,
                            allow_unicode=False)
 
-        systemconfig = docker_run.local_system_config(
+        systemconfig = docker_common.local_system_config(
             self.args.systemconfig, self.args.datadir, work_dir)
         ship_conf = provider_factory.get_ship_config("shared")
 
@@ -199,11 +192,11 @@ class IPythonPrep(base.Command):
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not prep batch scripts.")
+        self.defaults.check_datadir("Could not prep batch scripts.")
 
     def work(self):
         """Run the command with the received information."""

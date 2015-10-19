@@ -400,7 +400,8 @@ def predict_unit(unit):
     else:
         if unit == 'k':
             # Treat `k` as an alias for `K`
-            symbol_set = constant.SYMBOLS['customary_symbols']
+            set_name = "customary_symbols"
+            symbol_set = constant.SYMBOLS["customary_symbols"]
             unit = unit.upper()
         else:
             raise ValueError("Invalid unit name %(unit)s", {"unit": unit})
@@ -418,7 +419,7 @@ def predict_size(size, convert="K"):
     initial_size = size.strip()
     numerical = ""
     while (initial_size and initial_size[0:1].isdigit() or
-            initial_size[0:1] == '.'):
+           initial_size[0:1] == '.'):
         numerical += initial_size[0]
         initial_size = initial_size[1:]
     numerical = float(numerical)
@@ -445,6 +446,20 @@ def compress(source, destination=None, compression="gz"):
 
     with contextlib.closing(tarfile.open(destination, open_mode)) as archive:
         for path in source:
-            archive.add(source, arcname=os.path.basename(source))
+            archive.add(path, arcname=os.path.basename(path))
 
     return destination
+
+
+def upgrade_bcbio_vm():
+    """Upgrade bcbio-nextgen-vm wrapper code."""
+    executable = os.path.dirname(os.path.realpath(sys.executable))
+    conda_bin = os.path.join(executable, "conda")
+    if not os.path.exists(conda_bin):
+        return False
+
+    execute([conda_bin, "install", "--yes",
+             "-c", global_config.conda["channel"],
+             global_config.conda["package"]], check_exit_code=0)
+
+    return True

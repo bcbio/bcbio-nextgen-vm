@@ -1,16 +1,17 @@
 """Tools and utilities commands."""
 
 from bcbiovm.client import base
-from bcbiovm.common import objectstore
+from bcbiovm.provider.aws import storage as aws_storage
+from bcbiovm.provider.azure import storage as azure_storage
 
 
 class _S3Upload(base.Command):
 
     """Upload file to Amazon Simple Storage Service (Amazon S3)."""
 
-    def __init__(self, *args, **kwargs):
-        super(_S3Upload, self).__init__(*args, **kwargs)
-        self._storage = objectstore.AmazonS3()
+    def __init__(self, parent, parser):
+        super(_S3Upload, self).__init__(parent, parser)
+        self._storage = aws_storage.AmazonS3()
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -39,9 +40,9 @@ class _BlobUpload(base.Command):
 
     """Upload file to Azure Blob storage service."""
 
-    def __init__(self, *args, **kwargs):
-        super(_BlobUpload, self).__init__(*args, **kwargs)
-        self._storage = objectstore.AzureBlob
+    def __init__(self, parent, parser):
+        super(_BlobUpload, self).__init__(parent, parser)
+        self._storage = azure_storage.AzureBlob
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -73,7 +74,7 @@ class _BlobUpload(base.Command):
                                     context=context)
 
 
-class Upload(base.CommandContainer):
+class Upload(base.Container):
 
     """Upload file to a storage manager."""
 

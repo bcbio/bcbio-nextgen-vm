@@ -39,10 +39,12 @@ class BaseContainer(object):
         self._parsers = {}
         self._containers = []
 
-        # Setup the current job
+    def _bind_items(self):
+        """Bind the received items to the current container."""
+        # Setup the current container
         self.setup()
 
-        # Bind all the received jobs to the current job
+        # Bind all the received items to the current container
         for container, metadata in self.items or ():
             if not self.check_container(container):
                 LOG.error("The container %(container)r is not recognized.",
@@ -64,7 +66,7 @@ class BaseContainer(object):
         try:
             return self._parsers[name]
         except KeyError:
-            raise ValueError("Invalid item name %(name)s",
+            raise ValueError("Invalid item name %(name)s" %
                              {"name": name})
 
     def task_done(self, result):
@@ -140,6 +142,8 @@ class BaseContainer(object):
 
 class Command(BaseContainer):
 
+    """Contract class for all the commands."""
+
     def __init__(self, parent, parser):
         super(Command, self).__init__()
         self._args = None
@@ -147,12 +151,28 @@ class Command(BaseContainer):
         self._parent = parent
         self._parser = parser
 
-        # Add the injector tool to this command
-        self._injector = client_tools.Injector()
-        # Set the parent value in injector
-        self._injector.parent = self
-        # Update the values from the injector blacklist
-        self._injector.blacklist = dir(self)
+        self._defaults = None
+        self._install = None
+
+        # Setup the current container and bind all the received items
+        self._bind_items()
+
+    @property
+    def install(self):
+        """Retrieve default information required for interacting
+        with container images."""
+        if self._install is None:
+            self._install = client_tools.Install(self)
+        return self._install
+
+    @property
+    def defaults(self):
+        """Save and retrieve default locations associated with a
+        bcbio-nextgen installation.
+        """
+        if self._defaults is None:
+            self._defaults = client_tools.Defaults(self)
+        return self._defaults
 
     @property
     def parent(self):
@@ -187,24 +207,11 @@ class Command(BaseContainer):
         raise ValueError("The %(attribute)s attribute is missing from the "
                          "client tree." % {"attribute": attribute})
 
-    def _discover_tools(self):
-        """Search for all the available tools."""
-        for tool_cls in dir(client_tools):
-            if not issubclass(tool_cls, client_tools.Tool):
-                continue
-
-            # Create a new instance of the received tool
-            tool = tool_cls()
-            if not tool.namespace:
-                LOG.debug("The tool %(tool)r do not expose anything.",
-                          {"tool": tool.name})
-            self._injector.inject(tool)
-
     def check_container(self, container):
         """Check if the received container is valid and can be
         used property.
         """
-        return True
+        return False
 
     def register_container(self, container, metadata):
         """Bind the received container to the current one."""
@@ -246,6 +253,9 @@ class Container(BaseContainer):
         self._parent = parent
         self._parser = parser
 
+        # Setup the current container and bind all the received items
+        self._bind_items()
+
     @property
     def parent(self):
         """Return the object that contains the current container."""
@@ -255,7 +265,7 @@ class Container(BaseContainer):
         """Check if the received container is valid and can be
         used property.
         """
-        if not isinstance(container, Container):
+        if not issubclass(container, (Container, Command)):
             return False
 
         return True
@@ -277,10 +287,28 @@ class Container(BaseContainer):
 
 class Client(Container):
 
+    """Contract class for all the command line applications.
+
+    :ivar: items: A list which contains (command, parser_name) tuples
+
+    ::
+    Example:
+    ::
+        class Example(Container):
+
+            items = [
+                (ExampleOne, "main_parser"),
+                (ExampleTwo, "main_parser),
+                (ExampleThree, "second_parser")
+            ]
+
+            # ...
+    """
+
     def __init__(self, command_line):
         super(Client, self).__init__(parent=None, parser=None)
-        self._command_line = command_line
         self._args = None
+        self._command_line = command_line
 
     @property
     def args(self):

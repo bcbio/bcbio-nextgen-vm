@@ -2,27 +2,16 @@
 from __future__ import print_function
 
 import os
-
-import yaml
-
+from bcbiovm import config as bcbio_config
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.common import exception
-from bcbiovm.common import utils
-from bcbiovm.docker import devel as docker_devel
-from bcbiovm.docker import manage as docker_manage
-from bcbiovm.docker import run as docker_run
+from bcbiovm.common import utils as common_utils
+from bcbiovm.container.docker import docker_container
+from bcbiovm.container.docker import common as docker_common
 from bcbiovm.provider import factory as provider_factory
 
-LOG = utils.get_logger(__name__)
-
-# Because the tool namespace is injected in the parent
-# command, pylint thinks that the arguments from the tool's
-# namespace did not exist.
-# In order to avoid `no-memeber` error we will disable this
-# error.
-
-# pylint: disable=no-member
+LOG = common_utils.get_logger(__name__)
 
 
 class _Action(base.Command):
@@ -34,10 +23,10 @@ class _Action(base.Command):
     _NO_ALIGNERS = ("Data not installed, no aligners provided with "
                     "`--aligners` flag")
 
-    def __init__(self, install, *args, **kwargs):
-        super(_Action, self).__init__(*args, **kwargs)
+    def __init__(self, install, parent, parser):
         self._action = "Install" if install else "Upgrade"
         self._updates = []
+        super(_Action, self).__init__(parent, parser)
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -72,6 +61,7 @@ class _Action(base.Command):
             "--image", default=None,
             help=("Docker image name to use, could point to compatible "
                   "pre-installed image."))
+
         parser.set_defaults(work=self.run)
 
     def _check_install_data(self):
@@ -100,40 +90,45 @@ class _Action(base.Command):
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         if self.args.install_data:
             # Check if the datadir exists
-            self.defaults.datadir("bcbio-nextgen not installed or upgrade.")
+            self.defaults.check_datadir("bcbio-nextgen not installed or "
+                                        "upgrade.")
 
         # Add previously saved installation defaults to command line
         # arguments.
-        self.install.defaults()
+        self.install.add_install_defaults()
 
     def work(self):
         """Run the command with the received information."""
-        mounts = self.common.prepare_system(self.args.datadir,
-                                            constant.DOCKER["biodata_dir"])
+        container = docker_container.Docker()
+        mounts = docker_common.prepare_system(self.args.datadir,
+                                              constant.DOCKER["biodata_dir"])
 
         if self.args.wrapper:
             self._updates.append("wrapper scripts")
-            self.common.upgrade_bcbio_vm()
+            if not common_utils.upgrade_bcbio_vm():
+                LOG.warning("Cannot update bcbio-nextgen-vm; "
+                            "not installed with conda")
 
         if self.args.install_tools:
             self._updates.append("bcbio-nextgen code and third party tools")
-            self.common.pull_image(constant.DOCKER)
+            container.pull_image(constant.DOCKER)
             # Ensure external galaxy configuration in sync when
             # doing tool upgrade
-            docker_manage.run_bcbio_cmd(self.args.image, mounts, ["upgrade"])
+            container.run_command(image=self.args.image, mounts=mounts,
+                                  arguments=["upgrade"], ports=None)
 
         if self.args.install_data:
             self._updates.append("biological data")
-            self.common.check_image()
-            docker_manage.run_bcbio_cmd(self.args.image, mounts,
-                                        self._get_command_line())
+            container.check_image(self.args.image)
+            container.run_command(image=self.args.image, mounts=mounts,
+                                  arguments=self._get_command_line())
 
-        self.install.save_defaults()
+        self.install.save_install_defaults()
 
     def epilogue(self):
         if self._updates:
@@ -149,16 +144,16 @@ class Install(_Action):
 
     """Install bcbio-nextgen docker container and data."""
 
-    def __init__(self, *args, **kwargs):
-        super(Install, self).__init__(install=True, *args, **kwargs)
+    def __init__(self, parent, parser):
+        super(Install, self).__init__(True, parent, parser)
 
 
 class Upgrade(_Action):
 
     """Upgrade bcbio-nextgen docker container and data."""
 
-    def __init__(self, *args, **kwargs):
-        super(Upgrade, self).__init__(install=False, *args, **kwargs)
+    def __init__(self, parent, parser):
+        super(Upgrade, self).__init__(False, parent, parser)
 
 
 class Build(base.Command):
@@ -190,15 +185,29 @@ class Build(base.Command):
                  " is done through a storage account.")
         parser.set_defaults(work=self.run)
 
+    def prologue(self):
+        """Executed once before the running of the command."""
+        self.args.context = {"account_name": self.args.account_name}
+        self.args.storage = provider_factory.get_storage(self.args.provider)()
+
+        if self.args.provider == constant.PROVIDER.AWS:
+            self.args.context["headers"] = {
+                "x-amz-storage-class": "REDUCED_REDUNDANCY",
+                "x-amz-acl": "public-read",
+            }
+        elif self.args.provider != constant.PROVIDER.AZURE:
+            raise exception.BCBioException(
+                "The provider name %(provider)r is not recognised.",
+                {"provider": self.args.provider})
+
     def work(self):
         """Run the command with the received information."""
-        return docker_devel.run_docker_build(
-            container=self.args.container,
-            build_type=self.args.buildtype,
-            run_directory=self.args.rundir,
-            provider=self.args.provider,
-            account_name=self.args.account_name,
-        )
+        container = docker_container.Docker()
+        return container.build_image(container=self.args.container,
+                                     cwd=self.args.rundir,
+                                     full=self.args.buildtype == "full",
+                                     storage=self.args.storage,
+                                     context=self.args.context)
 
 
 class BiodataUpload(base.Command):
@@ -224,33 +233,44 @@ class BiodataUpload(base.Command):
             "--aligners", help="Aligner indexes to download",
             action="append", default=[],
             choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+        parser.add_argument(
+            "-p", "--provider", default=constant.DEFAULT_PROVIDER,
+            help="The name of the cloud provider. (default=aws)")
+
         parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the arguments parsing."""
+        if not self.args.prepped:
+            return
+
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Biodata not uploaded.")
+        self.defaults.check_datadir("Biodata not uploaded.")
         # Add all the missing arguments related to docker image.
         self.install.image_defaults()
-        # Check if the docker image exists.
-        self.common.check_image()
 
     def work(self):
         """Manage preparation of biodata on a local machine, uploading
         to a storage manager in pieces."""
-        if self.args.prepped:
-            docker_devel.prepare_genomes(genomes=self.args.genomes,
-                                         aligners=self.args.aligners,
-                                         prepped=self.args.prepped)
-            return
+        container = docker_container.Docker()
 
-        mounts = self.common.prepare_system(self.args.datadir,
-                                            constant.DOCKER["biodata_dir"])
-        return docker_devel.run_biodata_upload(self.args, mounts)
+        if self.args.prepped:
+            return container.prepare_genomes(genomes=self.args.genomes,
+                                             aligners=self.args.aligners,
+                                             output=self.args.prepped)
+        else:
+            # Check if the docker image exists.
+            container.check_image(self.args.image)
+            provider = provider_factory.get(self.args.provider)()
+            return container.upload_biodata(genomes=self.args.genomes,
+                                            aligners=self.args.aligners,
+                                            image=self.args.image,
+                                            datadir=self.args.datadir,
+                                            provider=provider)
 
 
 class SystemUpdate(base.Command):
@@ -269,24 +289,27 @@ class SystemUpdate(base.Command):
         parser.add_argument(
             "memory",
             help="Target memory per core, in Mb (1000 = 1Gb)")
+
         parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not do upgrade of bcbio_system.yaml.")
+        self.defaults.check_datadir("Could not do upgrade of "
+                                    "bcbio_system.yaml.")
 
     def work(self):
         """Update bcbio_system.yaml file with a given target of cores
         and memory.
         """
-        return docker_devel.run_system_update(datadir=self.args.datadir,
-                                              cores=self.args.cores,
-                                              memory=self.args.memory)
+        container = docker_container.Docker()
+        return container.update_system(datadir=self.args.datadir,
+                                       cores=self.args.cores,
+                                       memory=self.args.memory)
 
 
 class SetupInstall(base.Command):
@@ -301,14 +324,15 @@ class SetupInstall(base.Command):
                   "the current directory"))
         parser.add_argument(
             "-i", "--image", help="Image name to write updates to",
-            default=constant.DOCKER_DEFAULT_IMAGE)
+            default=bcbio_config["docker.image"])
         parser.set_defaults(work=self.run)
 
     def work(self):
         """Install python code from a bcbio-nextgen development tree
         inside of docker.
         """
-        return docker_devel.run_setup_install(image=self.args.image)
+        container = docker_container.Docker()
+        return container.install_bcbio(image=self.args.image)
 
     def epilogue(self):
         """Executed once after the command running."""
@@ -339,22 +363,32 @@ class Run(base.Command):
         parser.add_argument(
             "-n", "--numcores", type=int, default=1,
             help="Total cores to use for processing")
+        parser.add_argument(
+            "-i", "--image", help="Image name to write updates to",
+            default=bcbio_config["docker.image"])
+
         parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not run analysis.")
+        self.defaults.check_datadir("Could not run analysis.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
-        mounts = self.common.prepare_system(self.args.datadir,
-                                            constant.DOCKER["biodata_dir"])
-        docker_run.do_analysis(self.args, constant.DOCKER, mounts)
+        container = docker_container.Docker()
+        container.run_analysis(image=self.args.image,
+                               sample=self.args.sample_config,
+                               fcdir=self.args.fcdir,
+                               config=self.args.systemconfig,
+                               datadir=self.args.datadir,
+                               cores=self.args.numcores)
 
 
 class RunFunction(base.Command):
@@ -368,20 +402,6 @@ class RunFunction(base.Command):
             help=("Run a specific bcbio-nextgen function with provided"
                   " arguments"))
         parser.add_argument(
-            "sample_config",
-            help="YAML file with details about samples to process.")
-        parser.add_argument(
-            "--fcdir",
-            help="A directory of Illumina output or fastq files to process",
-            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
-        parser.add_argument(
-            "--systemconfig",
-            help=("Global YAML configuration file specifying system details. "
-                  "Defaults to installed bcbio_system.yaml."))
-        parser.add_argument(
-            "-n", "--numcores", type=int, default=1,
-            help="Total cores to use for processing")
-        parser.add_argument(
             "fn_name",
             help="Name of the function to run")
         parser.add_argument(
@@ -390,42 +410,38 @@ class RunFunction(base.Command):
         parser.add_argument(
             "runargs",
             help="JSON/YAML file with arguments to the function")
+        parser.add_argument(
+            "--systemconfig",
+            help=("Global YAML configuration file specifying system details. "
+                  "Defaults to installed bcbio_system.yaml."))
+        parser.add_argument(
+            "-n", "--numcores", type=int, default=1,
+            help="Total cores to use for processing")
+        parser.add_argument(
+            "-i", "--image", help="Image name to write updates to",
+            default=bcbio_config["docker.image"])
+
         parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not run bcbio-nextgen function.")
+        self.defaults.check_datadir("Could not run bcbio-nextgen function.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
-        # FIXME(alexandrucoman): Taking cloud provider into consideration
-        shipping_config = provider_factory.get_ship_config("S3", raw=False)
-        ship = provider_factory.get_ship("S3")
-
-        with open(self.args.parallel) as in_handle:
-            parallel = yaml.safe_load(in_handle)
-
-        with open(self.args.runargs) as in_handle:
-            runargs = yaml.safe_load(in_handle)
-
-        cmd_args = {
-            "systemconfig": self.args.systemconfig,
-            "image": self.args.image,
-            "pack": shipping_config(parallel["pack"]),
-        }
-        out = docker_run.do_runfn(self.args.fn_name, runargs, cmd_args,
-                                  parallel, constant.DOCKER)
-        out_file = "%s-out%s" % os.path.splitext(self.args.runargs)
-        with open(out_file, "w") as out_handle:
-            yaml.safe_dump(out, out_handle, default_flow_style=False,
-                           allow_unicode=False)
-
-        ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
+        container = docker_container.Docker()
+        container.run_bcbio_function(image=self.args.image,
+                                     config=self.args.systemconfig,
+                                     parallel=self.args.parallel,
+                                     function=self.args.fn_name,
+                                     args=self.args.runargs)
 
 
 class Server(base.Command):
@@ -441,27 +457,30 @@ class Server(base.Command):
         parser.add_argument(
             "--port", default=8085,
             help="External port to connect to docker image.")
+        parser.add_argument(
+            "-i", "--image", help="Image name to write updates to",
+            default=bcbio_config["docker.image"])
+
         parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the arguments parsing."""
         # Add user configured defaults to supplied command line arguments.
-        self.defaults.add()
+        self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
         # Check if the datadir exists if it is required.
-        self.defaults.datadir("Could not run server.")
+        self.defaults.check_datadir("Could not run server.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
-        ports = ["%s:%s" % (self.args.port, constant.DOCKER["port"])]
         print("Running server on port %s. Press ctrl-c to exit." %
               self.args.port)
-        docker_manage.run_bcbio_cmd(
-            image=self.args.image, mounts=[], ports=ports,
-            bcbio_nextgen_args=["server", "--port",
-                                str(constant.DOCKER["port"])],
-        )
+
+        container = docker_container.Docker()
+        container.run_server(image=self.args.image, port=self.args.port)
 
 
 class SaveConfig(base.Command):
@@ -478,5 +497,4 @@ class SaveConfig(base.Command):
 
     def work(self):
         """Save user specific defaults to a yaml configuration file."""
-        # defaults.save is alias for tools.DockerDefaults.save_defaults
-        self.defaults.save()
+        self.defaults.save_defaults()
