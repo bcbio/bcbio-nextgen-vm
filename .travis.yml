@@ -18,13 +18,14 @@ before_install:
     - export NUMPY=19
     - conda update --yes conda
     - conda install --yes --quiet conda-build jinja2 toolz anaconda-client
-    - conda install --yes --quiet pep8 pylint
     - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
     - bash build/build.sh
     - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm --numpy "$NUMPY")
+    - source activate _test
+    - conda install --yes --quiet pep8 pylint
 
 install:
-  - conda install --yes "$PACKAGE"
+  - conda install --yes --quiet "$PACKAGE"
 
 script:
   - pylint --rcfile=pylintrc bcbiovm
