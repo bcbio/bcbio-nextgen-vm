@@ -11,7 +11,14 @@ from bcbio.graph import graph
 from bcbio.workflow import template
 
 from bcbiovm.client import base
-from bcbiovm.client.subcommands import factory as command_factory
+from bcbiovm.client.subcommands import aws as aws_subcommand
+from bcbiovm.client.subcommands import azure as azure_subcommand
+from bcbiovm.client.subcommands import cluster as cluster_subcommand
+from bcbiovm.client.subcommands import config as config_subcommand
+from bcbiovm.client.subcommands import docker as docker_subcommand
+from bcbiovm.client.subcommands import icel as icel_subcommand
+from bcbiovm.client.subcommands import tools as tools_subcommand
+
 from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.provider import factory as cloud_factory
@@ -58,9 +65,6 @@ class Graph(base.Command):
     Generate system graphs (CPU/memory/network/disk I/O consumption)
     from bcbio runs.
     """
-
-    groups = None
-    sub_commands = None
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -152,8 +156,8 @@ class ConfigAWS(_Config):
     ways to edit in place.
     """
 
-    sub_commands = [
-        (command_factory.get("config", "EditAWS"), "actions"),
+    items = [
+        (config_subcommand.EditAWS, "actions"),
     ]
 
 
@@ -163,8 +167,8 @@ class ConfigAzure(_Config):
     ways to edit in place.
     """
 
-    sub_commands = [
-        (command_factory.get("config", "EditAzure"), "actions"),
+    items = [
+        (config_subcommand.EditAzure, "actions"),
     ]
 
 
@@ -173,10 +177,10 @@ class DockerDevel(base.Container):
     """Utilities to help with develping using bcbion inside of docker."""
 
     items = [
-        (command_factory.get("docker", "Build"), "actions"),
-        (command_factory.get("docker", "BiodataUpload"), "actions"),
-        (command_factory.get("docker", "SetupInstall"), "actions"),
-        (command_factory.get("docker", "SystemUpdate"), "actions")
+        (docker_subcommand.Build, "actions"),
+        (docker_subcommand.BiodataUpload, "actions"),
+        (docker_subcommand.SetupInstall, "actions"),
+        (docker_subcommand.SystemUpdate, "actions")
     ]
 
     def setup(self):
@@ -194,12 +198,12 @@ class ElastiCluster(base.Container):
     """Run and manage a cluster using elasticluster."""
 
     items = [
-        (command_factory.get("cluster", "Bootstrap"), "actions"),
-        (command_factory.get("cluster", "Start"), "actions"),
-        (command_factory.get("cluster", "Stop"), "actions"),
-        (command_factory.get("cluster", "Setup"), "actions"),
-        (command_factory.get("cluster", "SSHConnection"), "actions"),
-        (command_factory.get("cluster", "Command"), "actions"),
+        (cluster_subcommand.Bootstrap, "actions"),
+        (cluster_subcommand.Start, "actions"),
+        (cluster_subcommand.Stop, "actions"),
+        (cluster_subcommand.Setup, "actions"),
+        (cluster_subcommand.SSHConnection, "actions"),
+        (cluster_subcommand.Command, "actions"),
     ]
 
     def setup(self):
@@ -215,11 +219,11 @@ class ICELCommand(base.Container):
     """Create scratch filesystem using Intel Cloud Edition for Lustre."""
 
     items = [
-        (command_factory.get("icel", "Create"), "actions"),
-        (command_factory.get("icel", "Specification"), "actions"),
-        (command_factory.get("icel", "Mount"), "actions"),
-        (command_factory.get("icel", "Unmount"), "actions"),
-        (command_factory.get("icel", "Stop"), "actions"),
+        (icel_subcommand.Create, "actions"),
+        (icel_subcommand.Specification, "actions"),
+        (icel_subcommand.Mount, "actions"),
+        (icel_subcommand.Unmount, "actions"),
+        (icel_subcommand.Stop, "actions"),
     ]
 
     def setup(self):
@@ -240,11 +244,11 @@ class AWSProvider(base.Container):
         (ElastiCluster, "actions"),
         (ConfigAWS, "actions"),
         (Info, "actions"),
-        (command_factory.get("aws", "IAMBootstrap"), "actions"),
-        (command_factory.get("aws", "VPCBoostrap"), "actions"),
+        (aws_subcommand.IAMBootstrap, "actions"),
+        (aws_subcommand.VPCBoostrap, "actions"),
         (ICELCommand, "actions"),
         (Graph, "actions"),
-        (command_factory.get("aws", "ClusterK"), "actions")
+        (aws_subcommand.ClusterK, "actions")
     ]
 
     def setup(self):
@@ -256,6 +260,23 @@ class AWSProvider(base.Container):
         self._register_parser("actions", actions)
 
 
+class PrepareEnvironment(base.Container):
+
+    items = [
+        (azure_subcommand.ManagementCertificate, "actions"),
+        (azure_subcommand.PrivateKey, "actions"),
+        (azure_subcommand.ECConfig, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "prepare",
+            help=("Utilities to help with environment configuration."))
+        actions = parser.add_subparsers(title="[devel commands]")
+        self._register_parser("actions", actions)
+
+
 class AzureProvider(base.Container):
 
     """Automate resources for running bcbio on Azure."""
@@ -264,7 +285,7 @@ class AzureProvider(base.Container):
         (ConfigAzure, "actions"),
         (Info, "actions"),
         (Graph, "actions"),
-        (command_factory.get("azure", "PrepareEnvironment"), "actions")
+        (PrepareEnvironment, "actions")
     ]
 
     def setup(self):
@@ -281,7 +302,8 @@ class Tools(base.Container):
     """Tools and utilities."""
 
     items = [
-        (command_factory.get("docker", "SystemUpdate"), "tools")
+        (tools_subcommand.S3Upload, "storage_manager"),
+        (tools_subcommand.BlobUpload, "storage_manager"),
     ]
 
     def setup(self):
@@ -289,4 +311,9 @@ class Tools(base.Container):
         parser = self._parser.add_parser(
             "tools", help="Tools and utilities.")
         tools = parser.add_subparsers(title="[available tools]")
+        upload = tools.add_parser(
+            "upload", help="Upload file to a storage manager.")
+        storage_manager = upload.add_subparsers(title="[storage manager]")
+
         self._register_parser("tools", tools)
+        self._register_parser("storage_manager", storage_manager)

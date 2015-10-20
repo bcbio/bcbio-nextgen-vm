@@ -37,11 +37,6 @@ class ManagementCertificate(base.Command):
         super(ManagementCertificate, self).__init__(parent, parser)
         self._ssh_path = os.path.join(os.path.expanduser("~"), ".ssh")
 
-    @property
-    def ssh_path(self):
-        """Return the SSH keys path."""
-        return self._ssh_path
-
     def _get_subject(self):
         """Return the information regarding client in subject format."""
         subject = []
@@ -115,11 +110,6 @@ class PrivateKey(base.Command):
         super(PrivateKey, self).__init__(parent, parser)
         self._ssh_path = os.path.join(os.path.expanduser("~"), ".ssh")
 
-    @property
-    def ssh_path(self):
-        """Return the SSH keys path."""
-        return self._ssh_path
-
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
         parser = self._parser.add_parser(
@@ -140,20 +130,3 @@ class PrivateKey(base.Command):
                       cwd=self._ssh_path)
         utils.execute(["chmod", 600, "managementCert.key"],
                       cwd=self._ssh_path)
-
-
-class PrepareEnvironment(base.Container):
-
-    sub_commands = [
-        (ManagementCertificate, "actions"),
-        (PrivateKey, "actions"),
-        (ECConfig, "actions"),
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "prepare",
-            help=("Utilities to help with environment configuration."))
-        actions = parser.add_subparsers(title="[devel commands]")
-        self._register_parser("actions", actions)

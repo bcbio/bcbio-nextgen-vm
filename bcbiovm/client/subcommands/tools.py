@@ -5,12 +5,12 @@ from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.azure import storage as azure_storage
 
 
-class _S3Upload(base.Command):
+class S3Upload(base.Command):
 
     """Upload file to Amazon Simple Storage Service (Amazon S3)."""
 
     def __init__(self, parent, parser):
-        super(_S3Upload, self).__init__(parent, parser)
+        super(S3Upload, self).__init__(parent, parser)
         self._storage = aws_storage.AmazonS3()
 
     def setup(self):
@@ -36,12 +36,12 @@ class _S3Upload(base.Command):
                                     container=self.args.bucket)
 
 
-class _BlobUpload(base.Command):
+class BlobUpload(base.Command):
 
     """Upload file to Azure Blob storage service."""
 
     def __init__(self, parent, parser):
-        super(_BlobUpload, self).__init__(parent, parser)
+        super(BlobUpload, self).__init__(parent, parser)
         self._storage = azure_storage.AzureBlob
 
     def setup(self):
@@ -72,21 +72,3 @@ class _BlobUpload(base.Command):
                                     container=self.args.container,
                                     filename=self.args.blob,
                                     context=context)
-
-
-class Upload(base.Container):
-
-    """Upload file to a storage manager."""
-
-    sub_commands = [
-        (_S3Upload, "storage_manager"),
-        (_BlobUpload, "storage_manager"),
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "upload", help="Upload file to a storage manager.")
-
-        storage_manager = parser.add_subparsers(title="[storage manager]")
-        self._register_parser("storage_manager", storage_manager)

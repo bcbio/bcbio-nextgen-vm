@@ -13,7 +13,8 @@ import sys
 from bcbiovm import config
 from bcbiovm.client import base
 from bcbiovm.client import commands as client_commands
-from bcbiovm.client.subcommands import factory
+from bcbiovm.client.subcommands import docker as docker_subcommand
+from bcbiovm.client.subcommands import ipython as ipython_subcommand
 from bcbiovm.common import cluster
 
 
@@ -22,17 +23,17 @@ class BCBioClient(base.Client):
     """bcbio-nextgen-vm command line application."""
 
     items = [
-        (factory.get('docker', 'Run'), "commands"),
-        (factory.get('docker', 'Install'), "commands"),
-        (factory.get('docker', 'Upgrade'), "commands"),
-        (factory.get('ipython', 'IPython'), "commands"),
-        (factory.get('ipython', 'IPythonPrep'), "commands"),
+        (docker_subcommand.Run, "commands"),
+        (docker_subcommand.Install, "commands"),
+        (docker_subcommand.Upgrade, "commands"),
+        (ipython_subcommand.IPython, "commands"),
+        (ipython_subcommand.IPythonPrep, "commands"),
         (client_commands.Template, "commands"),
         (client_commands.AWSProvider, "commands"),
         (client_commands.AzureProvider, "commands"),
-        (factory.get('docker', 'RunFunction'), "commands"),
+        (docker_subcommand.RunFunction, "commands"),
         (client_commands.DockerDevel, "commands"),
-        (factory.get('docker', 'SaveConfig'), "commands"),
+        (docker_subcommand.SaveConfig, "commands"),
     ]
 
     def setup(self):
