@@ -18,7 +18,6 @@ before_install:
     - export NUMPY=19
     - conda update --yes conda
     - conda install --yes --quiet conda-build jinja2 toolz anaconda-client
-    - conda install --yes --quiet pep8 pylint
     - git clone https://github.com/alexandrucoman/bcbio-dev-conda build
     - if [ "$TRAVIS_BRANCH" == "develop" ]; then
         python build/build.py --bcbio-repo "$BCBIO_REPO" --upload --token "$BINSTAR_TOKEN" --numpy "$NUMPY";
@@ -26,9 +25,11 @@ before_install:
         python build/build.py --bcbio-repo "$BCBIO_REPO" --bcbio-branch "$TRAVIS_BRANCH" --numpy "$NUMPY";
       fi
     - export PACKAGE=$(conda build --output build/bcbio-nextgen-vm --numpy "$NUMPY")
+    - source activate _test
+    - conda install --yes --quiet pep8 pylint
 
 install:
-  - conda install --yes "$PACKAGE"
+  - conda install --yes --quiet "$PACKAGE"
 
 script:
   - pylint --rcfile=pylintrc bcbiovm
