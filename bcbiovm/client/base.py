@@ -31,6 +31,8 @@ class BaseContainer(object):
                      (ExampleThree, metadata)]
             # ...
     """
+    _FLAG_EXCEPTION = "BCBioException"
+    _FLAG_Interrupt = "KeyboardInterrupt"
 
     items = None
 
@@ -69,24 +71,23 @@ class BaseContainer(object):
             raise ValueError("Invalid item name %(name)s" %
                              {"name": name})
 
+    @abc.abstractmethod
     def task_done(self, result):
         """What to execute after successfully finished processing a task."""
-        LOG.info("Execution successful with: %(result)s", result)
+        pass
 
+    @abc.abstractmethod
     def task_fail(self, exc):
         """What to do when the program fails processing a task."""
-        # This should be the default behavior. If the error should
-        # be silenced, then it must be done from the derrived class.
-        LOG.exception("Failed to run %(name)r: %(reason)s",
-                      {"name": self.name, "reason": exc})
-        raise exc
+        pass
 
+    @abc.abstractmethod
     def interrupted(self):
         """What to execute when keyboard interrupts arrive."""
-        LOG.warning("Interrupted by the user.")
+        pass
 
     def prologue(self):
-        """Executed once before the arguments parsing."""
+        """Executed once before the command running."""
         pass
 
     def epilogue(self):
@@ -125,10 +126,11 @@ class BaseContainer(object):
     def run(self):
         """Run the command."""
         result = None
-        self.prologue()
 
         try:
+            self.prologue()
             result = self.work()
+            self.epilogue()
         except KeyboardInterrupt:
             self.interrupted()
         except exception.BCBioException as exc:
@@ -136,7 +138,6 @@ class BaseContainer(object):
         else:
             self.task_done(result)
 
-        self.epilogue()
         return result
 
 
@@ -206,6 +207,23 @@ class Command(BaseContainer):
 
         raise ValueError("The %(attribute)s attribute is missing from the "
                          "client tree." % {"attribute": attribute})
+
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        LOG.info("Execution of command %(name)s ends with success. "
+                 "(%(result)s)", {"name": self.name, "result": result})
+
+    def task_fail(self, exc):
+        """What to do when the program fails processing a task."""
+        LOG.exception("Failed to run %(name)r: %(reason)s",
+                      {"name": self.name, "reason": exc})
+        raise exc
+
+    def interrupted(self):
+        """What to execute when keyboard interrupts arrive."""
+        LOG.warning("Command %(name)s interrupted by the user.",
+                    {"name": self.name})
+        raise KeyboardInterrupt()
 
     def check_container(self, container):
         """Check if the received container is valid and can be
@@ -279,6 +297,18 @@ class Container(BaseContainer):
         """Override this with your desired procedures."""
         pass
 
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        pass
+
+    def task_fail(self, exc):
+        """What to do when the program fails processing a task."""
+        pass
+
+    def interrupted(self):
+        """What to execute when keyboard interrupts arrive."""
+        pass
+
     @abc.abstractmethod
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -320,6 +350,19 @@ class Client(Container):
         """Command line provided to parser."""
         return self._command_line
 
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        pass
+
+    def task_fail(self, exc):
+        """What to do when the program fails processing a task."""
+        if not isinstance(exc, exception.BCBioException):
+            LOG.exception(exc)
+
+    def interrupted(self):
+        """What to execute when keyboard interrupts arrive."""
+        pass
+
     @abc.abstractmethod
     def setup(self):
         """Extend the parser configuration in order to expose all
@@ -339,9 +382,16 @@ class Client(Container):
         """
         pass
 
+    def prologue(self):
+        """Executed once before the command running."""
+        self._args = self._parser.parse_args(self.command_line)
+
     def work(self):
         """Parse the command line."""
-        self._args = self._parser.parse_args(self.command_line)
+        if not self._args:
+            LOG.warning("Command line parsing failed.")
+            return
+
         work_function = getattr(self._args, "work", None)
         if not work_function:
             raise exception.NotFound(object="work", container=self._args)

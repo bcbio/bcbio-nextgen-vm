@@ -58,9 +58,9 @@ class BCBioClient(base.Client):
             title="[commands]", dest="provider")
         self._register_parser(name="commands", item=commands)
 
-    def epilogue(self):
+    def prologue(self):
         """Executed once before the command running."""
-        super(BCBioClient, self).epilogue()
+        super(BCBioClient, self).prologue()
 
         if self.args.quiet:
             # Print only the errors and exceptions
