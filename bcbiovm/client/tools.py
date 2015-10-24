@@ -5,12 +5,12 @@ import sys
 import yaml
 
 from bcbiovm import config as bconfig
+from bcbiovm import log as logging
 from bcbiovm.common import exception
-from bcbiovm.common import utils
 from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.azure import storage as azure_storage
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class Tool(object):

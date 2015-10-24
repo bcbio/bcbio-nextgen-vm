@@ -8,9 +8,10 @@ import os
 import boto
 import toolz
 
+from bcbiovm import log as logging
 from bcbiovm.common import utils
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 IAM_POLICY = """{
   "Version": "2012-10-17",
   "Statement": [

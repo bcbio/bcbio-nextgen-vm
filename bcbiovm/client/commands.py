@@ -10,6 +10,7 @@ import pylab
 from bcbio.graph import graph
 from bcbio.workflow import template
 
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.client.subcommands import aws as aws_subcommand
 from bcbiovm.client.subcommands import azure as azure_subcommand
@@ -18,13 +19,11 @@ from bcbiovm.client.subcommands import config as config_subcommand
 from bcbiovm.client.subcommands import docker as docker_subcommand
 from bcbiovm.client.subcommands import icel as icel_subcommand
 from bcbiovm.client.subcommands import tools as tools_subcommand
-
 from bcbiovm.common import constant
-from bcbiovm.common import utils
 from bcbiovm.provider import factory as cloud_factory
 
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class Info(base.Command):

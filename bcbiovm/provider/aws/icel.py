@@ -17,14 +17,14 @@ import requests
 import toolz
 from elasticluster import exceptions as ec_exc
 
-
+from bcbiovm import log as logging
 from bcbiovm.common import cluster as cluster_ops
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import utils
 from bcbiovm.provider import playbook as provider_playbook
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class ICELOps(object):

@@ -1,7 +1,13 @@
 """Run bcbio-nextgen installations inside of virtual machines
 and containers.
 """
+import os
+import sys
+import logging
+
 from bcbiovm.common import constant
+
+__all__ = ["config", "log"]
 
 
 class _NameSpace(object):
@@ -63,13 +69,14 @@ class _Config(object):
 
     """Container for global config values."""
 
-    defaults = {}
-    environment = "production"
+    def __init__(self, defaults=None, environment=None):
+        if environment is None:
+            environment = os.environ.get("BCBIO_ENV", "production")
 
-    def __init__(self):
         self._data = {}
+        self._defaults = defaults or {}
+        self._environment = constant.ENVIRONMENT.get(environment, {})
         self._namespace = {}
-        self._environment = constant.ENVIRONMENT.get(self.environment, {})
 
     def __str__(self):
         """String representation for current task."""
@@ -109,10 +116,82 @@ class _Config(object):
 
     def update(self):
         """Update fields from local storage."""
-        for configurations in (self.defaults, self._environment):
+        for configurations in (self._defaults, self._environment):
             self._data.update(configurations)
             self._update_namespace(configurations)
 
-config = _Config()
-config.defaults = constant.DEFAULTS
+
+class _Logging(object):
+
+    def __init__(self):
+        self._loggers = {}
+
+    @classmethod
+    def file_handler(cls, handler=None):
+        """Setup the file handler."""
+        if not config["log.file"]:
+            return
+        if not handler or handler.baseFilename != config["log.file"]:
+            handler = logging.FileHandler(config.log["file"])
+            formatter = logging.Formatter(config["log.format"])
+            handler.setFormatter(formatter)
+
+        handler.set_name("file_handler")
+        handler.setLevel(config["log.file_level"])
+        return handler
+
+    @classmethod
+    def cli_handler(cls, handler=None):
+        """Setup the stream handler."""
+        if not handler:
+            formatter = logging.Formatter(config["log.format"])
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(formatter)
+
+        handler.set_name("cli_handler")
+        handler.setLevel(config["log.cli_level"])
+        return handler
+
+    @classmethod
+    def _get_handlers(cls, logger):
+        handlers = {"cli_handler": None, "file_handler": None}
+        for handler in logger.handlers:
+            handlers[handler.name] = handler
+        return handlers
+
+    def _update_handler(self, name, handler=None):
+        getter = getattr(self, name, None)
+        return getter(handler) if getter else None
+
+    def _setup_logger(self, logger):
+        """Setup the received logger."""
+        logger.setLevel(min(config["log.cli_level"],
+                            config["log.file_level"]))
+        for name, handler in self._get_handlers(logger).items():
+            new_handler = self._update_handler(name, handler)
+            if new_handler is None and handler:
+                handler.flush()
+                handler.close()
+                logger.removeHandler(handler)
+            elif new_handler and handler is None:
+                logger.addHandler(new_handler)
+
+    def get_logger(self, name):
+        """Obtain a new logger object."""
+        if name not in self._loggers:
+            logger = logging.getLogger(name)
+            logger.propagate = False
+            self._setup_logger(logger)
+            self._loggers[name] = logger
+
+        return self._loggers[name]
+
+    def update_loggers(self):
+        """Update the loggers settings if it is required."""
+        for logger in self._loggers.values():
+            self._setup_logger(logger)
+
+
+log = _Logging()
+config = _Config(defaults=constant.DEFAULTS)
 config.update()

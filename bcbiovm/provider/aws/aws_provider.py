@@ -5,6 +5,7 @@ import os
 
 from bcbio.distributed import objectstore
 
+from bcbiovm import log as logging
 from bcbiovm.common import objects
 from bcbiovm.common import constant
 from bcbiovm.common import utils as common_utils
@@ -16,7 +17,7 @@ from bcbiovm.provider.aws import icel as aws_icel
 from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.aws import vpc as aws_vpc
 
-LOG = common_utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class AWSProvider(base.BaseCloudProvider):

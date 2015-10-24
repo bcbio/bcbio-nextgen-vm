@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import os
 from bcbiovm import config as bcbio_config
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.common import exception
@@ -11,7 +12,7 @@ from bcbiovm.container.docker import docker_container
 from bcbiovm.container.docker import common as docker_common
 from bcbiovm.provider import factory as provider_factory
 
-LOG = common_utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class _Action(base.Command):

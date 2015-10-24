@@ -5,11 +5,11 @@ import re
 
 import boto.ec2
 
+from bcbiovm import log as logging
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import constant
-from bcbiovm.common import utils
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class VirtualPrivateCloud(object):

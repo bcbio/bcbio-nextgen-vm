@@ -11,11 +11,14 @@ import os
 import sys
 
 from bcbiovm import config
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.client import commands as client_commands
 from bcbiovm.client.subcommands import docker as docker_subcommand
 from bcbiovm.client.subcommands import ipython as ipython_subcommand
 from bcbiovm.common import cluster
+
+LOG = logging.get_logger(__name__)
 
 
 class BCBioClient(base.Client):
@@ -71,6 +74,8 @@ class BCBioClient(base.Client):
             cli_level = config.log["cli_level"] - 10 * self.args.verbosity
             config.log["cli_level"] = cli_level if cli_level > 0 else 0
             config.log["verbosity"] = self.args.verbosity
+
+        logging.update_loggers()
 
 
 def main():

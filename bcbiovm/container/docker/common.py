@@ -6,11 +6,12 @@ import pwd
 import numpy
 import yaml
 
+from bcbiovm import log as logging
 from bcbiovm.common import exception
 from bcbiovm.common import utils as common_utils
 from bcbiovm.container.docker import mounts as docker_mounts
 
-LOG = common_utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 def _get_system_config(config, datadir):

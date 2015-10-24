@@ -12,6 +12,7 @@ from bcbio.pipeline import genome as bcbio_genome
 from bcbio.provenance import do as bcbio_do
 from bcbio import log as bcbio_log
 
+from bcbiovm import log as logging
 from bcbiovm.common import constant
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import exception
@@ -22,8 +23,7 @@ from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import factory as provider_factory
 
-
-LOG = common_utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class Docker(base.Container):

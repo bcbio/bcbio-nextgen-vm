@@ -1,12 +1,13 @@
 """Subcommands available for Azure provider."""
 import os
 
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.common import exception
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class ECConfig(base.Command):

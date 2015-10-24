@@ -10,12 +10,13 @@ from elasticluster import conf as ec_conf
 from elasticluster import main as ec_main
 import voluptuous
 
+from bcbiovm import log as logging
 from bcbiovm import config as bcbio_config
 from bcbiovm.common import constant
 from bcbiovm.common import exception
-from bcbiovm.common import utils
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
+
 __all__ = ['AnsiblePlaybook', 'ElastiCluster']
 
 

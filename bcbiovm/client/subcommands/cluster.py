@@ -4,13 +4,13 @@ from __future__ import print_function
 import abc
 import argparse
 
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.common import objects
-from bcbiovm.common import utils
 from bcbiovm.provider import factory as cloud_factory
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class CommandMixin(base.Command):

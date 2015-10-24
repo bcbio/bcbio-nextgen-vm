@@ -8,11 +8,11 @@ import abc
 
 import six
 
+from bcbiovm import log as logging
 from bcbiovm.client import tools as client_tools
 from bcbiovm.common import exception
-from bcbiovm.common import utils
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)

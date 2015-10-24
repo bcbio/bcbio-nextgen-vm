@@ -14,13 +14,14 @@ import pandas
 import paramiko
 import toolz
 
+from bcbiovm import log as logging
 from bcbiovm.common import cluster as cluster_ops
 from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.common import objects
 from bcbiovm.provider.aws import icel
 
-LOG = utils.get_logger(__name__)
+LOG = logging.get_logger(__name__)
 
 
 class Collector(object):
