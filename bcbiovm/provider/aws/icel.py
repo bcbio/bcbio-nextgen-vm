@@ -26,34 +26,38 @@ from bcbiovm.provider import playbook as provider_playbook
 
 LOG = logging.get_logger(__name__)
 
+_ANSIBLE_TEMPLATE = None
+_SSH_TEMPLATE = None
+
+TEMPLATES = {
+    'ap-northeast-1': ('http://s3-ap-northeast-1.amazonaws.com/'
+                       'hpdd-templates-ap-northeast-1/gs/1.0.1/'
+                       'hpdd-gs-ha-c3-small-1.0.1.template'),
+    'ap-southeast-1': ('http://s3-ap-southeast-1.amazonaws.com/'
+                       'hpdd-templates-ap-southeast-1/gs/1.0.1/'
+                       'hpdd-gs-ha-c3-small-1.0.1.template'),
+    'ap-southeast-2': ('http://s3-ap-southeast-2.amazonaws.com/'
+                       'hpdd-templates-ap-southeast-2/gs/1.0.1/'
+                       'hpdd-gs-ha-c3-small-1.0.1.template'),
+    'eu-west-1': ('http://s3-eu-west-1.amazonaws.com/hpdd-templates-eu-'
+                  'west-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
+    'sa-east-1': ('http://s3-sa-east-1.amazonaws.com/hpdd-templates-sa-'
+                  'east-1 /gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
+    'us-east-1': ('http://s3.amazonaws.com/hpdd-templates-us-east-1/gs/'
+                  '1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
+    'us-west-1': ('http://s3-us-west-1.amazonaws.com/hpdd-templates-us-'
+                  'west-1 /gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
+    'us-west-2': ('http://s3-us-west-2.amazonaws.com/hpdd-templates-us-'
+                  'west-2/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
+}
+
 
 class ICELOps(object):
 
     """Create an Intel ICEL stack on AWS."""
 
-    DELETE_COMPLETE = 'DELETE_COMPLETE'
-    CREATE_COMPLETE = 'CREATE_COMPLETE'
-    TEMPLATES = {
-        'ap-northeast-1': ('http://s3-ap-northeast-1.amazonaws.com/'
-                           'hpdd-templates-ap-northeast-1/gs/1.0.1/'
-                           'hpdd-gs-ha-c3-small-1.0.1.template'),
-        'ap-southeast-1': ('http://s3-ap-southeast-1.amazonaws.com/'
-                           'hpdd-templates-ap-southeast-1/gs/1.0.1/'
-                           'hpdd-gs-ha-c3-small-1.0.1.template'),
-        'ap-southeast-2': ('http://s3-ap-southeast-2.amazonaws.com/'
-                           'hpdd-templates-ap-southeast-2/gs/1.0.1/'
-                           'hpdd-gs-ha-c3-small-1.0.1.template'),
-        'eu-west-1': ('http://s3-eu-west-1.amazonaws.com/hpdd-templates-eu-'
-                      'west-1/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
-        'sa-east-1': ('http://s3-sa-east-1.amazonaws.com/hpdd-templates-sa-'
-                      'east-1 /gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
-        'us-east-1': ('http://s3.amazonaws.com/hpdd-templates-us-east-1/gs/'
-                      '1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
-        'us-west-1': ('http://s3-us-west-1.amazonaws.com/hpdd-templates-us-'
-                      'west-1 /gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
-        'us-west-2': ('http://s3-us-west-2.amazonaws.com/hpdd-templates-us-'
-                      'west-2/gs/1.0.1/hpdd-gs-ha-c3-small-1.0.1.template'),
-    }
+    _DELETE_COMPLETE = 'DELETE_COMPLETE'
+    _CREATE_COMPLETE = 'CREATE_COMPLETE'
 
     def __init__(self, cluster, config):
         self._ecluster = cluster_ops.ElastiCluster(constant.PROVIDER.AWS)
@@ -124,7 +128,7 @@ class ICELOps(object):
         # pylint: disable=too-many-locals
 
         aws_config = self._cluster_config['cloud']
-        icel_template = self.TEMPLATES[aws_config['ec2_region']]
+        icel_template = TEMPLATES[aws_config['ec2_region']]
 
         try:
             source_template = requests.get(icel_template)
@@ -271,7 +275,8 @@ class ICELOps(object):
     @staticmethod
     def _write_ansible_config(path, stack_name, storage_path):
         """Create the ansible config file."""
-        template_path = constant.PATH.ANSIBLE_TEMPLATE
+        template_path = os.path.join(constant.PATH.ANSIBLE_BASE,
+                                     "ansible-icel.cfg.template")
         with open(template_path, 'r') as file_handle:
             ansible_template = file_handle.read()
 
@@ -301,7 +306,8 @@ class ICELOps(object):
 
     def _write_ssh_config(self, path, stack_name):
         """Create the ssh config file."""
-        template_path = constant.PATH.SSH_TEMPLATE
+        template_path = os.path.join(constant.PATH.ANSIBLE_BASE,
+                                     "ssh_config-icel.template")
         with open(template_path, 'r') as file_handle:
             ssh_template = file_handle.read()
 
@@ -358,7 +364,7 @@ class ICELOps(object):
         cf_conn.delete_stack(stack_name)
         LOG.info('Waiting for stack to delete (this will take a few minutes)')
         self._wait_for_stack(stack_name=stack_name,
-                             desired_state=self.DELETE_COMPLETE,
+                             desired_state=self._DELETE_COMPLETE,
                              timeout=900,   # 15 minutes
                              retry_interval=10)
 
@@ -468,7 +474,7 @@ class ICELOps(object):
             aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
             aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
 
-        for stack in cf_conn.list_stacks(self.CREATE_COMPLETE):
+        for stack in cf_conn.list_stacks(self._CREATE_COMPLETE):
             if stack.stack_name == stack_name:
                 if recreate:
                     self._delete_stack(stack_name)
@@ -539,7 +545,7 @@ class ICELOps(object):
                      "few minutes)")
             try:
                 self._wait_for_stack(stack_name=stack_name,
-                                     desired_state=self.CREATE_COMPLETE,
+                                     desired_state=self._CREATE_COMPLETE,
                                      timeout=900)
             except exception.BCBioException as exc:
                 LOG.exception(exc)

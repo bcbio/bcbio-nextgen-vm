@@ -19,6 +19,12 @@ LOG = logging.get_logger(__name__)
 
 __all__ = ['AnsiblePlaybook', 'ElastiCluster']
 
+_EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share", "elasticluster",
+                                   "providers", "ansible-playbooks",
+                                   "library")
+_EC_STORAGE = os.path.join(constant.PATH.EC, "storage")
+_PICKLE_FILE = os.path.join(_EC_STORAGE, "%(cluster)s.pickle")
+
 
 class ElastiCluster(object):
 
@@ -84,7 +90,7 @@ class ElastiCluster(object):
     @classmethod
     def _add_common_options(cls, command, config=None):
         """Add common options to the command line."""
-        if bcbio_config.log["enabled"]:
+        if bcbio_config["log.verbosity"]:
             # Insert `--verbose` to the command
             verbosity = "v" * bcbio_config.log["verbosity"]
             command.insert(1, "-{verbosity}".format(verbosity=verbosity))
@@ -105,15 +111,14 @@ class ElastiCluster(object):
         # Ckeck if received command contains '-s' or '--storage'
         if cls._STORAGE[0] not in command and cls._STORAGE[1] not in command:
             # Insert `--storage storage_path` to the command
-            for argument in (constant.PATH.EC_STORAGE, cls._STORAGE[1]):
+            for argument in (_EC_STORAGE, cls._STORAGE[1]):
                 command.insert(1, argument)
 
             # Notes: Clean up the old storage directory in order to avoid
             #        consistent errors.
             std_args = [arg for arg in command if not arg.startswith('-')]
             if len(std_args) >= 3 and std_args[1] == "start":
-                pickle_file = (constant.PATH.PICKLE_FILE %
-                               {"cluster": std_args[2]})
+                pickle_file = (_PICKLE_FILE % {"cluster": std_args[2]})
                 if os.path.exists(pickle_file):
                     os.remove(pickle_file)
 
@@ -129,7 +134,7 @@ class ElastiCluster(object):
         # Note: Sets NFS client parameters for elasticluster Ansible playbook.
         #       Uses async clients which provide better throughput on
         #       reads/writes: http://goo.gl/tGrGtE (section 5.9 for tradeoffs)
-        os.environ["nfsoptions"] = constant.NFS_OPTIONS
+        os.environ["nfsoptions"] = "rw,async,nfsvers=3"
         cls._add_common_options(command, **kwargs)
         cls._check_command(command)
         sys.argv = command
@@ -294,7 +299,7 @@ class AnsiblePlaybook(object):
         :param args:        arguments received from the client
         """
         self._stats = ansible.callbacks.AggregateStats()
-        if bcbio_config.log["enabled"]:
+        if bcbio_config["log.verbosity"]:
             self._callbacks = ansible.callbacks.PlaybookCallbacks()
             self._runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(
                 self._stats)
@@ -353,7 +358,7 @@ class AnsiblePlaybook(object):
 
         playbook = ansible.playbook.PlayBook(
             playbook=self._playbook,
-            module_path=constant.PATH.EC_ANSIBLE_LIBRARY,
+            module_path=_EC_ANSIBLE_LIBRARY,
             extra_vars=self._extra_vars,
             host_list=self._host_list,
             private_key_file=private_key,

@@ -56,9 +56,9 @@ class BCBioClient(base.Client):
         self._parser.add_argument(
             "-v", "--verbosity", dest="verbosity", action="count",
             help="increase output verbosity")
-
         commands = self._parser.add_subparsers(
             title="[commands]", dest="provider")
+
         self._register_parser(name="commands", item=commands)
 
     def prologue(self):
@@ -67,13 +67,13 @@ class BCBioClient(base.Client):
 
         if self.args.quiet:
             # Print only the errors and exceptions
-            config.log["cli_level"] = 40
-            config.log["enabled"] = False
+            config["log.cli.level"] = 40
+            config["log.verbosity"] = 0
 
         elif self.args.verbosity:
-            cli_level = config.log["cli_level"] - 10 * self.args.verbosity
-            config.log["cli_level"] = cli_level if cli_level > 0 else 0
-            config.log["verbosity"] = self.args.verbosity
+            cli_level = config["log.cli_level"] - 10 * self.args.verbosity
+            config["log.cli.level"] = cli_level if cli_level > 0 else 0
+            config["log.verbosity"] = self.args.verbosity
 
         logging.update_loggers()
 

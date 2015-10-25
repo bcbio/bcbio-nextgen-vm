@@ -17,6 +17,17 @@ import six
 from bcbiovm import config as global_config
 from bcbiovm.common import constant
 
+_SYMBOLS = {
+    'customary_symbols': ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
+    'customary_names': ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta',
+                        'exa', 'zetta', 'iotta'),
+    # Note(alexandrucoman): More information can be found on the following link
+    #                       http://goo.gl/uyQruU
+    'IEC_symbols': ('Bi', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+    'IEC_names': ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
+                  'zebi', 'yobi'),
+}
+
 
 class SSHAgent(object):
 
@@ -182,8 +193,7 @@ class SSHClient(object):
         return output
 
 
-def write_file(path, content, permissions=constant.DEFAULT_PERMISSIONS,
-               open_mode="wb", utime=None):
+def write_file(path, content, permissions=0o644, open_mode="wb", utime=None):
     """Writes a file with the given content.
 
     Also the function sets the file mode as specified.
@@ -296,7 +306,9 @@ def write_elasticluster_config(config, output,
     """Write Elasticluster configuration file with user and security
     information.
     """
-    template_file = constant.PATH.EC_CONFIG_TEMPLATE.format(provider=provider)
+    template_file = os.path.join(
+        sys.prefix, "share", "bcbio-vm", "elasticluster",
+        "{provider}.config".format(provider=provider))
     content = []
 
     if not os.path.exists(os.path.dirname(output)):
@@ -361,14 +373,14 @@ def predict_unit(unit):
     symbol_value = 1
     _symbol = collections.namedtuple("Symbol", ["name", "set", "value"])
 
-    for set_name, symbol_set in constant.SYMBOLS.items():
+    for set_name, symbol_set in _SYMBOLS.items():
         if unit in symbol_set:
             break
     else:
         if unit == 'k':
             # Treat `k` as an alias for `K`
             set_name = "customary_symbols"
-            symbol_set = constant.SYMBOLS["customary_symbols"]
+            symbol_set = _SYMBOLS["customary_symbols"]
             unit = unit.upper()
         else:
             raise ValueError("Invalid unit name %(unit)s", {"unit": unit})

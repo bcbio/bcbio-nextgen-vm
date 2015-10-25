@@ -129,27 +129,35 @@ class _Logging(object):
     @classmethod
     def file_handler(cls, handler=None):
         """Setup the file handler."""
-        if not config["log.file"]:
+        if not config["log.file.path"]:
             return
-        if not handler or handler.baseFilename != config["log.file"]:
-            handler = logging.FileHandler(config.log["file"])
-            formatter = logging.Formatter(config["log.format"])
+
+        log_dir = os.path.dirname(config["log.file.path"])
+        if not os.path.exists(log_dir):
+            try:
+                os.makedirs(log_dir)
+            except (IOError, OSError):
+                return handler
+
+        if not handler or handler.baseFilename != config["log.file.path"]:
+            handler = logging.FileHandler(config["log.file.path"])
+            formatter = logging.Formatter(config["log.file.format"])
             handler.setFormatter(formatter)
 
         handler.set_name("file_handler")
-        handler.setLevel(config["log.file_level"])
+        handler.setLevel(config["log.file.level"])
         return handler
 
     @classmethod
     def cli_handler(cls, handler=None):
         """Setup the stream handler."""
         if not handler:
-            formatter = logging.Formatter(config["log.format"])
+            formatter = logging.Formatter(config["log.cli.format"])
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(formatter)
 
         handler.set_name("cli_handler")
-        handler.setLevel(config["log.cli_level"])
+        handler.setLevel(config["log.cli.level"])
         return handler
 
     @classmethod
@@ -165,8 +173,8 @@ class _Logging(object):
 
     def _setup_logger(self, logger):
         """Setup the received logger."""
-        logger.setLevel(min(config["log.cli_level"],
-                            config["log.file_level"]))
+        logger.setLevel(min(config["log.cli.level"],
+                            config["log.file.level"]))
         for name, handler in self._get_handlers(logger).items():
             new_handler = self._update_handler(name, handler)
             if new_handler is None and handler:
