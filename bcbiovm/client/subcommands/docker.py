@@ -181,7 +181,8 @@ class Build(base.Command):
             "-p", "--provider", default=constant.DEFAULT_PROVIDER,
             help="The name of the cloud provider. (default=aws)")
         parser.add_argument(
-            "--account_name", default=None,
+            "--account_name",
+            default=bcbio_config.get("env.STORAGE_ACCOUNT", None),
             help="The storage account name. All access to Azure Storage"
                  " is done through a storage account.")
         parser.set_defaults(work=self.run)

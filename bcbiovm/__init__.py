@@ -9,6 +9,14 @@ from bcbiovm.common import constant
 
 __all__ = ["config", "log"]
 
+_ENVIRONMENT = (
+    "HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy",
+    "ALL_PROXY", "all_proxy", "FTP_PROXY", "ftp_proxy",
+    "RSYNC_PROXY", "rsync_proxy",
+    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+    "BCBIO_ENV", "STORAGE_ACCOUNT", "STORAGE_ACCESS_KEY",
+)
+
 
 class _NameSpace(object):
 
@@ -59,6 +67,13 @@ class _NameSpace(object):
     def _key(self, field):
         """Return the key name for the received field."""
         return "{}.{}".format(self._name, field)
+
+    def get(self, field, default=None):
+        """Return the value of the received field if exists."""
+        try:
+            return self[self._key(field)]
+        except KeyError:
+            return default
 
     def fields(self):
         """The fields available in the current namespace."""
@@ -114,9 +129,20 @@ class _Config(object):
             namaspace = self._namespace.setdefault(key, set())
             namaspace.add(value)
 
+    def get(self, key, default=None):
+        """Return the value of the received key if exists."""
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
     def update(self):
         """Update fields from local storage."""
-        for configurations in (self._defaults, self._environment):
+
+        # Load all the environment variables related to bcbio project.
+        environ = {"env.{0}".format(key): os.environ[key]
+                   for key in _ENVIRONMENT if key in os.environ}
+        for configurations in (self._defaults, self._environment, environ):
             self._data.update(configurations)
             self._update_namespace(configurations)
 

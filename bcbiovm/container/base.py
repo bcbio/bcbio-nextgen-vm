@@ -4,9 +4,10 @@ Container base-class:
     and shared types that support that contract.
 """
 import abc
-import os
 
 import six
+
+from bcbiovm import config as bcbiovm_config
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -14,18 +15,14 @@ class Container(object):
 
     """Base class for the containers."""
 
-    _ENVIRONMENT = ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy",
-                    "ALL_PROXY", "all_proxy", "FTP_PROXY", "ftp_proxy",
-                    "RSYNC_PROXY", "rsync_proxy",
-                    "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
-
     @classmethod
     def _export_environment(cls):
         """Pass external proxy information inside container for retrieval."""
         output = []
-        for key in cls._ENVIRONMENT:
-            if key in os.environ:
-                output.extend(["-e", "%s=%s" % (key, os.environ[key])])
+        environment = bcbiovm_config["env"]
+        for field in environment.fields():
+            output.extend(["-e", "%s=%s" % (field, environment[field])])
+
         return output
 
     @abc.abstractmethod

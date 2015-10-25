@@ -8,6 +8,7 @@ from azure import storage as azure_storage
 from bcbio import utils as bcbio_utils
 from bcbio.distributed import objectstore
 
+from bcbiovm import config as bcbiovm_config
 from bcbiovm.common import exception
 from bcbiovm.provider import storage
 
@@ -17,13 +18,21 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
     """Azure Blob storage service manager."""
 
     @classmethod
-    def connect(cls, account_name):
+    def connect(cls, resource=None):
         """Returns a connection object pointing to the endpoint
         associated to the received blob service.
         """
-        account_key = os.getenv("BLOB_ACCOUNT_KEY", None)
-        return azure_storage.BlobService(account_name=account_name,
-                                         account_key=account_key)
+        if resource:
+            return objectstore.AzureBlob.connect(resource)
+
+        account_name = bcbiovm_config.get("env.STORAGE_ACCOUNT", None)
+        if not account_name:
+            raise exception.NotFound(object="account_name",
+                                     container=bcbiovm_config.env)
+
+        return azure_storage.BlobService(
+            account_name=account_name,
+            account_key=bcbiovm_config.get("env.STORAGE_ACCESS_KEY", None))
 
     @classmethod
     def exists(cls, container, filename, context=None):
@@ -68,11 +77,7 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
             The context should contain the storage account name.
             All access to Azure Storage is done through a storage account.
         """
-        account_name = (context or {}).get('account_name', None)
-        if not account_name:
-            raise exception.NotFound(object="account_name",
-                                     container="context: {0}".format(context))
-        blob_service = cls.connect(account_name)
+        blob_service = cls.connect()
         blob_service.put_block_blob_from_path(container_name=container,
                                               blob_name=filename,
                                               file_path=path)
