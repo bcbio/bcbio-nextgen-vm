@@ -5,7 +5,7 @@ from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import objects
 from bcbiovm.provider import base
-from bcbiovm.provider.azure import bootstrap as azure_bootstrap
+from bcbiovm.provider.common import bootstrap as common_bootstrap
 from bcbiovm.provider.azure import storage as azure_storage
 
 
@@ -148,18 +148,10 @@ class AzureProvider(base.BaseCloudProvider):
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
         """
-        result = {}
-        install = azure_bootstrap.Bootstrap(provider=self, config=config,
-                                            cluster_name=cluster,
-                                            reboot=reboot)
-
-        for playbook_name in ("docker", "bcbio"):
-            playbook = getattr(install, playbook_name)
-            result[playbook_name] = playbook()
-            if not result[playbook_name].status:
-                break
-
-        return result
+        bootstrap = common_bootstrap.Bootstrap(provider=self, config=config,
+                                               cluster_name=cluster,
+                                               reboot=reboot)
+        return bootstrap.run()
 
     def upload_biodata(self, genome, target, source):
         """Upload biodata for a specific genome build and target to a storage

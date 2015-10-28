@@ -10,14 +10,24 @@ from bcbiovm.common import objects
 from bcbiovm.common import constant
 from bcbiovm.common import utils as common_utils
 from bcbiovm.provider import base
-from bcbiovm.provider.aws import bootstrap as aws_bootstrap
 from bcbiovm.provider.aws import resources as aws_resources
 from bcbiovm.provider.aws import iam as aws_iam
 from bcbiovm.provider.aws import icel as aws_icel
 from bcbiovm.provider.aws import storage as aws_storage
 from bcbiovm.provider.aws import vpc as aws_vpc
+from bcbiovm.provider.common import bootstrap as common_bootstrap
+from bcbiovm.provider.common import playbook as common_playbook
 
 LOG = logging.get_logger(__name__)
+
+
+class AWSPlaybook(common_playbook.Playbook):
+
+    """Default paths for Ansible playbooks."""
+
+    icel = ("roles", "icel", "tasks", "main.yml")
+    mount_lustre = ("roles", "lustre_client", "tasks", "mount.yml")
+    unmount_lustre = ("roles", "lustre_client", "tasks", "unmount.yml")
 
 
 class AWSProvider(base.BaseCloudProvider):
@@ -59,6 +69,7 @@ class AWSProvider(base.BaseCloudProvider):
 
     def __init__(self):
         super(AWSProvider, self).__init__(name=constant.PROVIDER.AWS)
+        self._playbook = AWSPlaybook()
 
     def get_storage_manager(self, name="AmazonS3"):
         """Return a cloud provider specific storage manager.
@@ -103,8 +114,10 @@ class AWSProvider(base.BaseCloudProvider):
             from bcbio runs. The statistics will contain information regarding
             CPU, memory, network, disk I/O usage.
         """
-        collector = aws_resources.Collector(config, cluster, rawdir)
-        collector.run()
+        collector = aws_resources.Collector(config=config, cluster=cluster,
+                                            rawdir=rawdir,
+                                            playbook=self._playbook)
+        return collector.run()
 
     def resource_usage(self, bcbio_log, rawdir):
         """Generate system statistics from bcbio runs.
@@ -132,16 +145,10 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:   cluster name
         :param reboot:    whether to upgrade and restart the host OS
         """
-        result = {}
-        install = aws_bootstrap.Bootstrap(provider=self, config=config,
-                                          cluster_name=cluster, reboot=reboot)
-        for playbook_name in ("docker", "gof3r", "nfs", "bcbio"):
-            playbook = getattr(install, playbook_name)
-            result[playbook_name] = playbook()
-            if not result[playbook_name].status:
-                break
-
-        return result
+        bootstrap = common_bootstrap.Bootstrap(provider=self, config=config,
+                                               cluster_name=cluster,
+                                               reboot=reboot)
+        return bootstrap.run()
 
     def upload_biodata(self, genome, target, source):
         """Upload biodata for a specific genome build and target to a storage
@@ -171,7 +178,7 @@ class AWSProvider(base.BaseCloudProvider):
                      "%(target)s:", {"genome": genome, "target": target})
             storage_manager.upload(path=archive, filename=file_info.key,
                                    container=file_info.bucket,
-                                   context=context)
+                                   context=context, playbook=self._playbook)
         finally:
             if os.path.exists(archive):
                 os.remove(archive)
@@ -224,7 +231,7 @@ class AWSProvider(base.BaseCloudProvider):
                             destroying all data stored on it
         :param setup:       whether to run again the configuration steps
         """
-        icel = aws_icel.ICELOps(cluster, config)
+        icel = aws_icel.ICELOps(cluster, config, self._playbook)
         return icel.create(**kwargs)
 
     def mount_lustre(self, cluster, config, stack_name):
@@ -234,7 +241,7 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
         """
-        icel = aws_icel.ICELOps(cluster, config)
+        icel = aws_icel.ICELOps(cluster, config, self._playbook)
         return icel.mount(stack_name)
 
     def unmount_lustre(self, cluster, config, stack_name):
@@ -244,7 +251,7 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
         """
-        icel = aws_icel.ICELOps(cluster, config)
+        icel = aws_icel.ICELOps(cluster, config, self._playbook)
         return icel.unmount(stack_name)
 
     def stop_lustre(self, cluster, config, stack_name):
@@ -254,7 +261,7 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
         """
-        icel = aws_icel.ICELOps(cluster, config)
+        icel = aws_icel.ICELOps(cluster, config, self._playbook)
         return icel.stop(stack_name)
 
     def lustre_spec(self, cluster, config, stack_name):
@@ -264,5 +271,5 @@ class AWSProvider(base.BaseCloudProvider):
         :param cluster:     cluster name
         :param stack_name:  CloudFormation name for the new stack
         """
-        icel = aws_icel.ICELOps(cluster, config)
+        icel = aws_icel.ICELOps(cluster, config, self._playbook)
         return icel.fs_spec(stack_name)

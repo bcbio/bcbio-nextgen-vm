@@ -22,6 +22,7 @@ from bcbiovm.container.docker import common as docker_common
 from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.container.docker import remap as docker_remap
 from bcbiovm.provider import factory as provider_factory
+from bcbiovm.provider.common import playbook as common_playbook
 
 LOG = logging.get_logger(__name__)
 
@@ -39,6 +40,7 @@ class Docker(base.Container):
             "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
                           "bcbio-nextgen-docker-image.gz")
         }
+        self._playbook = common_playbook.Playbook()
 
     @classmethod
     def install_bcbio(cls, image):
@@ -82,8 +84,7 @@ class Docker(base.Container):
         common_utils.execute(["docker", "rm", container],
                              check_exit_code=True)
 
-    @classmethod
-    def build_image(cls, container, cwd, full, storage, context):
+    def build_image(self, container, cwd, full, storage, context):
         """Build an image from the current container and export it
         to the received cloud provider.
 
@@ -108,7 +109,7 @@ class Docker(base.Container):
 
         playbook = clusterops.AnsiblePlaybook(
             extra_vars=extra_vars,
-            playbook_path=provider_factory.get_playbook("docker_local"),
+            playbook_path=self._playbook.docker_local,
             inventory_path=os.path.join(constant.PATH.ANSIBLE_BASE,
                                         "standard_hosts.txt")
         )

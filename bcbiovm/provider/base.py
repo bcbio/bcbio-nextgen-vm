@@ -3,7 +3,6 @@
     types that support that contract.
 """
 import abc
-import collections
 import os
 import yaml
 
@@ -12,12 +11,10 @@ import six
 import toolz
 
 from bcbio import utils
-from bcbio.distributed import ipython
 from bcbio.pipeline import config_utils
 
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.container.docker import remap as docker_remap
-from bcbiovm.provider import playbook as provider_playbook
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -228,88 +225,6 @@ class BaseCloudProvider(object):
         :param source: A list of directories which contain the information
                        that should be uploaded.
         """
-        pass
-
-
-@six.add_metaclass(abc.ABCMeta)
-class Bootstrap(object):
-
-    """
-    Update or install the bcbio and its requirements.
-    """
-
-    _RESPONSE = collections.namedtuple("Response",
-                                       ["status", "unreachable", "failures"])
-
-    def __init__(self, provider, config, cluster_name, reboot):
-        """
-        :param provider:       an instance of
-                               :class bcbiovm.provider.base.BaseCloudProvider:
-        :param config:         elasticluster config file
-        :param cluster_name:   cluster name
-        :param reboot:         whether to upgrade and restart the host OS
-        """
-        self._config = config
-        self._cluster_name = cluster_name
-        self._reboot = reboot
-        self._provider = provider
-
-        self._ecluster = clusterops.ElastiCluster(provider=self._provider.name)
-        self._ecluster.load_config(config)
-        self._cluster = self._ecluster.get_cluster(cluster_name)
-
-        self._inventory_path = os.path.join(
-            self._cluster.repository.storage_path,
-            "ansible-inventory.%(cluster)s" % {"cluster": cluster_name})
-        self._playbook = provider_playbook.Playbook()
-
-    def _run_playbook(self, playbook, extra_vars=None):
-        """Run a playbook and return the result.
-
-        :param playbook_path:   the path to a playbook file
-        :param extra_args:      is an option function that should return
-                                extra variables to pass to ansible given
-                                the arguments and cluster configuration
-        """
-        playbook = clusterops.AnsiblePlaybook(
-            inventory_path=self._inventory_path,
-            playbook_path=playbook,
-            config=self._config,
-            cluster=self._cluster_name,
-            extra_vars=extra_vars,
-            provider=self._provider.name)
-        playbook_response = playbook.run()
-        return self._RESPONSE(not any(playbook_response), *playbook_response)
-
-    def bcbio(self):
-        """Install bcbio_vm and docker container with tools.
-        Set core and memory usage.
-        """
-        def _extra_vars(cluster_config):
-            """Extra variables to inject into a playbook."""
-            # Calculate cores and memory
-            compute_nodes = int(
-                toolz.get_in(["nodes", "frontend", "compute_nodes"],
-                             cluster_config, 0))
-            if compute_nodes > 0:
-                machine = toolz.get_in(["nodes", "compute", "flavor"],
-                                       cluster_config)
-            else:
-                machine = toolz.get_in(["nodes", "frontend", "flavor"],
-                                       cluster_config)
-            flavor = self._provider.get_flavor(machine=machine)
-            cores = ipython.per_machine_target_cores(flavor.cpus,
-                                                     compute_nodes)
-            return {
-                "target_cores": cores,
-                "target_memory": flavor.memory,
-                "upgrade_host_os_and_reboot": self._reboot}
-
-        return self._run_playbook(self._playbook.bcbio, _extra_vars)
-
-    @abc.abstractmethod
-    def docker(self):
-        """Install docker."""
         pass
 
 
