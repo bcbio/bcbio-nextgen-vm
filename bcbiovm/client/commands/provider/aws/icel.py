@@ -6,7 +6,7 @@ import getpass
 
 from bcbiovm.client import base
 from bcbiovm.common import constant
-from bcbiovm.provider import factory as cloud_factory
+from bcbiovm.provider import aws
 
 
 class Create(base.Command):
@@ -58,7 +58,7 @@ class Create(base.Command):
     def work(self):
         """Run the command with the received information."""
         # NOTE(alexandrucoman): Command available only for AWS Provider
-        provider = cloud_factory.get(constant.PROVIDER.AWS)()
+        provider = aws.AWSProvider()
         provider.create_icel(
             cluster=self.args.cluster,
             config=self.args.econfig,
@@ -97,7 +97,7 @@ class Mount(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)()
+        provider = aws.AWSProvider()
         provider.mount_lustre(cluster=self.args.cluster,
                               config=self.args.econfig,
                               stack_name=self.args.stack_name)
@@ -128,7 +128,7 @@ class Unmount(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)()
+        provider = aws.AWSProvider()
         provider.unmount_lustre(cluster=self.args.cluster,
                                 config=self.args.econfig,
                                 stack_name=self.args.stack_name)
@@ -159,7 +159,7 @@ class Stop(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)()
+        provider = aws.AWSProvider()
         provider.stop_lustre(cluster=self.args.cluster,
                              config=self.args.econfig,
                              stack_name=self.args.stack_name)
@@ -190,7 +190,7 @@ class Specification(base.Command):
 
     def work(self):
         """Run the command with the received information."""
-        provider = cloud_factory.get(constant.PROVIDER.AWS)()
+        provider = aws.AWSProvider()
         print(provider.lustre_spec(cluster=self.args.cluster,
                                    config=self.args.econfig,
                                    stack_name=self.args.stack_name))
