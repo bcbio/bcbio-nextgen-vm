@@ -22,7 +22,6 @@ from bcbiovm.common import cluster as cluster_ops
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import utils
-from bcbiovm.provider import playbook as provider_playbook
 
 LOG = logging.get_logger(__name__)
 
@@ -59,13 +58,14 @@ class ICELOps(object):
     _DELETE_COMPLETE = 'DELETE_COMPLETE'
     _CREATE_COMPLETE = 'CREATE_COMPLETE'
 
-    def __init__(self, cluster, config):
+    def __init__(self, cluster, config, playbook):
         self._ecluster = cluster_ops.ElastiCluster(constant.PROVIDER.AWS)
         self._ecluster.load_config(config)
         self._cluster_config = self._ecluster.get_config(cluster)
 
         self._cluster_name = cluster
         self._config_path = config
+        self._playbook = playbook
 
     @staticmethod
     def _check_network(network):
@@ -374,11 +374,11 @@ class ICELOps(object):
         inventory_path = os.path.join(
             cluster.repository.storage_path,
             'ansible-inventory.{}'.format(self._cluster_name))
-        aws_playbook = provider_playbook.AWSPlaybook()
+
         if mount:
-            playbook_path = aws_playbook.mount_lustre
+            playbook_path = self._playbook.mount_lustre
         else:
-            playbook_path = aws_playbook.unmount_lustre
+            playbook_path = self._playbook.unmount_lustre
 
         # pylint: disable=unused-argument
         def get_lustre_vars(cluster_config):
@@ -564,10 +564,9 @@ class ICELOps(object):
             cluster_storage_path, 'icel-{}.inventory'.format(stack_name))
         self._write_inventory(inventory_path, stack_name)
 
-        aws_playbook = provider_playbook.AWSPlaybook()
         playbook = cluster_ops.AnsiblePlaybook(
             inventory_path=inventory_path,
-            playbook_path=aws_playbook.icel,
+            playbook_path=self._playbook.icel,
             config=self._config_path,
             cluster=self._cluster_name,
             ansible_cfg=ansible_config_path,

@@ -3,7 +3,6 @@ import collections
 
 from bcbiovm.common import constant
 from bcbiovm.common import exception
-from bcbiovm.provider import playbook as bcbio_playbook
 from bcbiovm.provider import ship as shared_ship
 from bcbiovm.provider.aws import aws_provider
 from bcbiovm.provider.aws import ship as aws_ship
@@ -36,12 +35,6 @@ STORAGE = {
     constant.PROVIDER.AZURE: azure_storage.AzureBlob,
 }
 
-PLAYBOOK = {
-    "AWS": bcbio_playbook.AWSPlaybook(),
-    "Azure": bcbio_playbook.AzurePlaybook(),
-    "default": bcbio_playbook.Playbook(),
-}
-
 
 def get(cloud_provider=constant.DEFAULT_PROVIDER):
     """Return the required cloud provider."""
@@ -70,12 +63,6 @@ def get_ship_config(provider, raw=True):
         raise exception.NotFound(object=provider,
                                  container=SHIP_CONFIG.keys())
     return ship_config[raw]
-
-
-def get_playbook(playbook, provider="default"):
-    """Return the path of the received playbook."""
-    playbook_provider = PLAYBOOK.get(provider)
-    return getattr(playbook_provider, playbook)
 
 
 def get_storage(cloud_provider):

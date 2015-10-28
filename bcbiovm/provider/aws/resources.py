@@ -42,7 +42,7 @@ class Collector(object):
     COLLECTL_PATH = '/var/log/collectl/*.raw.gz'
     NATDevice = 'NATDevice'
 
-    def __init__(self, config, cluster, rawdir):
+    def __init__(self, config, cluster, rawdir, playbook):
         """
         :param config:    elasticluster config file
         :param cluster:   cluster name
@@ -54,7 +54,7 @@ class Collector(object):
         self._elasticluster.load_config(config)
         self._cluster = self._elasticluster.get_cluster(cluster)
         self._aws_config = self._elasticluster.get_config(cluster)
-        self._icel = icel.ICELOps(cluster, config)
+        self._icel = icel.ICELOps(cluster, config, playbook)
 
         self._private_keys = set()
         self._nodes = []
