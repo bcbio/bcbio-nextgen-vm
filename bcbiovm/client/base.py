@@ -16,60 +16,17 @@ LOG = logging.get_logger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
-class BaseContainer(object):
+class Worker(object):
 
-    """
-    Contract class for all the commands or containers.
-
-    :ivar: items: A list which contains (container, metadata) tuples
-
-    Example:
-    ::
-        class Example(BaseContainer):
-
-            items = [(ExampleOne, metadata), (ExampleTwo, metadata),
-                     (ExampleThree, metadata)]
-            # ...
-    """
-    _FLAG_EXCEPTION = "BCBioException"
-    _FLAG_Interrupt = "KeyboardInterrupt"
-
-    items = None
+    """Contract class for all the commands and clients."""
 
     def __init__(self):
         self._name = self.__class__.__name__
-        self._parsers = {}
-        self._containers = []
-
-    def _bind_items(self):
-        """Bind the received items to the current container."""
-        # Setup the current container
-        self.setup()
-
-        # Bind all the received items to the current container
-        for container, metadata in self.items or ():
-            if not self.check_container(container):
-                LOG.error("The container %(container)r is not recognized.",
-                          {"container": container})
-                continue
-            self.register_container(container, metadata)
 
     @property
     def name(self):
         """Command name."""
         return self._name
-
-    def _register_parser(self, name, item):
-        """Register a new item in this container."""
-        self._parsers[name] = item
-
-    def _get_parser(self, name):
-        """Get an item from the container."""
-        try:
-            return self._parsers[name]
-        except KeyError:
-            raise ValueError("Invalid item name %(name)s" %
-                             {"name": name})
 
     @abc.abstractmethod
     def task_done(self, result):
@@ -82,6 +39,11 @@ class BaseContainer(object):
         pass
 
     @abc.abstractmethod
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        pass
+
+    @abc.abstractmethod
     def interrupted(self):
         """What to execute when keyboard interrupts arrive."""
         pass
@@ -90,37 +52,13 @@ class BaseContainer(object):
         """Executed once before the command running."""
         pass
 
-    def epilogue(self):
-        """Executed once after the command running."""
-        pass
-
-    @abc.abstractmethod
-    def register_container(self, container, metadata):
-        """Bind the received container to the current one."""
-        pass
-
-    @abc.abstractmethod
-    def check_container(self, container):
-        """Check if the received container is valid and can be used property.
-
-        Exemple:
-        ::
-            # ...
-            if not isintance(job, Job):
-                return False
-
-            return True
-        """
-        pass
-
-    @abc.abstractmethod
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        pass
-
     @abc.abstractmethod
     def work(self):
         """Override this with your desired procedures."""
+        pass
+
+    def epilogue(self):
+        """Executed once after the command running."""
         pass
 
     def run(self):
@@ -141,7 +79,7 @@ class BaseContainer(object):
         return result
 
 
-class Command(BaseContainer):
+class Command(Worker):
 
     """Contract class for all the commands."""
 
@@ -155,8 +93,7 @@ class Command(BaseContainer):
         self._defaults = None
         self._install = None
 
-        # Setup the current container and bind all the received items
-        self._bind_items()
+        self.setup()
 
     @property
     def install(self):
@@ -177,12 +114,12 @@ class Command(BaseContainer):
 
     @property
     def parent(self):
-        """Return the object that contains the current container."""
+        """Return the object that contains the current command."""
         return self._parent
 
     @property
     def args(self):
-        """The arguments after the command line was parsed."""
+        """The command line arguments parsed by the client."""
         if self._args is None:
             self._args = self._discover_attribute("args")
         return self._args
@@ -225,16 +162,6 @@ class Command(BaseContainer):
                     {"name": self.name})
         raise KeyboardInterrupt()
 
-    def check_container(self, container):
-        """Check if the received container is valid and can be
-        used property.
-        """
-        return False
-
-    def register_container(self, container, metadata):
-        """Bind the received container to the current one."""
-        pass
-
     @abc.abstractmethod
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -246,18 +173,18 @@ class Command(BaseContainer):
         pass
 
 
-class Container(BaseContainer):
+class Group(object):
 
-    """Contract class for all the commands contains.
+    """Contract class for all the command groups.
 
-    :ivar: items: A list which contains (command, parser_name) tuples
+    :ivar: commands: A list which contains (command, parser_name) tuples.
 
     ::
     Example:
     ::
-        class Example(Container):
+        class Example(Group):
 
-            items = [
+            commands = [
                 (ExampleOne, "main_parser"),
                 (ExampleTwo, "main_parser),
                 (ExampleThree, "second_parser")
@@ -266,48 +193,57 @@ class Container(BaseContainer):
             # ...
     """
 
+    commands = None
+
     def __init__(self, parent, parser):
-        super(Container, self).__init__()
+        super(Group, self).__init__()
         self._parent = parent
         self._parser = parser
+        self._parsers = {}
+        self._childs = []
 
-        # Setup the current container and bind all the received items
-        self._bind_items()
+        self.setup()            # Setup the current command group
+        self._bind_commands()   # Bind all the received commands
 
     @property
     def parent(self):
-        """Return the object that contains the current container."""
+        """Return the object that contains the current command group."""
         return self._parent
 
-    def check_container(self, container):
-        """Check if the received container is valid and can be
-        used property.
+    def _bind_commands(self):
+        """Bind the received commands to the current command group."""
+        for command, parser in self.commands or ():
+            if not self.check_command(command):
+                LOG.error("The command %(command)r is not recognized.",
+                          {"command": command})
+                continue
+            self.bind(command, parser)
+
+    def _register_parser(self, name, parser):
+        """Register a new parser in this command."""
+        self._parsers[name] = parser
+
+    def _get_parser(self, name):
+        """Get an parser from the current command group."""
+        try:
+            return self._parsers[name]
+        except KeyError:
+            raise ValueError("Invalid parser name %(name)s" %
+                             {"name": name})
+
+    def check_command(self, command):
+        """Check if the received command is valid and can be
+        property used.
         """
-        if not issubclass(container, (Container, Command)):
+        if not issubclass(command, (Command, Group)):
             return False
 
         return True
 
-    def register_container(self, container, metadata):
-        """Bind the received container to the current one."""
-        parser = self._get_parser(metadata)
-        self._containers.append(container(self, parser))
-
-    def work(self):
-        """Override this with your desired procedures."""
-        pass
-
-    def task_done(self, result):
-        """What to execute after successfully finished processing a task."""
-        pass
-
-    def task_fail(self, exc):
-        """What to do when the program fails processing a task."""
-        pass
-
-    def interrupted(self):
-        """What to execute when keyboard interrupts arrive."""
-        pass
+    def bind(self, command, parser_name):
+        """Bind the received command to the current one."""
+        parser = self._get_parser(parser_name)
+        self._childs.append(command(self, parser))
 
     @abc.abstractmethod
     def setup(self):
@@ -315,18 +251,18 @@ class Container(BaseContainer):
         pass
 
 
-class Client(Container):
+class Client(Group, Worker):
 
     """Contract class for all the command line applications.
 
-    :ivar: items: A list which contains (command, parser_name) tuples
+    :ivar: commands: A list which contains (command, parser_name) tuples
 
     ::
     Example:
     ::
-        class Example(Container):
+        class Example(CommandGroup):
 
-            items = [
+            commands = [
                 (ExampleOne, "main_parser"),
                 (ExampleTwo, "main_parser),
                 (ExampleThree, "second_parser")

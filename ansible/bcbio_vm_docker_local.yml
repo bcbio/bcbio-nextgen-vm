@@ -1,7 +1,8 @@
-# Create the bcbio_vm docker image locally, pushing to S3
+# Create the bcbio_vm docker image locally
 ---
-- name: Rebuild and update bcbio_vm docker image on S3
-  hosts: localhost
+- name: Create the bcbio_vm docker image locally
+  hosts: 127.0.0.1
+  connection: local
   gather_facts: True
   vars:
     bcbio_dir: /tmp/bcbio-nextgen

@@ -56,6 +56,8 @@ class SSH:
 
 
 DEFAULTS = {
+    "bcbio.repo": "https://github.com/chapmanb/bcbio-nextgen.git",
+    "bcbio.branch": "master",
     "docker.image": "chapmanb/bcbio-nextgen-devel",
     "log.verbosity": 0,
     "log.file.level": logging.DEBUG,

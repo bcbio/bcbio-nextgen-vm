@@ -13,8 +13,11 @@ import toolz
 from bcbio import utils
 from bcbio.pipeline import config_utils
 
+from bcbiovm import log as logging
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.container.docker import remap as docker_remap
+
+LOG = logging.get_logger(__name__)
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -42,6 +45,7 @@ class BaseCloudProvider(object):
     def __init__(self, name=None):
         self._name = name or self.__class__.__name__
         self._ecluster = clusterops.ElastiCluster(self._name)
+        self._biodata_template = None
 
     @property
     def name(self):
@@ -49,7 +53,7 @@ class BaseCloudProvider(object):
         return self._name
 
     @abc.abstractmethod
-    def get_storage_manager(self, name):
+    def get_storage_manager(self, name=None):
         """Return a cloud provider specific storage manager.
 
         :param name: The name of the required storage manager.
@@ -216,14 +220,16 @@ class BaseCloudProvider(object):
         client.close()
 
     @abc.abstractmethod
-    def upload_biodata(self, genome, target, source):
+    def upload_biodata(self, genome, target, source, context):
         """Upload biodata for a specific genome build and target to a storage
         manager.
 
-        :param genome: Genome which should be uploaded.
-        :param target: The pice from the genome that should be uploaded.
-        :param source: A list of directories which contain the information
-                       that should be uploaded.
+        :param genome:  Genome which should be uploaded.
+        :param target:  The pice from the genome that should be uploaded.
+        :param source:  A list of directories which contain the information
+                        that should be uploaded.
+        :param context: A dictionary that may contain useful information
+                        for the cloud provider (credentials, headers etc).
         """
         pass
 

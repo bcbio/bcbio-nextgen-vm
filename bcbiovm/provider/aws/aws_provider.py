@@ -70,6 +70,7 @@ class AWSProvider(base.BaseCloudProvider):
     def __init__(self):
         super(AWSProvider, self).__init__(name=constant.PROVIDER.AWS)
         self._playbook = AWSPlaybook()
+        self._biodata_template = objectstore.BIODATA_INFO["s3"]
 
     def get_storage_manager(self, name="AmazonS3"):
         """Return a cloud provider specific storage manager.
@@ -150,35 +151,32 @@ class AWSProvider(base.BaseCloudProvider):
                                                reboot=reboot)
         return bootstrap.run()
 
-    def upload_biodata(self, genome, target, source):
+    def upload_biodata(self, genome, target, source, context):
         """Upload biodata for a specific genome build and target to a storage
         manager.
 
-        :param genome: Genome which should be uploaded.
-        :param target: The pice from the genome that should be uploaded.
-        :param source: A list of directories which contain the information
-                       that should be uploaded.
+        :param genome:  Genome which should be uploaded.
+        :param target:  The pice from the genome that should be uploaded.
+        :param source:  A list of directories which contain the information
+                        that should be uploaded.
+        :param context: A dictionary that may contain useful information
+                        for the cloud provider (credentials, headers etc).
         """
         storage_manager = self.get_storage_manager()
-        biodata_info = objectstore.BIODATA_INFO["s3"].format(build=genome,
-                                                             target=target)
-        context = {"arguments": ["--no-md5"], "headers": {
-            "x-amz-storage-class": "REDUCED_REDUNDANCY",
-            "x-amz-acl": "public-read"
-        }}
+        biodata = self._biodata_template.format(build=genome, target=target)
 
         try:
             archive = common_utils.compress(source)
-            file_info = storage_manager.parse_remote(biodata_info)
+            file_info = storage_manager.parse_remote(biodata)
             if storage_manager.exists(file_info.bucket, file_info.key):
                 LOG.info("The %(biodata)r build already exist",
                          {"biodata": file_info.key})
                 return
             LOG.info("Upload pre-prepared genome data: %(genome)s, "
                      "%(target)s:", {"genome": genome, "target": target})
-            storage_manager.upload(path=archive, filename=file_info.key,
+            storage_manager.upload(path=archive, filename=file_info.blob,
                                    container=file_info.bucket,
-                                   context=context, playbook=self._playbook)
+                                   context=context)
         finally:
             if os.path.exists(archive):
                 os.remove(archive)

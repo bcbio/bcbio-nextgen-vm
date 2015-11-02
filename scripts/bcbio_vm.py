@@ -14,9 +14,8 @@ from bcbiovm import config
 from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.client import commands as client_commands
-from bcbiovm.client.subcommands import docker as docker_subcommand
-from bcbiovm.client.subcommands import ipython as ipython_subcommand
-from bcbiovm.common import cluster
+from bcbiovm.client import groups
+from bcbiovm.client.commands import container
 
 LOG = logging.get_logger(__name__)
 
@@ -25,18 +24,17 @@ class BCBioClient(base.Client):
 
     """bcbio-nextgen-vm command line application."""
 
-    items = [
-        (docker_subcommand.Run, "commands"),
-        (docker_subcommand.Install, "commands"),
-        (docker_subcommand.Upgrade, "commands"),
-        (ipython_subcommand.IPython, "commands"),
-        (ipython_subcommand.IPythonPrep, "commands"),
-        (client_commands.Template, "commands"),
-        (client_commands.AWSProvider, "commands"),
-        (client_commands.AzureProvider, "commands"),
-        (docker_subcommand.RunFunction, "commands"),
-        (client_commands.DockerDevel, "commands"),
-        (docker_subcommand.SaveConfig, "commands"),
+    commands = [
+        (container.docker.Run, "commands"),
+        (container.docker.Install, "commands"),
+        (container.docker.Upgrade, "commands"),
+        (container.docker.RunFunction, "commands"),
+        (container.docker.SaveConfig, "commands"),
+        (client_commands.common.Template, "commands"),
+        (client_commands.ipython.IPython, "commands"),
+        (client_commands.ipython.IPythonPrep, "commands"),
+        (groups.AWSProvider, "commands"),
+        (groups.AzureProvider, "commands"),
     ]
 
     def setup(self):
@@ -59,7 +57,7 @@ class BCBioClient(base.Client):
         commands = self._parser.add_subparsers(
             title="[commands]", dest="provider")
 
-        self._register_parser(name="commands", item=commands)
+        self._register_parser("commands", commands)
 
     def prologue(self):
         """Executed once before the command running."""
@@ -71,7 +69,7 @@ class BCBioClient(base.Client):
             config["log.verbosity"] = 0
 
         elif self.args.verbosity:
-            cli_level = config["log.cli_level"] - 10 * self.args.verbosity
+            cli_level = config["log.cli.level"] - 10 * self.args.verbosity
             config["log.cli.level"] = cli_level if cli_level > 0 else 0
             config["log.verbosity"] = self.args.verbosity
 

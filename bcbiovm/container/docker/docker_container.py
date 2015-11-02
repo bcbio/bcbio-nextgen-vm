@@ -12,6 +12,7 @@ from bcbio.pipeline import genome as bcbio_genome
 from bcbio.provenance import do as bcbio_do
 from bcbio import log as bcbio_log
 
+from bcbiovm import config as bcbio_config
 from bcbiovm import log as logging
 from bcbiovm.common import constant
 from bcbiovm.common import cluster as clusterops
@@ -95,7 +96,8 @@ class Docker(base.Container):
                           and third party tools will be installed otherwise
                           only only bcbio-nextgen code will be copied.
         :param storage:   The storage manager required for this task.
-        :param context:   More information required by the storage manager.
+        :param context:   A dictionary that may contain useful information
+                          for the storage manager (credentials, headers etc).
         """
         docker_image = "bcbio-nextgen-docker-image.gz"
 
@@ -105,6 +107,8 @@ class Docker(base.Container):
                 "docker_buildtype": "full" if full else "code",
                 "docker_image": docker_image,
                 "bcbio_dir": cwd,
+                "bcbio_repo": bcbio_config["bcbio.repo"],
+                "bcbio_branch": bcbio_config["bcbio.branch"],
             }
 
         playbook = clusterops.AnsiblePlaybook(
@@ -113,8 +117,11 @@ class Docker(base.Container):
             inventory_path=os.path.join(constant.PATH.ANSIBLE_BASE,
                                         "standard_hosts.txt")
         )
-        # TODO(alexandrucoman): Check the playbook.run return value
-        playbook.run()
+        playbook_response = playbook.run()
+        if not any(playbook_response):
+            LOG.warning("Failed to create docker image.")
+            LOG.debug("Playbook response: %s", playbook_response)
+            return
 
         # Upload the image to the received file storage
         return storage.upload(path=os.path.join(cwd, docker_image),
@@ -157,7 +164,8 @@ class Docker(base.Container):
                          " --prepped to upload", genome_build, output)
 
     @classmethod
-    def upload_biodata(cls, genomes, aligners, image, datadir, provider):
+    def upload_biodata(cls, genomes, aligners, image, datadir, provider,
+                       context):
         """Upload pre-prepared biological data to cache.
 
         :param genomes:    Genomes which should be uploaded.
@@ -166,6 +174,8 @@ class Docker(base.Container):
         :param datadir:    Directory with genome data and associated
                            files.
         :param provider:   An instance of a cloud provider
+        :param context:    A dictionary that may contain useful information
+                           for the cloud provider (credentials, headers etc).
         """
         wanted_dirs = ("rnaseq", "seq", "variation", "vep", "snpeff")
         mounts = docker_common.prepare_system(datadir,
@@ -186,13 +196,15 @@ class Docker(base.Container):
                     genome_build=genome_build, target="seq",
                     source=[dirname for dirname in all_dirs
                             if dirname.startswith("rnaseq-") or
-                            dirname in wanted_dirs])
+                            dirname in wanted_dirs],
+                    context=context)
 
                 for aligner in aligners:
                     target = bcbio_genome.REMAP_NAMES.get(aligner, aligner)
                     provider.upload_biodata(
                         genome_build=genome_build, target=target,
-                        source=[target] if target in all_dirs else [])
+                        source=[target] if target in all_dirs else [],
+                        context=context)
 
     def update_system(self, datadir, cores, memory):
         """Update system core and memory configuration.

@@ -36,15 +36,21 @@ class AmazonS3(storage.StorageManager, objectstore.AmazonS3):
 
         return bucket
 
-    def exists(self, container, filename, context=None):
+    @classmethod
+    def resource_exists(cls, resource, context=None):
+        """Check if the received key name exists in the bucket."""
+        file_info = cls.parse_remote(resource)
+        return cls.exists(file_info.bucket, file_info.key, context)
+
+    @classmethod
+    def exists(cls, container, filename, context=None):
         """Check if the received key name exists in the bucket.
 
         :container: The name of the bucket.
         :filename:  The name of the key.
         :context:   More information required by the storage manager.
         """
-        super(AmazonS3, self).exists(container, filename, context)
-        bucket = self.get_bucket(container)
+        bucket = cls.get_bucket(container)
         key = bucket.get_key(filename)
         return True if key else False
 

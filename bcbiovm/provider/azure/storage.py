@@ -1,5 +1,6 @@
 """Manage pushing and pulling files from Azure Blob Service."""
 
+import collections
 import os
 
 import azure
@@ -17,22 +18,43 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
 
     """Azure Blob storage service manager."""
 
+    _CREDENTIALS = collections.namedtuple("Credentials", ["account_name",
+                                                          "account_key"])
+
+    @classmethod
+    def _get_credentials(cls, context=None):
+        """Get AzureBlob credentials from environment or context data."""
+        credentials = (context or {}).get("credentials", {})
+        if "storage_account" in credentials:
+            account_name = credentials["storage_account"]
+            account_key = credentials.get("storage_access_key", None)
+        else:
+            account_name = bcbiovm_config.get("env.STORAGE_ACCOUNT", None)
+            account_key = bcbiovm_config.get("env.STORAGE_ACCESS_KEY", None)
+
+        return cls._CREDENTIALS(account_name, account_key)
+
     @classmethod
     def connect(cls, resource=None):
         """Returns a connection object pointing to the endpoint
         associated to the received blob service.
         """
-        if resource:
+        if resource and not isinstance(resource, dict):
             return objectstore.AzureBlob.connect(resource)
 
-        account_name = bcbiovm_config.get("env.STORAGE_ACCOUNT", None)
-        if not account_name:
+        credentials = cls._get_credentials(resource)
+        if not credentials.account_name:
             raise exception.NotFound(object="account_name",
                                      container=bcbiovm_config.env)
 
-        return azure_storage.BlobService(
-            account_name=account_name,
-            account_key=bcbiovm_config.get("env.STORAGE_ACCESS_KEY", None))
+        return azure_storage.BlobService(account_name=credentials.account_name,
+                                         account_key=credentials.account_key)
+
+    @classmethod
+    def resource_exists(cls, resource, context=None):
+        """Check if the received key name exists in the bucket."""
+        file_info = cls.parse_remote(resource)
+        return cls.exists(file_info.container, file_info.blob, context)
 
     @classmethod
     def exists(cls, container, filename, context=None):
@@ -47,14 +69,14 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
             The context should contain the storage account name.
             All access to Azure Storage is done through a storage account.
         """
-        account_name = (context or {}).get('account_name', None)
-        if not account_name:
+        credentials = cls._get_credentials(context)
+        if not credentials.account_name:
             raise exception.NotFound(object="account_name",
                                      container="context: {0}".format(context))
 
-        blob_handle = objectstore.BlobHandle(blob_service=account_name,
-                                             container=container,
-                                             blob=filename, chunk_size=32)
+        blob_handle = objectstore.BlobHandle(
+            blob_service=credentials.account_name, container=container,
+            blob=filename, chunk_size=32)
         try:
             # pylint: disable=protected-access
             blob_handle._download_chunk(chunk_offset=0, chunk_size=1024)
@@ -77,7 +99,7 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
             The context should contain the storage account name.
             All access to Azure Storage is done through a storage account.
         """
-        blob_service = cls.connect()
+        blob_service = cls.connect(context)
         blob_service.put_block_blob_from_path(container_name=container,
                                               blob_name=filename,
                                               file_path=path)
