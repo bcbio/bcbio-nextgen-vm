@@ -1,8 +1,8 @@
 ---
 - name: Clone bcbio-nextgen from GitHub
   git:
-    repo: https://github.com/chapmanb/bcbio-nextgen.git
-    version: master
+    repo: "{{ bcbio_repo }}"
+    version: "{{ bcbio_branch }}"
     dest: "{{ bcbio_dir }}"
 
 - set_fact: image_name=chapmanb/bcbio-nextgen-devel-work

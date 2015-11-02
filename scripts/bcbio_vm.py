@@ -69,7 +69,7 @@ class BCBioClient(base.Client):
             config["log.verbosity"] = 0
 
         elif self.args.verbosity:
-            cli_level = config["log.cli_level"] - 10 * self.args.verbosity
+            cli_level = config["log.cli.level"] - 10 * self.args.verbosity
             config["log.cli.level"] = cli_level if cli_level > 0 else 0
             config["log.verbosity"] = self.args.verbosity
 

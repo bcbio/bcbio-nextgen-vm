@@ -12,6 +12,7 @@ from bcbio.pipeline import genome as bcbio_genome
 from bcbio.provenance import do as bcbio_do
 from bcbio import log as bcbio_log
 
+from bcbiovm import config as bcbio_config
 from bcbiovm import log as logging
 from bcbiovm.common import constant
 from bcbiovm.common import cluster as clusterops
@@ -106,6 +107,8 @@ class Docker(base.Container):
                 "docker_buildtype": "full" if full else "code",
                 "docker_image": docker_image,
                 "bcbio_dir": cwd,
+                "bcbio_repo": bcbio_config["bcbio.repo"],
+                "bcbio_branch": bcbio_config["bcbio.branch"],
             }
 
         playbook = clusterops.AnsiblePlaybook(
@@ -114,8 +117,11 @@ class Docker(base.Container):
             inventory_path=os.path.join(constant.PATH.ANSIBLE_BASE,
                                         "standard_hosts.txt")
         )
-        # TODO(alexandrucoman): Check the playbook.run return value
-        playbook.run()
+        playbook_response = playbook.run()
+        if not any(playbook_response):
+            LOG.warning("Failed to create docker image.")
+            LOG.debug("Playbook response: %s", playbook_response)
+            return
 
         # Upload the image to the received file storage
         return storage.upload(path=os.path.join(cwd, docker_image),
