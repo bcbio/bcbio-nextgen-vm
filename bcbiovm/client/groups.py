@@ -4,6 +4,8 @@ from bcbiovm.client import base
 from bcbiovm.client import commands as client_commands
 from bcbiovm.client.commands import provider
 from bcbiovm.client.commands import container
+from bcbiovm.client.commands.provider import aws as aws_provider
+from bcbiovm.client.commands.provider import azure as azure_provider
 
 LOG = logging.get_logger(__name__)
 
@@ -25,13 +27,11 @@ class Config(base.Group):
         self._register_parser("actions", actions)
 
 
-class DockerDevel(base.Group):
+class Docker(base.Group):
 
     """Utilities to help with develping using bcbion inside of docker."""
 
     commands = [
-        (container.docker.Build, "actions"),
-        (container.docker.BiodataUpload, "actions"),
         (container.docker.SetupInstall, "actions"),
         (container.docker.SystemUpdate, "actions")
     ]
@@ -44,6 +44,28 @@ class DockerDevel(base.Group):
                   "inside of docker."))
         actions = parser.add_subparsers(title="[devel commands]")
         self._register_parser("actions", actions)
+
+
+class DockerAWS(Docker):
+
+    """Utilities to help with develping using bcbion inside of docker."""
+
+    commands = [
+        (aws_provider.docker.Build, "actions"),
+        (aws_provider.docker.BiodataUpload, "actions"),
+    ]
+    commands.extend(Docker.commands)
+
+
+class DockerAzure(Docker):
+
+    """Utilities to help with develping using bcbion inside of docker."""
+
+    commands = [
+        (azure_provider.docker.Build, "actions"),
+        (azure_provider.docker.BiodataUpload, "actions"),
+    ]
+    commands.extend(Docker.commands)
 
 
 class ElastiCluster(base.Group):
@@ -73,11 +95,11 @@ class ICELCommand(base.Group):
     """Create scratch filesystem using Intel Cloud Edition for Lustre."""
 
     commands = [
-        (provider.aws.icel.Create, "actions"),
-        (provider.aws.icel.Specification, "actions"),
-        (provider.aws.icel.Mount, "actions"),
-        (provider.aws.icel.Unmount, "actions"),
-        (provider.aws.icel.Stop, "actions"),
+        (aws_provider.icel.Create, "actions"),
+        (aws_provider.icel.Specification, "actions"),
+        (aws_provider.icel.Mount, "actions"),
+        (aws_provider.icel.Unmount, "actions"),
+        (aws_provider.icel.Stop, "actions"),
     ]
 
     def setup(self):
@@ -90,36 +112,12 @@ class ICELCommand(base.Group):
         self._register_parser("actions", actions)
 
 
-class AWSProvider(base.Group):
-
-    """Automate resources for running bcbio on AWS."""
-
-    commands = [
-        (ElastiCluster, "actions"),
-        (provider.cluster.EditConfig, "actions"),
-        (client_commands.common.Info, "actions"),
-        (provider.aws.bootstrap.IdentityAccessManagement, "actions"),
-        (provider.aws.bootstrap.VirtualPrivateCloud, "actions"),
-        (ICELCommand, "actions"),
-        (client_commands.common.Graph, "actions"),
-        (provider.aws.clusterk.ClusterK, "actions")
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "aws",
-            help="Automate resources for running bcbio on AWS")
-        actions = parser.add_subparsers(title="[aws commands]")
-        self._register_parser("actions", actions)
-
-
 class PrepareEnvironment(base.Group):
 
     commands = [
-        (provider.azure.prepare.ManagementCertificate, "actions"),
-        (provider.azure.prepare.PrivateKey, "actions"),
-        (provider.azure.prepare.ECConfig, "actions"),
+        (azure_provider.prepare.ManagementCertificate, "actions"),
+        (azure_provider.prepare.PrivateKey, "actions"),
+        (azure_provider.prepare.ECConfig, "actions"),
     ]
 
     def setup(self):
@@ -129,26 +127,6 @@ class PrepareEnvironment(base.Group):
             help=("Utilities to help with environment configuration."))
         actions = parser.add_subparsers(title="[devel commands]")
 
-        self._register_parser("actions", actions)
-
-
-class AzureProvider(base.Group):
-
-    """Automate resources for running bcbio on Azure."""
-    commands = [
-        (ElastiCluster, "actions"),
-        (provider.cluster.EditConfig, "actions"),
-        (client_commands.common.Info, "actions"),
-        (client_commands.common.Graph, "actions"),
-        (PrepareEnvironment, "actions")
-    ]
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "azure",
-            help="Automate resources for running bcbio on Azure")
-        actions = parser.add_subparsers(title="[azure commands]")
         self._register_parser("actions", actions)
 
 
@@ -172,3 +150,49 @@ class Tools(base.Group):
 
         self._register_parser("tools", tools)
         self._register_parser("storage_manager", storage_manager)
+
+
+class AWSProvider(base.Group):
+
+    """Automate resources for running bcbio on AWS."""
+
+    commands = [
+        (aws_provider.bootstrap.IdentityAccessManagement, "actions"),
+        (aws_provider.bootstrap.VirtualPrivateCloud, "actions"),
+        (aws_provider.clusterk.ClusterK, "actions"),
+        (client_commands.common.Graph, "actions"),
+        (client_commands.common.Info, "actions"),
+        (provider.cluster.EditConfig, "actions"),
+        (DockerAWS, "actions"),
+        (ElastiCluster, "actions"),
+        (ICELCommand, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "aws",
+            help="Automate resources for running bcbio on AWS")
+        actions = parser.add_subparsers(title="[aws commands]")
+        self._register_parser("actions", actions)
+
+
+class AzureProvider(base.Group):
+
+    """Automate resources for running bcbio on Azure."""
+    commands = [
+        (client_commands.common.Info, "actions"),
+        (client_commands.common.Graph, "actions"),
+        (provider.cluster.EditConfig, "actions"),
+        (DockerAzure, "actions"),
+        (ElastiCluster, "actions"),
+        (PrepareEnvironment, "actions"),
+    ]
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "azure",
+            help="Automate resources for running bcbio on Azure")
+        actions = parser.add_subparsers(title="[azure commands]")
+        self._register_parser("actions", actions)

@@ -1,7 +1,11 @@
 """Utilities to help with develping using bcbion inside of docker."""
 from __future__ import print_function
 
+import abc
 import os
+
+import six
+
 from bcbiovm import config as bcbio_config
 from bcbiovm import log as logging
 from bcbiovm.client import base
@@ -10,9 +14,72 @@ from bcbiovm.common import exception
 from bcbiovm.common import utils as common_utils
 from bcbiovm.container.docker import docker_container
 from bcbiovm.container.docker import common as docker_common
-from bcbiovm.provider import factory as provider_factory
 
 LOG = logging.get_logger(__name__)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class Build(base.Command):
+
+    """Build docker image and export to the cloud provider."""
+
+    @abc.abstractmethod
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        pass
+
+    def work(self):
+        """Run the command with the received information."""
+        container = docker_container.Docker()
+        return container.build_image(container=self.args.container,
+                                     cwd=self.args.rundir,
+                                     full=self.args.buildtype == "full",
+                                     storage=self.args.storage,
+                                     context=self.args.context)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class BiodataUpload(base.Command):
+
+    """Upload pre-prepared biological data to cache."""
+
+    @abc.abstractmethod
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        pass
+
+    def prologue(self):
+        """Executed once before the arguments parsing."""
+        if not self.args.prepped:
+            return
+
+        # Add user configured defaults to supplied command line arguments.
+        self.defaults.add_defaults()
+        # Retrieve supported remote inputs specified on the command line.
+        self.defaults.retrieve()
+        # Check if the datadir exists if it is required.
+        self.defaults.check_datadir("Biodata not uploaded.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
+
+    def work(self):
+        """Manage preparation of biodata on a local machine, uploading
+        to a storage manager in pieces."""
+        container = docker_container.Docker()
+
+        if self.args.prepped:
+            return container.prepare_genomes(genomes=self.args.genomes,
+                                             aligners=self.args.aligners,
+                                             output=self.args.prepped)
+
+        # Check if the docker image exists.
+        container.check_image(self.args.image)
+        return container.upload_biodata(genomes=self.args.genomes,
+                                        aligners=self.args.aligners,
+                                        image=self.args.image,
+                                        datadir=self.args.datadir,
+                                        provider=self.args.provider,
+                                        context=self.args.context)
 
 
 class _Action(base.Command):
@@ -155,124 +222,6 @@ class Upgrade(_Action):
 
     def __init__(self, parent, parser):
         super(Upgrade, self).__init__(False, parent, parser)
-
-
-class Build(base.Command):
-
-    """Build docker image and export to the cloud provider."""
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "dockerbuild",
-            help="Build docker image and export to the cloud provider.")
-        parser.add_argument(
-            "-c", "--container", default="bcbio_nextgen",
-            help="The container name where to upload the gzipped "
-                 "docker image to")
-        parser.add_argument(
-            "-t", "--buildtype", default="full", choices=["full", "code"],
-            help=("Type of docker build to do. full is all code and third"
-                  " party tools. code is only bcbio-nextgen code."))
-        parser.add_argument(
-            "-d", "--rundir", default="/tmp/bcbio-docker-build",
-            help="Directory to run docker build in")
-        parser.add_argument(
-            "-p", "--provider", default=constant.DEFAULT_PROVIDER,
-            help="The name of the cloud provider. (default=aws)")
-        parser.add_argument(
-            "--account_name",
-            default=bcbio_config.get("env.STORAGE_ACCOUNT", None),
-            help="The storage account name. All access to Azure Storage"
-                 " is done through a storage account.")
-        parser.set_defaults(work=self.run)
-
-    def prologue(self):
-        """Executed once before the running of the command."""
-        self.args.context = {"account_name": self.args.account_name}
-        self.args.storage = provider_factory.get_storage(self.args.provider)()
-
-        if self.args.provider == constant.PROVIDER.AWS:
-            self.args.context["headers"] = {
-                "x-amz-storage-class": "REDUCED_REDUNDANCY",
-                "x-amz-acl": "public-read",
-            }
-        elif self.args.provider != constant.PROVIDER.AZURE:
-            raise exception.BCBioException(
-                "The provider name %(provider)r is not recognised.",
-                {"provider": self.args.provider})
-
-    def work(self):
-        """Run the command with the received information."""
-        container = docker_container.Docker()
-        return container.build_image(container=self.args.container,
-                                     cwd=self.args.rundir,
-                                     full=self.args.buildtype == "full",
-                                     storage=self.args.storage,
-                                     context=self.args.context)
-
-
-class BiodataUpload(base.Command):
-
-    """Upload pre-prepared biological data to cache."""
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "biodata",
-            help="Upload pre-prepared biological data to cache")
-        parser.add_argument(
-            "--prepped",
-            help=("Start with an existing set of cached data to "
-                  "output directory."))
-        parser.add_argument(
-            "--genomes", help="Genomes to download",
-            action="append", default=[],
-            choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3",
-                     "Zv9", "phix", "sacCer3", "xenTro3", "TAIR10",
-                     "WBcel235"])
-        parser.add_argument(
-            "--aligners", help="Aligner indexes to download",
-            action="append", default=[],
-            choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
-        parser.add_argument(
-            "-p", "--provider", default=constant.DEFAULT_PROVIDER,
-            help="The name of the cloud provider. (default=aws)")
-
-        parser.set_defaults(work=self.run)
-
-    def prologue(self):
-        """Executed once before the arguments parsing."""
-        if not self.args.prepped:
-            return
-
-        # Add user configured defaults to supplied command line arguments.
-        self.defaults.add_defaults()
-        # Retrieve supported remote inputs specified on the command line.
-        self.defaults.retrieve()
-        # Check if the datadir exists if it is required.
-        self.defaults.check_datadir("Biodata not uploaded.")
-        # Add all the missing arguments related to docker image.
-        self.install.image_defaults()
-
-    def work(self):
-        """Manage preparation of biodata on a local machine, uploading
-        to a storage manager in pieces."""
-        container = docker_container.Docker()
-
-        if self.args.prepped:
-            return container.prepare_genomes(genomes=self.args.genomes,
-                                             aligners=self.args.aligners,
-                                             output=self.args.prepped)
-        else:
-            # Check if the docker image exists.
-            container.check_image(self.args.image)
-            provider = provider_factory.get(self.args.provider)()
-            return container.upload_biodata(genomes=self.args.genomes,
-                                            aligners=self.args.aligners,
-                                            image=self.args.image,
-                                            datadir=self.args.datadir,
-                                            provider=provider)
 
 
 class SystemUpdate(base.Command):

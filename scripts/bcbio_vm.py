@@ -28,14 +28,13 @@ class BCBioClient(base.Client):
         (container.docker.Run, "commands"),
         (container.docker.Install, "commands"),
         (container.docker.Upgrade, "commands"),
+        (container.docker.RunFunction, "commands"),
+        (container.docker.SaveConfig, "commands"),
+        (client_commands.common.Template, "commands"),
         (client_commands.ipython.IPython, "commands"),
         (client_commands.ipython.IPythonPrep, "commands"),
-        (client_commands.common.Template, "commands"),
         (groups.AWSProvider, "commands"),
         (groups.AzureProvider, "commands"),
-        (container.docker.RunFunction, "commands"),
-        (groups.DockerDevel, "commands"),
-        (container.docker.SaveConfig, "commands"),
     ]
 
     def setup(self):

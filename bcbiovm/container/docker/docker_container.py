@@ -95,7 +95,8 @@ class Docker(base.Container):
                           and third party tools will be installed otherwise
                           only only bcbio-nextgen code will be copied.
         :param storage:   The storage manager required for this task.
-        :param context:   More information required by the storage manager.
+        :param context:   A dictionary that may contain useful information
+                          for the storage manager (credentials, headers etc).
         """
         docker_image = "bcbio-nextgen-docker-image.gz"
 
@@ -157,7 +158,8 @@ class Docker(base.Container):
                          " --prepped to upload", genome_build, output)
 
     @classmethod
-    def upload_biodata(cls, genomes, aligners, image, datadir, provider):
+    def upload_biodata(cls, genomes, aligners, image, datadir, provider,
+                       context):
         """Upload pre-prepared biological data to cache.
 
         :param genomes:    Genomes which should be uploaded.
@@ -166,6 +168,8 @@ class Docker(base.Container):
         :param datadir:    Directory with genome data and associated
                            files.
         :param provider:   An instance of a cloud provider
+        :param context:    A dictionary that may contain useful information
+                           for the cloud provider (credentials, headers etc).
         """
         wanted_dirs = ("rnaseq", "seq", "variation", "vep", "snpeff")
         mounts = docker_common.prepare_system(datadir,
@@ -186,13 +190,15 @@ class Docker(base.Container):
                     genome_build=genome_build, target="seq",
                     source=[dirname for dirname in all_dirs
                             if dirname.startswith("rnaseq-") or
-                            dirname in wanted_dirs])
+                            dirname in wanted_dirs],
+                    context=context)
 
                 for aligner in aligners:
                     target = bcbio_genome.REMAP_NAMES.get(aligner, aligner)
                     provider.upload_biodata(
                         genome_build=genome_build, target=target,
-                        source=[target] if target in all_dirs else [])
+                        source=[target] if target in all_dirs else [],
+                        context=context)
 
     def update_system(self, datadir, cores, memory):
         """Update system core and memory configuration.

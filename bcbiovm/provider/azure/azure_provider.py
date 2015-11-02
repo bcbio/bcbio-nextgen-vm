@@ -1,12 +1,17 @@
 """Azure Cloud Provider for bcbiovm."""
 # pylint: disable=no-self-use
+import os
 
+from bcbiovm import log as loggig
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.common import objects
+from bcbiovm.common import utils as common_utils
 from bcbiovm.provider import base
 from bcbiovm.provider.common import bootstrap as common_bootstrap
 from bcbiovm.provider.azure import storage as azure_storage
+
+LOG = loggig.get_logger(__name__)
 
 
 class AzureProvider(base.BaseCloudProvider):
@@ -80,6 +85,8 @@ class AzureProvider(base.BaseCloudProvider):
 
     def __init__(self):
         super(AzureProvider, self).__init__(name=constant.PROVIDER.AZURE)
+        self._biodata_template = ("https://bcbio.blob.core.windows.net/biodata"
+                                  "/prepped/{build}/{build}-{target}.tar.gz")
 
     def get_storage_manager(self, name="AzureBlob"):
         """Return a cloud provider specific storage manager.
@@ -153,14 +160,33 @@ class AzureProvider(base.BaseCloudProvider):
                                                reboot=reboot)
         return bootstrap.run()
 
-    def upload_biodata(self, genome, target, source):
+    def upload_biodata(self, genome, target, source, context):
         """Upload biodata for a specific genome build and target to a storage
         manager.
 
-        :param genome: Genome which should be uploaded.
-        :param target: The pice from the genome that should be uploaded.
-        :param source: A list of directories which contain the information
-                       that should be uploaded.
+        :param genome:  Genome which should be uploaded.
+        :param target:  The pice from the genome that should be uploaded.
+        :param source:  A list of directories which contain the information
+                        that should be uploaded.
+        :param context: A dictionary that may contain useful information
+                        for the cloud provider (credentials, headers etc).
         """
-        raise exception.NotSupported(feature="Upload biodata",
-                                     context="Azure provider")
+        storage_manager = self.get_storage_manager()
+        biodata = self._biodata_template.format(build=genome, target=target)
+
+        try:
+            archive = common_utils.compress(source)
+            file_info = storage_manager.parse_remote(biodata)
+            if storage_manager.exists(file_info.container, file_info.blob,
+                                      context):
+                LOG.info("The %(biodata)r build already exist",
+                         {"biodata": file_info.blob})
+                return
+            LOG.info("Upload pre-prepared genome data: %(genome)s, "
+                     "%(target)s:", {"genome": genome, "target": target})
+            storage_manager.upload(path=archive, filename=file_info.blob,
+                                   container=file_info.container,
+                                   context=context)
+        finally:
+            if os.path.exists(archive):
+                os.remove(archive)

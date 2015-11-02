@@ -46,7 +46,8 @@ class Container(object):
                           and third party tools will be installed otherwise
                           only only bcbio-nextgen code will be copied.
         :param storage:   The storage manager required for this task.
-        :param context:   More information required by the storage manager.
+        :param context:   A dictionary that may contain useful information
+                          for the cloud provider (credentials, headers etc).
         """
         pass
 
@@ -69,7 +70,8 @@ class Container(object):
         pass
 
     @abc.abstractmethod
-    def upload_biodata(self, genomes, aligners, image, datadir, provider):
+    def upload_biodata(self, genomes, aligners, image, datadir, provider,
+                       context):
         """Upload pre-prepared biological data to cache.
 
         :param genomes:    Genomes which should be uploaded.
@@ -78,6 +80,8 @@ class Container(object):
         :param datadir:    Directory with genome data and associated
                            files.
         :param provider:   An instance of a cloud provider
+        :param context:    A dictionary that may contain useful information
+                           for the cloud provider (credentials, headers etc).
         """
         pass
 

@@ -69,6 +69,11 @@ class StorageManager(object):
                       allow_unicode=False)
 
     @abc.abstractmethod
+    def resource_exists(self, resource, context=None):
+        """Check if the received key name exists in the bucket."""
+        pass
+
+    @abc.abstractmethod
     def exists(self, container, filename, context=None):
         """Check if the received key name exists in the bucket.
 
