@@ -1,5 +1,6 @@
 """Utilities to help with develping using bcbion inside of docker."""
 
+from bcbiovm import config as bcbio_config
 from bcbiovm.client.commands.container import docker
 from bcbiovm.provider.aws import storage
 from bcbiovm.provider.aws import aws_provider
@@ -25,6 +26,9 @@ class Build(docker.Build):
         parser.add_argument(
             "-d", "--rundir", default="/tmp/bcbio-docker-build",
             help="Directory to run docker build in")
+        parser.add_argument(
+            "--no-upload", action="store_false", dest="upload",
+            default=True, help="Upload the image to the cloud provider.")
 
         parser.set_defaults(work=self.run)
 
@@ -54,10 +58,12 @@ class BiodataUpload(docker.BiodataUpload):
                   "output directory."))
         parser.add_argument(
             "--genomes", help="Genomes to download",
-            action="append", default=[], choices=self.SUPPORTED_GENOMES)
+            action="append", default=[],
+            choices=bcbio_config["supported.genomes"])
         parser.add_argument(
             "--aligners", help="Aligner indexes to download",
-            action="append", default=[], choices=self.SUPPORTED_INDEXES)
+            action="append", default=[],
+            choices=bcbio_config["supported.indexes"])
 
         parser.set_defaults(work=self.run)
 

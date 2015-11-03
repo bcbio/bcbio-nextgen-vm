@@ -19,9 +19,9 @@ class Container(object):
     def _export_environment(cls):
         """Pass external proxy information inside container for retrieval."""
         output = []
-        environment = bcbiovm_config["env"]
+        environment = bcbiovm_config.env
         for field in environment.fields():
-            output.extend(["-e", "%s=%s" % (field, environment[field])])
+            output.extend(["-e", "%s=%s" % (field, environment.get(field))])
 
         return output
 
@@ -35,19 +35,14 @@ class Container(object):
         pass
 
     @abc.abstractmethod
-    def build_image(self, container, cwd, full, storage, context):
+    def build_image(self, cwd, full):
         """Build an image from the current container and export it
         to the received cloud provider.
 
-        :param container: The container name where to upload the gzipped
-                          docker image to.
         :param cwd:       The working directory.
         :param full:      The type of the build. If it is True all code
                           and third party tools will be installed otherwise
                           only only bcbio-nextgen code will be copied.
-        :param storage:   The storage manager required for this task.
-        :param context:   A dictionary that may contain useful information
-                          for the cloud provider (credentials, headers etc).
         """
         pass
 
@@ -56,6 +51,19 @@ class Container(object):
         """Check if the received image is available.
 
         :param image:  The name of the required container image.
+        """
+        pass
+
+    @abc.abstractmethod
+    def upload_image(self, path, container, storage, context):
+        """Upload the image to the received file storage.
+
+        :param path:      The path of the docker image file.
+        :param container: The container name where to upload the gzipped
+                          docker image to.
+        :param storage:   The storage manager required for this task.
+        :param context:   A dictionary that may contain useful information
+                          for the storage manager (credentials, headers etc).
         """
         pass
 

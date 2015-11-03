@@ -139,13 +139,15 @@ class Defaults(Tool):
     def save_defaults(self):
         """Save user specific defaults to a yaml configuration file."""
         new_config = self._get_defaults()
-        for config, value in self._defaults:
+        for config, value in self._defaults.items():
             args_value = getattr(self.args, config, None)
             if args_value and args_value != value:
+                LOG.debug("Updating %r value with %r", config, args_value)
                 new_config[config] = args_value
 
         if new_config:
             config_file = self._get_config_file(just_filename=True)
+            LOG.info("Writing the config file to %r.", config_file)
             with open(config_file, "w") as config_handle:
                 yaml.dump(new_config, config_handle, default_flow_style=False,
                           allow_unicode=False)
@@ -155,7 +157,7 @@ class Defaults(Tool):
         if self.args.datadir:
             return
 
-        default_datadir = self._get_datadir()
+        default_datadir = self._get_datadir(should_exist=True)
         if default_datadir:
             self.args.datadir = default_datadir
         else:

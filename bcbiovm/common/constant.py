@@ -13,8 +13,7 @@ DOCKER = {
     "port": 8085,
     "biodata_dir": "/usr/local/share/bcbio-nextgen",
     "work_dir": "/mnt/work",
-    "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
-                  "bcbio-nextgen-docker-image.gz")
+    "image_url": "bcbio/bcbio",
 }
 
 
@@ -59,9 +58,17 @@ DEFAULTS = {
     "bcbio.repo": "https://github.com/chapmanb/bcbio-nextgen.git",
     "bcbio.branch": "master",
     "docker.image": "chapmanb/bcbio-nextgen-devel",
+    "docker.bcbio_image": "bcbio-nextgen-docker-image.gz",
     "log.verbosity": 0,
     "log.file.level": logging.DEBUG,
     "log.file.format": "%(asctime)s,%(name)s,%(levelname)s,%(message)s",
+    "supported.genomes": ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10",
+                          "mm9", "rn6", "rn5", "canFam3", "dm3", "galGal4",
+                          "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
+                          "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9",
+                          "GRCz10"],
+    "supported.indexes": ["bowtie", "bowtie2", "bwa", "novoalign", "rtg",
+                          "snap", "star", "ucsc", "seq", "hisat2"],
 }
 
 ENVIRONMENT = {

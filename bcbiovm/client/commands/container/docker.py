@@ -31,26 +31,26 @@ class Build(base.Command):
     def work(self):
         """Run the command with the received information."""
         container = docker_container.Docker()
-        return container.build_image(container=self.args.container,
-                                     cwd=self.args.rundir,
-                                     full=self.args.buildtype == "full",
-                                     storage=self.args.storage,
-                                     context=self.args.context)
+        image_path = container.build_image(cwd=self.args.rundir,
+                                           full=self.args.buildtype == "full")
+
+        if image_path and self.args.upload:
+            LOG.info("Uploading docker image %s ...", image_path)
+            container.upload_image(path=image_path,
+                                   container=self.args.container,
+                                   storage=self.args.storage,
+                                   context=self.args.context)
+
+            LOG.info("The docker image was successfully uploaded ! "
+                     "Image URL: https://%s.blob.core.windows.net/%s/%s",
+                     self.args.storage_account, self.args.container,
+                     os.path.basename(image_path))
 
 
 @six.add_metaclass(abc.ABCMeta)
 class BiodataUpload(base.Command):
 
     """Upload pre-prepared biological data to cache."""
-
-    # Available genomes and indexes
-    SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10",
-                         "mm9", "rn6", "rn5", "canFam3", "dm3", "galGal4",
-                         "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
-                         "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9",
-                         "GRCz10"]
-    SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "rtg",
-                         "snap", "star", "ucsc", "seq", "hisat2"]
 
     @abc.abstractmethod
     def setup(self):
@@ -112,22 +112,16 @@ class _Action(base.Command):
             help="{action} bcbio-nextgen docker container "
                  "and data.".format(action=self._action))
         parser.add_argument(
-            "sample_config",
-            help="YAML file with details about samples to process.")
-        parser.add_argument(
-            "--fcdir",
-            help="A directory of Illumina output or fastq files to process",
-            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
-        parser.add_argument(
-            "--systemconfig",
-            help=("Global YAML configuration file specifying system details. "
-                  "Defaults to installed bcbio_system.yaml."))
-        parser.add_argument(
-            "-n", "--numcores", type=int, default=1,
-            help="Total cores to use for processing")
-        parser.add_argument(
             "--data", help="Install or upgrade data dependencies",
             dest="install_data", action="store_true", default=False)
+        parser.add_argument(
+            "--genomes", help="Genomes to download",
+            action="append", default=[],
+            choices=bcbio_config["supported.genomes"])
+        parser.add_argument(
+            "--aligners", help="Aligner indexes to download",
+            action="append", default=[],
+            choices=bcbio_config["supported.indexes"])
         parser.add_argument(
             "--tools", help="Install or upgrade tool dependencies",
             dest="install_tools", action="store_true", default=False)
@@ -170,14 +164,9 @@ class _Action(base.Command):
         self.defaults.add_defaults()
         # Retrieve supported remote inputs specified on the command line.
         self.defaults.retrieve()
-        if self.args.install_data:
-            # Check if the datadir exists
-            self.defaults.check_datadir("bcbio-nextgen not installed or "
-                                        "upgrade.")
-
-        # Add previously saved installation defaults to command line
-        # arguments.
-        self.install.add_install_defaults()
+        # Check if the datadir exists
+        self.defaults.check_datadir("bcbio-nextgen not installed or "
+                                    "upgrade.")
 
     def work(self):
         """Run the command with the received information."""
@@ -193,7 +182,7 @@ class _Action(base.Command):
 
         if self.args.install_tools:
             self._updates.append("bcbio-nextgen code and third party tools")
-            container.pull_image(constant.DOCKER)
+            container.pull_image(self.args.image)
             # Ensure external galaxy configuration in sync when
             # doing tool upgrade
             container.run_command(image=self.args.image, mounts=mounts,

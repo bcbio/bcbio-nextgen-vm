@@ -100,6 +100,11 @@ class AzureBlob(storage.StorageManager, objectstore.AzureBlob):
             All access to Azure Storage is done through a storage account.
         """
         blob_service = cls.connect(context)
+        # Ensure that the container exists.
+        blob_service.create_container(container_name=container,
+                                      x_ms_blob_public_access='container',
+                                      fail_on_exist=False)
+        # Upload the received file.
         blob_service.put_block_blob_from_path(container_name=container,
                                               blob_name=filename,
                                               file_path=path)

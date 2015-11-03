@@ -297,9 +297,6 @@ def execute(command, **kwargs):
             else:
                 raise
 
-    # TODO(alexandrucoman): Raise BCBioException or another custom exception:
-    #                       The maximum number of attempts has been exceeded.
-
 
 def write_elasticluster_config(config, output,
                                provider=constant.DEFAULT_PROVIDER):
