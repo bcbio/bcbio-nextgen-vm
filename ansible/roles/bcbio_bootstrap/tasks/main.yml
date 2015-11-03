@@ -30,7 +30,7 @@
   hosts: frontend*
   sudo: false
   vars:
-    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/data/anaconda"
   tasks:
     - name: Get Miniconda install script
       get_url:
@@ -73,7 +73,8 @@
   hosts: all
   sudo: false
   vars:
-    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/anaconda"
+    anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/data/anaconda"
+    data_dir: "~{{ansible_user_id}}/install/bcbio-vm/data"
   tasks:
     - name: install collectl for run stats (deb)
       apt: name=collectl state=present
@@ -131,13 +132,19 @@
 
     - name: Upgrade bcbio-vm docker container with tools
       shell: >
-        bcbio_vm.py upgrade --tools
+        bcbio_vm.py --datadir={{data_dir}} upgrade --tools
         >/tmp/bcbio.log 2>&1
       args:
         executable: /bin/bash
       register: bcbio_vm_doupgrade
       async: 18000
       poll: 30
+
+    - name: Save current configuration
+      shell: >
+        bcbio_vm.py --datadir={{data_dir}} saveconfig
+      args:
+        executable: /bin/bash
 
     - command: "tail -100 /tmp/bcbio.log"
       register: bcbio_vm_debug

@@ -63,15 +63,11 @@ class BiodataUpload(docker.BiodataUpload):
             help=("Start with an existing set of cached data to "
                   "output directory."))
         parser.add_argument(
-            "-g", "--genomes", help="Genomes to download",
-            action="append", default=[],
-            choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3",
-                     "Zv9", "phix", "sacCer3", "xenTro3", "TAIR10",
-                     "WBcel235"])
+            "--genomes", help="Genomes to download",
+            action="append", default=[], choices=self.SUPPORTED_GENOMES)
         parser.add_argument(
-            "-a", "--aligners", help="Aligner indexes to download",
-            action="append", default=[],
-            choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+            "--aligners", help="Aligner indexes to download",
+            action="append", default=[], choices=self.SUPPORTED_INDEXES)
         parser.add_argument(
             "-s", "--storage-account",
             default=bcbio_config.get("env.STORAGE_ACCOUNT", None),

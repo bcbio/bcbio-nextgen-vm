@@ -54,14 +54,10 @@ class BiodataUpload(docker.BiodataUpload):
                   "output directory."))
         parser.add_argument(
             "--genomes", help="Genomes to download",
-            action="append", default=[],
-            choices=["GRCh37", "hg19", "mm10", "mm9", "rn5", "canFam3", "dm3",
-                     "Zv9", "phix", "sacCer3", "xenTro3", "TAIR10",
-                     "WBcel235"])
+            action="append", default=[], choices=self.SUPPORTED_GENOMES)
         parser.add_argument(
             "--aligners", help="Aligner indexes to download",
-            action="append", default=[],
-            choices=["bowtie", "bowtie2", "bwa", "novoalign", "star", "ucsc"])
+            action="append", default=[], choices=self.SUPPORTED_INDEXES)
 
         parser.set_defaults(work=self.run)
 

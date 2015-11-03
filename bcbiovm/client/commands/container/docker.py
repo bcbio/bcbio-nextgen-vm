@@ -43,6 +43,15 @@ class BiodataUpload(base.Command):
 
     """Upload pre-prepared biological data to cache."""
 
+    # Available genomes and indexes
+    SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10",
+                         "mm9", "rn6", "rn5", "canFam3", "dm3", "galGal4",
+                         "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
+                         "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9",
+                         "GRCz10"]
+    SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "novoalign", "rtg",
+                         "snap", "star", "ucsc", "seq", "hisat2"]
+
     @abc.abstractmethod
     def setup(self):
         """Extend the parser configuration in order to expose this command."""

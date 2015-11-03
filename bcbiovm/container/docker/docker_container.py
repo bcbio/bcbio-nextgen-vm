@@ -4,6 +4,7 @@ import grp
 import os
 import platform
 import pwd
+import subprocess
 import uuid
 
 import yaml
@@ -271,6 +272,8 @@ class Docker(base.Container):
         group = grp.getgrgid(os.getgid())
 
         command = ["docker", "run", "-d", "-i"]
+        if bcbio_config.get("env.BCBIO_DOCKER_PRIVILEGED", False):
+            command.append("--privileged")
         # Use host-networking so Docker works correctly on AWS VPCs
         command.append("--net=host")
         for port in ports or ():
@@ -296,12 +299,13 @@ class Docker(base.Container):
             bcbio_do.run(["docker", "attach", "--no-stdin", cid],
                          "Running in docker container: %s" % cid,
                          log_stdout=True)
-        except Exception:
+        except subprocess.CalledProcessError as exc:
             LOG.warning("Stopping docker container")
             _, error = common_utils.execute(["docker", "kill", cid],
                                             check_exit_code=False)
             if error:
                 LOG.error(error)
+            raise exc
 
         finally:
             for command in (["docker", "kill", cid],
