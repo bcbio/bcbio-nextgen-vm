@@ -162,8 +162,14 @@ but do not maintain the original user ID and group ID, but rather get mounted as
 root. Since bcbio runs as the original user to avoid security issues, you don't have
 permissions to make modifications in the directories. There is an `open issue on
 the problem <https://github.com/boot2docker/boot2docker/issues/581>`_ and we're
-currently not sure about the best approach or workaround. We'd be happy to
-accept patches/suggestions from interested Mac OSX users.
+currently not sure about the best approach or workaround.
+
+Also, if you experience timeouts while pulling the docker image on OSX, please try
+to reboot the VirtualBox VM running boot2docker and/or upgrade it via:
+
+`docker-machine upgrade <boot2docker_VM>`
+
+We'd be happy to accept patches/suggestions from interested Mac OSX users.
 
 Docker image installation
 =========================
