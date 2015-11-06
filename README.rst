@@ -176,7 +176,7 @@ Docker image installation
 
 Install the current bcbio docker image into your local repository by hand with::
 
-    docker import https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz chapmanb/bcbio-nextgen-devel
+    docker pull bcbio/bcbio
 
 The installer does this automatically, but this is useful if you want to work
 with the bcbio-nextgen docker image independently from the wrapper.

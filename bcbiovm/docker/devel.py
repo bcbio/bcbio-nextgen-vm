@@ -25,7 +25,7 @@ from bcbiovm.docker import defaults, install, manage, mounts
 DOCKER = {"port": 8085,
           "biodata_dir": "/usr/local/share/bcbio-nextgen",
           "work_dir": "/mnt/work",
-          "image_url": "https://s3.amazonaws.com/bcbio_nextgen/bcbio-nextgen-docker-image.gz"}
+          "image_url": "bcbio/bcbio"}
 
 # Available genomes and indexes
 SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
