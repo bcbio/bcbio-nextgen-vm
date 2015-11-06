@@ -10,7 +10,7 @@ import yaml
 
 from bcbiovm.docker import manage, mounts
 
-DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
+DEFAULT_IMAGE = "bcbio/bcbio"
 
 def full(args, dockerconf):
     """Full installaction of docker image and data.
@@ -71,7 +71,7 @@ def pull(args, dockerconf):
     """
     print("Retrieving bcbio-nextgen docker image with code and tools")
     assert args.image, "Unspecified image name for docker import"
-    subprocess.check_call(["docker", "pull", dockerconf["image_url"], args.image])
+    subprocess.check_call(["docker", "pull", args.image])
 
 def _save_install_defaults(args):
     """Save arguments passed to installation to be used on subsequent upgrades.
