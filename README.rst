@@ -66,7 +66,7 @@ Installation
     sudo chgrp docker /usr/local/bin/bcbio_vm.py
     sudo chmod g+s /usr/local/bin/bcbio_vm.py
 
-- Install bcbio-nextgen. This will get the latest `bcbio-nextgen docker index`_
+- Install bcbio-nextgen. This will get the latest `bcbio docker image`_
   with software and tools, as well as downloading genome data::
 
     bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools \
@@ -74,7 +74,7 @@ Installation
 
   For more details on expected download sizes, see the `bcbio system
   requirements`_ documentation. By default, the installation will download and
-  import the default docker image as ``chapmanb/bcbio-nextgen-devel``. You can
+  import the default docker image as ``bcbio/bcbio``. You can
   specify an alternative image location with ``--image your_image_name``, and
   skip the ``--tools`` argument if this image is already present and configured.
 
@@ -96,8 +96,7 @@ Installation
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup
-.. _Docker index: https://index.docker.io/
-.. _bcbio-nextgen docker index: https://index.docker.io/u/chapmanb/bcbio-nextgen-devel/
+.. _bcbio docker image: https://hub.docker.com/r/bcbio/bcbio/
 .. _setgid: https://en.wikipedia.org/wiki/Setuid
 .. _conda: http://conda.pydata.org/
 .. _sanitizes input arguments: https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/bcbiovm/docker/manage.py
@@ -197,22 +196,9 @@ Edit the code as needed, then update your local install with::
 Creating docker image
 =====================
 
-An `ansible <http://www.ansible.com>`_ playbook automates the process of
-creating the bcbio-nextgen docker images. To build on AWS and upload the latest
-image to S3, first use the elasticluster interface to start an AWS
-instance. Then run the build script on the remote machine::
-
-    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen-vm/master/scripts/build_docker_image.sh
-    bcbio_vm.py aws cluster command build_docker_image.sh
-
-To monitor progress, ssh in to the machine and look at the general and docker
-specific build logs::
-
-    bcbio_vm.py aws cluster ssh
-    tail ~/build_docker_image.log
-    tail /tmp/bcbio-docker-build/build.log
-
-This requires permissions to write to the ``bcbio_nextgen`` bucket.
+Docker hub builds the `bcbio docker image`_. We automatically trigger this build
+to avoid overloading Docker hub services with a long rebuild on every change to
+the bcbio repository.
 
 Preparing pre-build genomes
 ===========================
