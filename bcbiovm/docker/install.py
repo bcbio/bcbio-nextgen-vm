@@ -10,7 +10,7 @@ import yaml
 
 from bcbiovm.docker import manage, mounts
 
-DEFAULT_IMAGE = "chapmanb/bcbio-nextgen-devel"
+DEFAULT_IMAGE = "bcbio/bcbio"
 
 def full(args, dockerconf):
     """Full installaction of docker image and data.
@@ -67,15 +67,11 @@ def upgrade_bcbio_vm():
                                "bcbio-nextgen-vm"])
 
 def pull(args, dockerconf):
-    """Pull down latest docker image, using export uploaded to S3 bucket.
-
-    Long term plan is to use the docker index server but upload size is
-    currently smaller with an exported gzipped image.
+    """Pull down latest docker image.
     """
     print("Retrieving bcbio-nextgen docker image with code and tools")
-    # subprocess.check_call(["docker", "pull", image])
     assert args.image, "Unspecified image name for docker import"
-    subprocess.check_call(["docker", "import", dockerconf["image_url"], args.image])
+    subprocess.check_call(["docker", "pull", args.image])
 
 def _save_install_defaults(args):
     """Save arguments passed to installation to be used on subsequent upgrades.
