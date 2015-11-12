@@ -39,10 +39,24 @@ class Docker(base.Container):
             "port": 8085,
             "biodata_dir": "/usr/local/share/bcbio-nextgen",
             "work_dir": "/mnt/work",
-            "image_url": ("https://s3.amazonaws.com/bcbio_nextgen/"
-                          "bcbio-nextgen-docker-image.gz")
+            "image_url": "bcbio/bcbio",
         }
         self._playbook = common_playbook.Playbook()
+
+    @classmethod
+    def _kill_container(cls, container_id):
+        """Kill a running container."""
+        # Get the runnning containers list
+        output, _ = common_utils.execute(["docker", "ps"])
+        running = [line.split()[0] for line in output.splitlines()]
+        if container_id in running:
+            _, error = common_utils.execute(("docker", "kill", container_id),
+                                            check_exit_code=False)
+            if error:
+                LOG.error(error)
+                return False
+
+        return True
 
     @classmethod
     def install_bcbio(cls, image):
@@ -86,31 +100,28 @@ class Docker(base.Container):
         common_utils.execute(["docker", "rm", container],
                              check_exit_code=True)
 
-    def build_image(self, container, cwd, full, storage, context):
+    def build_image(self, cwd, full):
         """Build an image from the current container and export it
         to the received cloud provider.
 
-        :param container: The container name where to upload the gzipped
-                          docker image to.
         :param cwd:       The working directory.
         :param full:      The type of the build. If it is True all code
                           and third party tools will be installed otherwise
                           only only bcbio-nextgen code will be copied.
-        :param storage:   The storage manager required for this task.
-        :param context:   A dictionary that may contain useful information
-                          for the storage manager (credentials, headers etc).
         """
-        docker_image = "bcbio-nextgen-docker-image.gz"
 
         def extra_vars(_):
             """Extra variables to inject into a playbook."""
             return {
                 "docker_buildtype": "full" if full else "code",
-                "docker_image": docker_image,
+                "docker_image": bcbio_config["docker.bcbio_image"],
                 "bcbio_dir": cwd,
                 "bcbio_repo": bcbio_config["bcbio.repo"],
                 "bcbio_branch": bcbio_config["bcbio.branch"],
             }
+
+        docker_image = os.path.join(cwd, bcbio_config["docker.bcbio_image"])
+        LOG.debug("Creating docker image: %s", docker_image)
 
         playbook = clusterops.AnsiblePlaybook(
             extra_vars=extra_vars,
@@ -119,15 +130,13 @@ class Docker(base.Container):
                                         "standard_hosts.txt")
         )
         playbook_response = playbook.run()
-        if not any(playbook_response):
-            LOG.warning("Failed to create docker image.")
-            LOG.debug("Playbook response: %s", playbook_response)
-            return
+        LOG.debug("Playbook response: %s", playbook_response)
 
-        # Upload the image to the received file storage
-        return storage.upload(path=os.path.join(cwd, docker_image),
-                              filename=docker_image, container=container,
-                              context=context)
+        if not os.path.exists(docker_image):
+            LOG.warning("Failed to create docker image.")
+            return False
+
+        return docker_image
 
     @classmethod
     def check_image(cls, image):
@@ -144,6 +153,21 @@ class Docker(base.Container):
 
         raise exception.NotFound(object="docker image %s" % image,
                                  container="local repository")
+
+    @classmethod
+    def upload_image(cls, path, container, storage, context):
+        """Upload the image to the received file storage.
+
+        :param path:      The path of the docker image file.
+        :param container: The container name where to upload the gzipped
+                          docker image to.
+        :param storage:   The storage manager required for this task.
+        :param context:   A dictionary that may contain useful information
+                          for the storage manager (credentials, headers etc).
+        """
+        return storage.upload(path=path, container=container,
+                              filename=bcbio_config["docker.bcbio_image"],
+                              context=context)
 
     @classmethod
     def prepare_genomes(cls, genomes, aligners, output):
@@ -281,7 +305,7 @@ class Docker(base.Container):
         for mount_point in mounts:
             command.extend(("-v", mount_point))
 
-        command.extend(cls._export_environment)
+        command.extend(cls._export_environment())
         command.extend(("-e", "PERL5LIB=/usr/local/lib/perl5"))
         command.append(image)
 
@@ -300,20 +324,15 @@ class Docker(base.Container):
                          "Running in docker container: %s" % cid,
                          log_stdout=True)
         except subprocess.CalledProcessError as exc:
+            raise exception.BCBioException(exc)
+        finally:
             LOG.warning("Stopping docker container")
-            _, error = common_utils.execute(["docker", "kill", cid],
+            cls._kill_container(cid)
+            _, error = common_utils.execute(("docker", "rm", cid),
                                             check_exit_code=False)
             if error:
                 LOG.error(error)
-            raise exc
 
-        finally:
-            for command in (["docker", "kill", cid],
-                            ["docker", "rm", cid]):
-                _, error = common_utils.execute(command,
-                                                check_exit_code=False)
-                if error:
-                    LOG.error(error)
         return cid
 
     def run_analysis(self, image, sample, fcdir, config, datadir, cores):
@@ -484,5 +503,4 @@ class Docker(base.Container):
             raise exception.BCBioException("Unspecified image name for "
                                            "docker import")
 
-        common_utils.execute(["docker", "import", self._config["image_url"],
-                              image], check_exit_code=0)
+        common_utils.execute(["docker", "pull", image], check_exit_code=0)

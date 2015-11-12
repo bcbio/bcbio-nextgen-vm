@@ -23,6 +23,9 @@ class Build(docker.Build):
             "-d", "--rundir", default="/tmp/bcbio-docker-build",
             help="Directory to run docker build in")
         parser.add_argument(
+            "--no-upload", action="store_false", dest="upload",
+            default=True, help="Upload the image to the cloud provider.")
+        parser.add_argument(
             "-c", "--container", default="bcbio_nextgen",
             help="The container name where to upload the gzipped "
                  "docker image to")
@@ -64,10 +67,12 @@ class BiodataUpload(docker.BiodataUpload):
                   "output directory."))
         parser.add_argument(
             "--genomes", help="Genomes to download",
-            action="append", default=[], choices=self.SUPPORTED_GENOMES)
+            action="append", default=[],
+            choices=bcbio_config["supported.genomes"])
         parser.add_argument(
             "--aligners", help="Aligner indexes to download",
-            action="append", default=[], choices=self.SUPPORTED_INDEXES)
+            action="append", default=[],
+            choices=bcbio_config["supported.indexes"])
         parser.add_argument(
             "-s", "--storage-account",
             default=bcbio_config.get("env.STORAGE_ACCOUNT", None),

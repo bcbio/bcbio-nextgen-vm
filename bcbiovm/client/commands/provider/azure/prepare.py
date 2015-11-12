@@ -1,5 +1,6 @@
 """Subcommands available for Azure provider."""
 import os
+import shutil
 
 from bcbiovm import log as logging
 from bcbiovm.client import base
@@ -8,6 +9,63 @@ from bcbiovm.common import utils
 from bcbiovm.common import exception
 
 LOG = logging.get_logger(__name__)
+
+
+class DataDirectory(base.Command):
+
+    """Create the datadir and add initial data."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "datadir", help="Create and setup the datadir.")
+        parser.add_argument(
+            "--path", default="~/install/bcbio-vm/data",
+            help=("The location for the datadir. "
+                  "[default: ~/install/bcbio-vm/data]"))
+        parser.add_argument(
+            "-f", "--force", default=False, action="store_true",
+            help="Overwrite the datadir if already exits.")
+
+        parser.set_defaults(work=self.run)
+
+    def prologue(self):
+        """Executed once before the command running."""
+        if self.args.force:
+            return
+
+        self.args.path = os.path.abspath(self.args.datadir or self.args.path)
+        if os.path.exists(self.args.path):
+            raise exception.BCBioException("The datadir already exists.")
+
+    def work(self):
+        """Run the command with the received information."""
+        if os.path.exists(self.args.path) and self.args.force:
+            shutil.rmtree(self.args.path)
+
+        os.makedirs(self.args.path)
+
+    def epilogue(self):
+        """Executed once after the command running."""
+        if os.path.exists('/usr/local/share/bcbio_nextgen/genomes'):
+            os.symlink(source='/usr/local/share/bcbio_nextgen/genomes',
+                       link_name=os.path.join(self.args.path, "genomes"))
+        if os.path.exists('/usr/local/share/gemini/data'):
+            os.symlink(source='/usr/local/share/bcbio_nextgen/genomes',
+                       link_name=os.path.join(self.args.path, "gemini_data"))
+
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        super(DataDirectory, self).task_done(result)
+        LOG.info("The datadir was successfully created.")
+
+    def task_fail(self, exc):
+        """What to do when the program fails processing a task."""
+        if isinstance(exc, exception.BCBioException):
+            LOG.error("The private key already exists. In order to "
+                      "overwrite it the --force argument can be used.")
+        else:
+            super(DataDirectory, self).task_fail(exc)
 
 
 class ECConfig(base.Command):

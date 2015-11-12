@@ -118,6 +118,7 @@ class PrepareEnvironment(base.Group):
         (azure_provider.prepare.ManagementCertificate, "actions"),
         (azure_provider.prepare.PrivateKey, "actions"),
         (azure_provider.prepare.ECConfig, "actions"),
+        (azure_provider.prepare.DataDirectory, "actions"),
     ]
 
     def setup(self):
