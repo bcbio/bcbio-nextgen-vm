@@ -41,8 +41,8 @@ class ElastiCluster(object):
     _EC_SSH = "ssh"
     _EC_SETUP = "setup"
 
-    def __init__(self, provider=constant.DEFAULT_PROVIDER):
-        self._provider = provider
+    def __init__(self, provider=None):
+        self._provider = provider or bcbio_config["env.BCBIO_PROVIDER"]
         self._config = None
         self._config_file = constant.PATH.EC_CONFIG.format(
             provider=provider)
@@ -91,12 +91,12 @@ class ElastiCluster(object):
     def _add_common_options(cls, command, config=None):
         """Add common options to the command line."""
         if bcbio_config["log.verbosity"]:
-            # Insert `--verbose` to the command
+            LOG.debug("Inserting `--verbose` into the command")
             verbosity = "v" * bcbio_config.log["verbosity"]
             command.insert(1, "-{verbosity}".format(verbosity=verbosity))
 
         if config:
-            # Insert `--config config_file` to the command
+            LOG.debug("Inserting `--config config_file` into the command")
             for argument in (config, cls._CONFIG[1]):
                 command.insert(1, argument)
 
@@ -108,23 +108,24 @@ class ElastiCluster(object):
         Note:
             If the storage or the config is missing they will be added.
         """
-        # Ckeck if received command contains '-s' or '--storage'
+        LOG.debug("Ckecking if received command contains '-s' or '--storage'")
         if cls._STORAGE[0] not in command and cls._STORAGE[1] not in command:
-            # Insert `--storage storage_path` to the command
+            LOG.debug("Inserting `--storage storage_path` into the command")
             for argument in (_EC_STORAGE, cls._STORAGE[1]):
                 command.insert(1, argument)
 
-            # Notes: Clean up the old storage directory in order to avoid
-            #        consistent errors.
+            LOG.debug("Clean up the old storage directory in order to avoid "
+                      "consistent errors.")
             std_args = [arg for arg in command if not arg.startswith('-')]
             if len(std_args) >= 3 and std_args[1] == "start":
                 pickle_file = (_PICKLE_FILE % {"cluster": std_args[2]})
                 if os.path.exists(pickle_file):
+                    LOG.debug("Removing pickle file: %s", pickle_file)
                     os.remove(pickle_file)
 
-        # Check if received command contains '-c' or '--config'
+        LOG.debug("Checking if received command contains '-c' or '--config'")
         if cls._CONFIG[0] not in command and cls._CONFIG[1] not in command:
-            # Insert `--config config_file` to the command
+            LOG.debug("Inserting `--config config_file` into the command")
             for argument in (constant.PATH.EC_CONFIG, cls._CONFIG[1]):
                 command.insert(1, argument)
 
@@ -138,8 +139,7 @@ class ElastiCluster(object):
         cls._add_common_options(command, **kwargs)
         cls._check_command(command)
         sys.argv = command
-        LOG.debug("Run elasticluster command: %(command)s",
-                  {"command": command})
+        LOG.info("Run elasticluster command: %s", command)
         try:
             return ec_main.main()
         except SystemExit as exc:
@@ -266,7 +266,7 @@ class AnsiblePlaybook(object):
 
     def __init__(self, inventory_path, playbook_path, config=None,
                  cluster=None, extra_vars=None, ansible_cfg=None,
-                 provider=constant.DEFAULT_PROVIDER):
+                 provider=None):
         """
         :param inventory_path:  the path to the inventory hosts file
         :param playbook_path:   the path to a playbook file
@@ -286,7 +286,8 @@ class AnsiblePlaybook(object):
         self._runner_cb = None
 
         if config and cluster:
-            ecluster = ElastiCluster(provider)
+            ecluster = ElastiCluster(provider or
+                                     bcbio_config["env.BCBIO_PROVIDER"])
             ecluster.load_config(config)
             self._cluster = ecluster.get_config(cluster)
 
@@ -303,7 +304,9 @@ class AnsiblePlaybook(object):
             self._callbacks = ansible.callbacks.PlaybookCallbacks()
             self._runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(
                 self._stats)
-            ansible.utils.VERBOSITY = bcbio_config.log["verbosity"] - 1
+            LOG.debug("Setting ansible VERBOSITY to %s",
+                      bcbio_config["log.verbosity"] - 1)
+            ansible.utils.VERBOSITY = bcbio_config["log.verbosity"] - 1
         else:
             self._callbacks = SilentPlaybook()
             self._runner_cb = ansible.callbacks.DefaultRunnerCallbacks()

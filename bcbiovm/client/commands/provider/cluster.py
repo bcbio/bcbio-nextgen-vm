@@ -257,6 +257,32 @@ class SSHConnection(CommandMixin):
                             ssh_args=self.args.args)
 
 
+class CreateConfig(CommandMixin):
+
+    """Write Elasticluster configuration file with user information."""
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "create",
+            help="Write Elasticluster configuration file.")
+        parser.add_argument(
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=None)
+
+        parser.set_defaults(work=self.run)
+
+    def work(self):
+        """Run the command with the received information."""
+        return common_utils.write_elasticluster_config(
+            config={}, output=self.args.econfig, provider=self.args.provider)
+
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        super(CreateConfig, self).task_done(result)
+        LOG.info("The elasticluster config was successfully generated.")
+
+
 class EditConfig(CommandMixin):
 
     """Edit cluster configuration."""
@@ -273,8 +299,8 @@ class EditConfig(CommandMixin):
     @staticmethod
     def _ask(message, default):
         """Get information from the user."""
-        message = "{message} [{default}]".format(message=message,
-                                                 default=default)
+        message = "{message} [{default}]: ".format(message=message,
+                                                   default=default)
         value = six.moves.input(message)
         return value or default
 
@@ -317,7 +343,7 @@ class EditConfig(CommandMixin):
         """Change values regarding the frontend node."""
         nfs_size = self._ask(
             message="Size of encrypted NFS mounted filesystem, in Gb",
-            default=self._frontend["encrypted_volume_size"])
+            default=self._frontend.get("encrypted_volume_size", 200))
 
         # 30 IOPS/Gb, maximum 4000 IOPS http://aws.amazon.com/ebs/details/
         iops = min(int(nfs_size) * 30, 4000)
@@ -327,6 +353,19 @@ class EditConfig(CommandMixin):
                              "encrypted_volume_type", "io1")
         self._raw_parser.set(self._frontend_section,
                              "encrypted_volume_iops", iops)
+
+    def setup(self):
+        """Extend the parser configuration in order to expose this command."""
+        parser = self._parser.add_parser(
+            "edit", help="Edit cluster configuration")
+        parser.add_argument(
+            "--econfig", help="Elasticluster bcbio configuration file",
+            default=None)
+        parser.add_argument(
+            "-c", "--cluster", default="bcbio",
+            help="elasticluster cluster name")
+
+        parser.set_defaults(work=self.run)
 
     def prologue(self):
         """Executed once before the command running."""
@@ -352,16 +391,3 @@ class EditConfig(CommandMixin):
         # Update the config file with the new setup
         with open(self.args.econfig, "w") as file_handle:
             self._raw_parser.write(file_handle)
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "edit", help="Edit cluster configuration")
-        parser.add_argument(
-            "--econfig", help="Elasticluster bcbio configuration file",
-            default=None)
-        parser.add_argument(
-            "-c", "--cluster", default="bcbio",
-            help="elasticluster cluster name")
-
-        parser.set_defaults(work=self.run)

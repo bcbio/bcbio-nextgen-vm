@@ -8,7 +8,6 @@ import sys
 
 # pylint: disable=no-init,old-style-class
 
-DEFAULT_PROVIDER = 'aws'
 DOCKER = {
     "port": 8085,
     "biodata_dir": "/usr/local/share/bcbio-nextgen",
@@ -59,6 +58,7 @@ DEFAULTS = {
     "bcbio.branch": "master",
     "docker.image": "chapmanb/bcbio-nextgen-devel",
     "docker.bcbio_image": "bcbio-nextgen-docker-image.gz",
+    "env.BCBIO_PROVIDER": PROVIDER.AWS,
     "log.verbosity": 0,
     "log.file.level": logging.DEBUG,
     "log.file.format": "%(asctime)s,%(name)s,%(levelname)s,%(message)s",
@@ -73,7 +73,8 @@ DEFAULTS = {
 
 ENVIRONMENT = {
     "development": {
-        "conda.channel": "https://conda.binstar.org/bcbio-dev",
+        "conda.channels": ("https://conda.binstar.org/bcbio-dev",
+                           "https://conda.binstar.org/bcbio"),
         "conda.package": "bcbio-nextgen-vm",
         "log.cli.format": "%(name)s - [%(levelname)s]: %(message)s",
         "log.cli.level": logging.DEBUG,
@@ -83,7 +84,7 @@ ENVIRONMENT = {
     },
 
     "production": {
-        "conda.channel": "https://conda.binstar.org/bcbio",
+        "conda.channels": ("https://conda.binstar.org/bcbio", ),
         "conda.package": "bcbio-nextgen-vm",
         "log.cli.format": "[%(levelname)s]: %(message)s",
         "log.cli.level": logging.INFO,

@@ -59,8 +59,24 @@ class BCBioClient(base.Client):
 
         self._register_parser("commands", commands)
 
+    def _backward_compatibility(self):
+        """Ensure backward compatibility."""
+        index = 0
+        for item in self.command_line:
+            if not item.startswith("-"):
+                break
+            index += 1
+        else:
+            return
+
+        if self.command_line[index] not in ("run", "install", "upgrade", "aws",
+                                            "runfn", "saveconfig", "template",
+                                            "ipython", "ipythonprep", "azure"):
+            self.command_line.insert(index, config["env.BCBIO_PROVIDER"])
+
     def prologue(self):
         """Executed once before the command running."""
+        self._backward_compatibility()
         super(BCBioClient, self).prologue()
 
         if self.args.quiet:

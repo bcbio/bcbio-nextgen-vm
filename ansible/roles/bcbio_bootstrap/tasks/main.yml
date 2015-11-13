@@ -31,7 +31,14 @@
   sudo: false
   vars:
     anaconda_dir: "~{{ansible_user_id}}/install/bcbio-vm/data/anaconda"
+
   tasks:
+    - name: Add environment variables
+      lineinfile:
+        dest:  ~{{ansible_user_id}}/.bashrc
+        line: "export {{ item.key }}='{{ item.value }}'"
+      with_dict: "{{ bcbio_environment }}"
+
     - name: Get Miniconda install script
       get_url:
         url: http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
@@ -42,8 +49,12 @@
       args:
         creates: "{{anaconda_dir}}/bin/conda"
 
+    - name: Add conda channels
+      shell: "{{anaconda_dir}}/bin/conda config --add channels {{ item }}"
+      with_items: "{{ bcbio_channels }}"
+
     - name: Install bcbio_vm
-      shell: "{{anaconda_dir}}/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
+      shell: "{{anaconda_dir}}/bin/conda install --yes bcbio-nextgen-vm"
 
     - name: bcbio_vm.py -- setgid docker
       file:

@@ -15,6 +15,10 @@ class Config(base.Group):
     """Manipulate elasticluster configuration files, providing easy
     ways to edit in place.
     """
+    commands = [
+        (provider.cluster.EditConfig, "actions"),
+        (provider.cluster.CreateConfig, "actions")
+    ]
 
     def setup(self):
         """Extend the parser configuration in order to expose this command."""
@@ -117,7 +121,6 @@ class PrepareEnvironment(base.Group):
     commands = [
         (azure_provider.prepare.ManagementCertificate, "actions"),
         (azure_provider.prepare.PrivateKey, "actions"),
-        (azure_provider.prepare.ECConfig, "actions"),
         (azure_provider.prepare.DataDirectory, "actions"),
     ]
 
@@ -163,7 +166,7 @@ class AWSProvider(base.Group):
         (aws_provider.clusterk.ClusterK, "actions"),
         (client_commands.common.Graph, "actions"),
         (client_commands.common.Info, "actions"),
-        (provider.cluster.EditConfig, "actions"),
+        (Config, "actions"),
         (DockerAWS, "actions"),
         (ElastiCluster, "actions"),
         (ICELCommand, "actions"),
@@ -184,7 +187,7 @@ class AzureProvider(base.Group):
     commands = [
         (client_commands.common.Info, "actions"),
         (client_commands.common.Graph, "actions"),
-        (provider.cluster.EditConfig, "actions"),
+        (Config, "actions"),
         (DockerAzure, "actions"),
         (ElastiCluster, "actions"),
         (PrepareEnvironment, "actions"),

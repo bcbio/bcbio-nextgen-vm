@@ -8,6 +8,7 @@ import os
 import toolz
 from bcbio.distributed import ipython
 
+from bcbiovm import config as bcbio_config
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.provider.common import playbook as common_playbook
 
@@ -75,13 +76,20 @@ class Bootstrap(object):
             else:
                 machine = toolz.get_in(["nodes", "frontend", "flavor"],
                                        cluster_config)
+
             flavor = self._provider.get_flavor(machine=machine)
             cores = ipython.per_machine_target_cores(flavor.cpus,
                                                      compute_nodes)
             return {
                 "target_cores": cores,
                 "target_memory": flavor.memory,
-                "upgrade_host_os_and_reboot": self._reboot}
+                "upgrade_host_os_and_reboot": self._reboot,
+                "bcbio_environment": {
+                    "BCBIO_ENV": bcbio_config["env.BCBIO_ENV"],
+                    "BCBIO_PROVIDER": bcbio_config["env.BCBIO_PROVIDER"],
+                },
+                "bcbio_channels": bcbio_config["conda.channels"]
+            }
 
         return self._run_playbook(self._playbook.bcbio, _extra_vars)
 

@@ -298,11 +298,11 @@ def execute(command, **kwargs):
                 raise
 
 
-def write_elasticluster_config(config, output,
-                               provider=constant.DEFAULT_PROVIDER):
+def write_elasticluster_config(config, output, provider=None):
     """Write Elasticluster configuration file with user and security
     information.
     """
+    provider = provider or global_config["env.BCBIO_PROVIDER"]
     template_file = os.path.join(
         sys.prefix, "share", "bcbio-vm", "elasticluster",
         "{provider}.config".format(provider=provider))

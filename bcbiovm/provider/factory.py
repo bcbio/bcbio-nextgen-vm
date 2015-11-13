@@ -1,6 +1,7 @@
 """Cloud provider factory."""
 import collections
 
+from bcbiovm import config as bcbio_config
 from bcbiovm.common import constant
 from bcbiovm.common import exception
 from bcbiovm.provider import ship as shared_ship
@@ -36,9 +37,10 @@ STORAGE = {
 }
 
 
-def get(cloud_provider=constant.DEFAULT_PROVIDER):
+def get(cloud_provider=None):
     """Return the required cloud provider."""
-    provider = CLOUD_PROVIDER.get(cloud_provider)
+    provider = CLOUD_PROVIDER.get(cloud_provider or
+                                  bcbio_config["env.BCBIO_PROVIDER"])
     if not provider:
         raise exception.NotFound(object=provider,
                                  container=CLOUD_PROVIDER.keys())

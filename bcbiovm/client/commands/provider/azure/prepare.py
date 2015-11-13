@@ -4,7 +4,6 @@ import shutil
 
 from bcbiovm import log as logging
 from bcbiovm.client import base
-from bcbiovm.common import constant
 from bcbiovm.common import utils
 from bcbiovm.common import exception
 
@@ -66,39 +65,6 @@ class DataDirectory(base.Command):
                       "overwrite it the --force argument can be used.")
         else:
             super(DataDirectory, self).task_fail(exc)
-
-
-class ECConfig(base.Command):
-
-    """Write Elasticluster configuration file with user information."""
-
-    def setup(self):
-        """Extend the parser configuration in order to expose this command."""
-        parser = self._parser.add_parser(
-            "ec-config",
-            help="Write Elasticluster configuration file.")
-        parser.add_argument(
-            "--econfig", help="Elasticluster bcbio configuration file",
-            default=None)
-
-        parser.set_defaults(work=self.run)
-
-    def prologue(self):
-        """Executed once before the command running."""
-        if self.args.econfig is None:
-            self.args.econfig = constant.PATH.EC_CONFIG.format(
-                provider=constant.PROVIDER.AZURE)
-
-    def work(self):
-        """Run the command with the received information."""
-        return utils.write_elasticluster_config(
-            config={}, output=self.args.econfig,
-            provider=constant.PROVIDER.AZURE)
-
-    def task_done(self, result):
-        """What to execute after successfully finished processing a task."""
-        super(ECConfig, self).task_done(result)
-        LOG.info("The elasticluster config was successfully generated.")
 
 
 class ManagementCertificate(base.Command):

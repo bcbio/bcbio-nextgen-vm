@@ -14,7 +14,7 @@ _ENVIRONMENT = (
     "ALL_PROXY", "all_proxy", "FTP_PROXY", "ftp_proxy",
     "RSYNC_PROXY", "rsync_proxy",
     "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
-    "BCBIO_ENV", "BCBIO_DOCKER_PRIVILEGED",
+    "BCBIO_ENV", "BCBIO_DOCKER_PRIVILEGED", "BCBIO_PROVIDER",
     "STORAGE_ACCOUNT", "STORAGE_ACCESS_KEY",
 )
 
@@ -143,6 +143,7 @@ class _Config(object):
         # Load all the environment variables related to bcbio project.
         environ = {"env.{0}".format(key): os.environ[key]
                    for key in _ENVIRONMENT if key in os.environ}
+
         for configurations in (self._defaults, self._environment, environ):
             self._data.update(configurations)
             self._update_namespace(configurations)
