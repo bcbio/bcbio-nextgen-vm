@@ -167,6 +167,8 @@ class _Action(base.Command):
         # Check if the datadir exists
         self.defaults.check_datadir("bcbio-nextgen not installed or "
                                     "upgrade.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
