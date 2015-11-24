@@ -195,10 +195,10 @@ class Install(Tool):
         if hasattr(self.args, "image") and self.args.image:
             return
 
-        if defaults["image"] and not defaults.get("images") == "None":
+        if defaults.get("images", "None") != "None":
             self.args.image = defaults["image"]
         else:
-            self.args.image = bconfig.docker["image"]
+            self.args.image = bconfig["docker.image"]
 
     def add_install_defaults(self):
         """Add previously saved installation defaults to command line
@@ -220,7 +220,7 @@ class Install(Tool):
             return
 
         default_args = self._get_install_defaults()
-        self.args = self._add_docker_defaults(default_args)
+        self._add_docker_defaults(default_args)
 
     def save_install_defaults(self):
         """Save arguments passed to installation to be used on subsequent upgrades.
@@ -242,7 +242,7 @@ class Install(Tool):
                 if value not in current_config[attribute]:
                     current_config[attribute].append(str(value))
 
-        if self.args.image and self.args.image != bconfig.docker["image"]:
+        if self.args.image and self.args.image != bconfig["docker.image"]:
             current_config["image"] = self.args.image
 
         with open(install_config, "w") as out_handle:

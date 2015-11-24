@@ -17,6 +17,7 @@ import six
 from bcbiovm import config as global_config
 from bcbiovm.common import constant
 
+_SYMBOL = collections.namedtuple("Symbol", ["name", "set", "value"])
 _SYMBOLS = {
     'customary_symbols': ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'),
     'customary_names': ('byte', 'kilo', 'mega', 'giga', 'tera', 'peta',
@@ -368,24 +369,15 @@ def backup(path, backup_dir=None, delete=False, maximum=0):
 def predict_unit(unit):
     """Predit the symbol set for the received unit."""
     symbol_value = 1
-    _symbol = collections.namedtuple("Symbol", ["name", "set", "value"])
+    unit = unit.upper() if len(unit) == 1 else unit
 
     for set_name, symbol_set in _SYMBOLS.items():
         if unit in symbol_set:
-            break
-    else:
-        if unit == 'k':
-            # Treat `k` as an alias for `K`
-            set_name = "customary_symbols"
-            symbol_set = _SYMBOLS["customary_symbols"]
-            unit = unit.upper()
-        else:
-            raise ValueError("Invalid unit name %(unit)s", {"unit": unit})
+            if unit != symbol_set[0]:
+                symbol_value = 1 << symbol_set.index(unit) * 10
+            return _SYMBOL(set_name, symbol_set, symbol_value)
 
-    if unit != symbol_set[0]:
-        symbol_value = 1 << symbol_set.index(unit) * 10
-
-    return _symbol(set_name, symbol_set, symbol_value)
+    raise ValueError("Invalid unit name %(unit)s", {"unit": unit})
 
 
 def predict_size(size, convert="K"):
@@ -395,7 +387,7 @@ def predict_size(size, convert="K"):
     initial_size = size.strip()
     numerical = ""
     while (initial_size and initial_size[0:1].isdigit() or
-           initial_size[0:1] == '.'):
+           initial_size[0:1] == "."):
         numerical += initial_size[0]
         initial_size = initial_size[1:]
     numerical = float(numerical)

@@ -87,7 +87,7 @@ def calculate_common_memory(resources):
     return numpy.median(memory)
 
 
-def update_memory(key, cur, target, common_mem):
+def update_memory(key, cur, target, median_memory):
     """Update memory specifications to match target.
 
     Handles JVM options and both megabyte and gigabyte specifications.
@@ -95,8 +95,8 @@ def update_memory(key, cur, target, common_mem):
     than 1.5x the current common memory setting, assuming these are pre-set for
     higher memory requirements.
     """
-    cur_mem, _ = get_memory(key, cur)
-    if cur_mem >= common_mem * 1.5:
+    current_value = get_memory(key, cur)
+    if current_value >= median_memory * 1.5:
         return cur
 
     new_val = "%sM" % target
