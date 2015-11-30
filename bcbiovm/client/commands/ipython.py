@@ -6,12 +6,15 @@ import yaml
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.container.docker import common as docker_common
 from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
+
+LOG = logging.get_logger(__name__)
 
 
 class IPython(base.Command):
@@ -32,17 +35,6 @@ class IPython(base.Command):
             "sample_config",
             help="YAML file with details about samples to process.")
         parser.add_argument(
-            "--fcdir",
-            help="A directory of Illumina output or fastq files to process",
-            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
-        parser.add_argument(
-            "--systemconfig",
-            help=("Global YAML configuration file specifying system details. "
-                  "Defaults to installed bcbio_system.yaml."))
-        parser.add_argument(
-            "-n", "--numcores", type=int, default=1,
-            help="Total cores to use for processing")
-        parser.add_argument(
             "scheduler", help="Scheduler to use.",
             choices=["lsf", "sge", "torque", "slurm", "pbspro"])
         parser.add_argument(
@@ -53,6 +45,17 @@ class IPython(base.Command):
                   "Can be specified multiple times.\n"
                   "Supports SGE and SLURM parameters."),
             default=[], action="append")
+        parser.add_argument(
+            "--fcdir",
+            help="A directory of Illumina output or fastq files to process",
+            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
+        parser.add_argument(
+            "--systemconfig",
+            help=("Global YAML configuration file specifying system details. "
+                  "Defaults to installed bcbio_system.yaml."))
+        parser.add_argument(
+            "-n", "--numcores", type=int, default=1,
+            help="Total cores to use for processing")
         parser.add_argument(
             "--timeout", default=15, type=int,
             help=("Number of minutes before cluster startup times out."
@@ -201,3 +204,12 @@ class IPythonPrep(base.Command):
     def work(self):
         """Run the command with the received information."""
         return batchprep.submit_script(self.args)
+
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        commands = {"slurm": "sbatch", "sge": "qsub",
+                    "lsf": "bsub", "torque": "qsub",
+                    "pbspro": "qsub"}
+
+        LOG.info("Start analysis with: %(command)s %(outfile)s",
+                 {"command": commands[self.args.scheduler], "outfile": result})

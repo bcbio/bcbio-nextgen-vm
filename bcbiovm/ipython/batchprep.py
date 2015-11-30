@@ -5,6 +5,12 @@ the same arguments as standard IPython runs.
 """
 import os
 
+from bcbiovm import log as logging
+from bcbiovm.common import exception
+
+LOG = logging.get_logger(__name__)
+
+
 # names that indicate we're running on a dedicated AWS queue
 AWS_QUEUES = set(["cloud"])
 
@@ -13,50 +19,57 @@ def _get_ipython_cmdline(args):
     """Translate arguments back into a standard bcbio_vm ipython
     submission command.
     """
-    cmd = ["bcbio_vm.py", "ipython", args.sample_config, args.scheduler,
-           args.queue, "--numcores", str(args.numcores)]
+    command = ["bcbio_vm.py", "ipython", args.sample_config,
+               args.scheduler, args.queue,
+               "--numcores", str(args.numcores)]
     has_timelimit = False
     for resource in args.resources:
-        cmd += ["-r", resource]
+        command.extend(["-r", resource])
         if resource.startswith("timelimit"):
             has_timelimit = True
+
     if not has_timelimit and args.queue in AWS_QUEUES:
-        cmd += ["-r", "timelimit=0"]
-    for opt_arg in ["timeout", "retries", "tag", "tmpdir",
-                    "fcdir", "systemconfig"]:
-        if getattr(args, opt_arg):
-            cmd += ["--%s" % opt_arg, str(getattr(args, opt_arg))]
-    return " ".join(cmd)
+        command.extend(["-r", "timelimit=0"])
+
+    for name in ("timeout", "retries", "tag", "tmpdir", "fcdir",
+                 "systemconfig"):
+        argument = str(getattr(args, name, ''))
+        if argument:
+            command.extend(["--%s" % name, argument])
+
+    return " ".join(command)
 
 
 def submit_script(args):
+    """Automates the process of preparing submission batch scripts,
+    using the same arguments as standard IPython runs.
+    """
     out_file = os.path.join(os.getcwd(), "bcbio_submit.sh")
+    LOG.info("Writing submission script for %s to %s",
+             args.scheduler, out_file)
+
     with open(out_file, "w") as out_handle:
         out_handle.write("#!/bin/bash\n")
-        out_handle.write(_get_scheduler_cmds(args) + "\n")
+        out_handle.write(_get_scheduler_arguments(args) + "\n")
         out_handle.write(_get_ipython_cmdline(args) + "\n")
-    print("Submission script for %s written to %s" %
-          (args.scheduler, out_file))
-    print("Start analysis with: %s %s" %
-          (_get_submit_cmd(args.scheduler), out_file))
+
+    return out_file
 
 
-def _get_scheduler_cmds(args):
-    cmds = {
-        "slurm": _get_slurm_cmds,
-        "sge": _get_sge_cmds,
-        "lsf": _get_lsf_cmds,
-        "torque": _get_torque_cmds,
-        "pbspro": _get_torque_cmds
-    }
+def _get_scheduler_arguments(args):
+    """Scheduler arguments factory."""
+    commands = {"slurm": _get_slurm_cmds, "sge": _get_sge_cmds,
+                "lsf": _get_lsf_cmds, "torque": _get_torque_cmds,
+                "pbspro": _get_torque_cmds}
     try:
-        return cmds[args.scheduler](args)
+        return commands[args.scheduler](args)
     except KeyError:
-        raise NotImplementedError("Batch script preparation for %s "
-                                  "not yet supported" % args.scheduler)
+        raise exception.NotSupported("Batch script preparation for %s "
+                                     "not yet supported" % args.scheduler)
 
 
 def _get_slurm_cmds(args):
+    """Required arguments for the SLURM scheduler."""
     cmds = ["--cpus-per-task=1", "--mem=2000", "-p %s" % args.queue]
     timelimit = "0" if args.queue in AWS_QUEUES else "1-00:00:00"
     for r in args.resources:
@@ -69,6 +82,7 @@ def _get_slurm_cmds(args):
 
 
 def _get_sge_cmds(args):
+    """Required arguments for the SGE scheduler."""
     cmds = ["-cwd", "-j y", "-S /bin/bash"]
     if args.queue:
         cmds += ["-q %s" % args.queue]
@@ -78,6 +92,7 @@ def _get_sge_cmds(args):
 
 
 def _get_lsf_cmds(args):
+    """Required arguments for the LSF scheduler."""
     cmds = ["-q %s" % args.queue, "-n 1"]
     if args.tag:
         cmds += ["-J %s-submit" % args.tag]
@@ -85,18 +100,8 @@ def _get_lsf_cmds(args):
 
 
 def _get_torque_cmds(args):
+    """Required arguments for the SLURM scheduler."""
     cmds = ["-V", "-j oe", "-q %s" % args.queue, "-l nodes=1:ppn=1"]
     if args.tag:
         cmds += ["-N %s-submit" % args.tag]
     return "\n".join("#PBS %s" % x for x in cmds)
-
-
-def _get_submit_cmd(scheduler):
-    cmds = {
-        "slurm": "sbatch",
-        "sge": "qsub",
-        "lsf": "bsub",
-        "torque": "qsub",
-        "pbspro": "qsub"
-    }
-    return cmds[scheduler]
