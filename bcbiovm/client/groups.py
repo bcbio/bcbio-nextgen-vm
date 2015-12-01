@@ -1,4 +1,6 @@
 """The commands used by the command line parser."""
+from bcbio.client import groups as bcbio_groups
+
 from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.client import commands as client_commands
@@ -139,6 +141,7 @@ class Tools(base.Group):
     """Tools and utilities."""
 
     commands = [
+        (bcbio_groups.Downloader, "tools"),
         (client_commands.tools.S3Upload, "storage_manager"),
         (client_commands.tools.BlobUpload, "storage_manager"),
     ]

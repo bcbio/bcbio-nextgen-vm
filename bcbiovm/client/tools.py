@@ -195,7 +195,7 @@ class Install(Tool):
         if hasattr(self.args, "image") and self.args.image:
             return
 
-        if defaults.get("images", "None") != "None":
+        if defaults.get("image", "None") != "None":
             self.args.image = defaults["image"]
         else:
             self.args.image = bconfig["docker.image"]

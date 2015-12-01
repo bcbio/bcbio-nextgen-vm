@@ -14,6 +14,7 @@ import time
 import paramiko
 import six
 
+from bcbiovm import log as logging
 from bcbiovm import config as global_config
 from bcbiovm.common import constant
 
@@ -28,6 +29,7 @@ _SYMBOLS = {
     'IEC_names': ('byte', 'kibi', 'mebi', 'gibi', 'tebi', 'pebi', 'exbi',
                   'zebi', 'yobi'),
 }
+_LOG = logging.get_logger(__name__)
 
 
 class SSHAgent(object):
@@ -264,6 +266,7 @@ def execute(command, **kwargs):
     elif isinstance(check_exit_code, int):
         check_exit_code = [check_exit_code]
 
+    _LOG.debug("Trying to execute: %r", command)
     while attempts > 0:
         attempts = attempts - 1
         try:
@@ -292,8 +295,9 @@ def execute(command, **kwargs):
                                                     output=(stdout, stderr))
             else:
                 return (stdout, stderr)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as exc:
             if attempts:
+                _LOG.debug("Failed to execute command: %r", exc)
                 time.sleep(retry_interval)
             else:
                 raise
@@ -369,7 +373,7 @@ def backup(path, backup_dir=None, delete=False, maximum=0):
 def predict_unit(unit):
     """Predit the symbol set for the received unit."""
     symbol_value = 1
-    unit = unit.upper() if len(unit) == 1 else unit
+    unit = unit if len(unit) > 1 else unit.upper()
 
     for set_name, symbol_set in _SYMBOLS.items():
         if unit in symbol_set:

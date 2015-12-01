@@ -23,6 +23,9 @@ def _get_system_config(config, datadir):
     :param config:  Global YAML configuration file specifying system
                     details.
     """
+    LOG.debug("Retrieve a system configuration with galaxy references "
+              "specified.")
+
     config_file = system_config_file(config, datadir)
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
@@ -158,7 +161,7 @@ def system_config_file(config, datadir):
     :param config:  Global YAML configuration file specifying system
                     details.
     """
-    if config:
+    if config and config != "None":
         if not os.path.isabs(config):
             return os.path.normpath(os.path.join(os.getcwd(), config))
         else:
@@ -197,8 +200,11 @@ def local_system_config(config, datadir, work_dir):
                      details.
     :param work_dir: The current working directory.
     """
+    LOG.debug("Creating a ready to run local system configuration file.")
+
     system_config = _get_system_config(config, datadir)
     system_cfile = os.path.join(work_dir, "bcbio_system-prep.yaml")
+
     with open(system_cfile, "w") as out_handle:
         yaml.dump(system_config, out_handle, default_flow_style=False,
                   allow_unicode=False)

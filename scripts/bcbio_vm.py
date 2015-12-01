@@ -35,6 +35,7 @@ class BCBioClient(base.Client):
         (client_commands.ipython.IPythonPrep, "commands"),
         (groups.AWSProvider, "commands"),
         (groups.AzureProvider, "commands"),
+        (groups.Tools, "commands"),
     ]
 
     def setup(self):
@@ -71,7 +72,8 @@ class BCBioClient(base.Client):
 
         if self.command_line[index] not in ("run", "install", "upgrade", "aws",
                                             "runfn", "saveconfig", "template",
-                                            "ipython", "ipythonprep", "azure"):
+                                            "ipython", "ipythonprep", "azure",
+                                            "tools"):
             self.command_line.insert(index, config["env.BCBIO_PROVIDER"])
 
     def prologue(self):

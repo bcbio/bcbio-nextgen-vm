@@ -81,30 +81,35 @@ class IPython(base.Command):
         # Check if the datadir exists if it is required.
         self.defaults.check_datadir("Could not run IPython parallel "
                                     "analysis.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
         work_dir = os.getcwd()
-        parallel = clargs.to_parallel(self.args, "bcbiovm.container.docker")
-        parallel["wrapper"] = "runfn"
-
-        with open(self.args.sample_config) as in_handle:
-            ready_config, _ = docker_mounts.normalize_config(
-                yaml.load(in_handle), self.args.fcdir)
-
         ready_config_file = os.path.join(
             work_dir, "%s-ready%s" %
             (os.path.splitext(os.path.basename(self.args.sample_config))))
 
+        parallel = clargs.to_parallel(self.args, "bcbiovm.container.docker")
+        parallel["wrapper"] = "runfn"
+
+        LOG.debug("Loading the config: %s", self.args.sample_config)
+        with open(self.args.sample_config) as in_handle:
+            ready_config, _ = docker_mounts.normalize_config(
+                yaml.load(in_handle), self.args.fcdir)
+
+        LOG.debug("Writing the %s file.", ready_config_file)
         with open(ready_config_file, "w") as out_handle:
             yaml.safe_dump(ready_config, out_handle, default_flow_style=False,
                            allow_unicode=False)
 
         systemconfig = docker_common.local_system_config(
-            self.args.systemconfig, self.args.datadir, work_dir)
-        ship_conf = provider_factory.get_ship_config("shared")
+            config=self.args.systemconfig, work_dir=work_dir,
+            datadir=self.args.datadir)
 
-        parallel["wrapper_self.args"] = [
+        ship_conf = provider_factory.get_ship_config("shared")
+        parallel["wrapper_args"] = [
             constant.DOCKER,
             {
                 "sample_config": ready_config_file,

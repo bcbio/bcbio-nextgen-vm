@@ -33,9 +33,9 @@ def _get_ipython_cmdline(args):
 
     for name in ("timeout", "retries", "tag", "tmpdir", "fcdir",
                  "systemconfig"):
-        argument = str(getattr(args, name, ''))
+        argument = getattr(args, name)
         if argument:
-            command.extend(["--%s" % name, argument])
+            command.extend(["--%s" % name, str(argument)])
 
     return " ".join(command)
 
