@@ -18,6 +18,7 @@ from bcbiovm import log as logging
 from bcbiovm.common import constant
 from bcbiovm.common import cluster as clusterops
 from bcbiovm.common import exception
+from bcbiovm.common import objects
 from bcbiovm.common import utils as common_utils
 from bcbiovm.container import base
 from bcbiovm.container.docker import common as docker_common
@@ -292,9 +293,11 @@ class Docker(base.Container):
             they have the same permissions inside the Docker container as they
             do externally.
         """
+        LOG.debug("Run command in docker container with the following"
+                  "arguments to bcbio-nextgen.py: %s", arguments)
+
         user = pwd.getpwuid(os.getuid())
         group = grp.getgrgid(os.getgid())
-
         command = ["docker", "run", "-d", "-i"]
         if bcbio_config.get("env.BCBIO_DOCKER_PRIVILEGED", False):
             command.append("--privileged")
@@ -423,7 +426,7 @@ class Docker(base.Container):
         ship.pack.send_output(shipping_config(parallel["pack"]), out_file)
 
     def run_function(self, function, arguments, cmd_args, parallel,
-                     dockerconf=None, ports=None):
+                     docker_conf=None, ports=None):
         """"Run a single defined function inside a docker container,
         returning results.
 
@@ -435,21 +438,22 @@ class Docker(base.Container):
         :param ports:       A list of ports that will be published from
                             container to the host.
         """
-        dockerconf = dockerconf or self._config
+        LOG.debug("Run %r inside a docker container.", function)
 
-        ship = provider_factory.get_ship(cmd_args["pack"].type)
-        reconstitute = ship.reconstitute()
-        datadir, arguments = reconstitute.prepare_datadir(cmd_args["pack"],
-                                                          arguments)
+        docker_conf = docker_conf or self._config
+        ship_conf = objects.ShippingConfig(cmd_args["pack"])
+        reconstitute = provider_factory.get_ship(ship_conf.type).reconstitute
+
+        datadir, arguments = reconstitute.prepare_datadir(pack=ship_conf,
+                                                          args=arguments)
         work_dir, arguments, finalizer = reconstitute.prepare_workdir(
-            cmd_args["pack"], parallel, arguments)
-
+            pack=ship_conf, parallel=parallel, args=arguments)
         reconstitute.prep_systemconfig(datadir, arguments)
+
         _, system_mounts = docker_common.read_system_config(
             cmd_args["systemconfig"], datadir)
-
-        mounts = docker_common.get_mounts(cmd_args, datadir, dockerconf)
-        mounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
+        mounts = docker_common.get_mounts(cmd_args, datadir, docker_conf)
+        mounts.append("%s:%s" % (work_dir, docker_conf["work_dir"]))
         mounts.extend(system_mounts)
 
         argfile = os.path.join(work_dir, "runfn-%s-%s.yaml" %
@@ -460,7 +464,7 @@ class Docker(base.Container):
                            allow_unicode=False)
 
         outfile = "%s-out%s" % os.path.splitext(argfile)
-        docker_argfile = os.path.join(dockerconf["work_dir"],
+        docker_argfile = os.path.join(docker_conf["work_dir"],
                                       os.path.basename(argfile))
         self.run_command(image=cmd_args["image"], mounts=mounts,
                          arguments=["runfn", function, docker_argfile],

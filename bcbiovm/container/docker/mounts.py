@@ -5,7 +5,10 @@ import os
 
 import six
 
+from bcbiovm import log as logging
 from bcbiovm.container.docker import remap
+
+LOG = logging.get_logger(__name__)
 
 
 def update_config(config, fcdir=None):
@@ -29,30 +32,34 @@ def normalize_config(config, fcdir=None):
 
     Prepares configuration for remapping directories into docker containers.
     """
+    LOG.debug("Normalize sample configuration: %s", config)
+
     absdetails = []
     directories = []
     ignore = ["variantcaller", "realign", "recalibrate", "phasing", "svcaller"]
-    for d in config["details"]:
-        d = abs_file_paths(d, base_dirs=[fcdir] if fcdir else None,
-                           ignore=["description", "analysis", "resources",
-                                   "genome_build", "lane"])
-        d["algorithm"] = abs_file_paths(d["algorithm"],
-                                        base_dirs=[fcdir] if fcdir else None,
-                                        ignore=ignore)
-        absdetails.append(d)
-        directories.extend(_get_directories(d, ignore))
-    if config.get("upload", {}).get("dir"):
+
+    for details in config["details"]:
+        details = abs_file_paths(details, base_dirs=[fcdir] if fcdir else None,
+                                 ignore=["description", "analysis", "lane",
+                                         "resources", "genome_build"])
+        details["algorithm"] = abs_file_paths(
+            details["algorithm"], base_dirs=[fcdir] if fcdir else None,
+            ignore=ignore)
+        absdetails.append(details)
+        directories.extend(_get_directories(details, ignore))
+
+    if config.get("upload", {}).get("dir", None):
         config["upload"]["dir"] = os.path.normpath(os.path.realpath(
             os.path.join(os.getcwd(), config["upload"]["dir"])))
         if not os.path.exists(config["upload"]["dir"]):
             os.makedirs(config["upload"]["dir"])
+
     config["details"] = absdetails
     return config, directories
 
 
 def _get_directories(xs, ignore):
-    """Retrieve all directories specified in an input file.
-    """
+    """Retrieve all directories specified in an input file."""
     out = []
     if not isinstance(xs, dict):
         return out

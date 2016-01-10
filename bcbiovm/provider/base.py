@@ -411,7 +411,7 @@ class Reconstitute(object):
         :param config: an instances of :class objects.ShippingConf:
         """
         # pylint: disable=no-self-use
-        if pack.type == "shared":
+        if "datadir" in pack.data:
             return pack.datadir, args
 
         raise ValueError("Cannot handle biodata directory "

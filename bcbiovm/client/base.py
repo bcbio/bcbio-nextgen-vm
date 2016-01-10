@@ -7,6 +7,7 @@ Client base-classes:
 import abc
 
 import six
+from bcbio.client import base as client_base
 
 from bcbiovm import log as logging
 from bcbiovm.client import tools as client_tools
@@ -235,7 +236,10 @@ class Group(object):
         """Check if the received command is valid and can be
         property used.
         """
-        if not issubclass(command, (Command, Group)):
+        # FIXME(alexandrucoman): Remove references to bcbio after the
+        #                        patch will be merged.
+        if not issubclass(command, (Command, Group, client_base.Command,
+                                    client_base.Group)):
             return False
 
         return True

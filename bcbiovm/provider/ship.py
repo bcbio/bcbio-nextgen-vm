@@ -64,6 +64,7 @@ class ReconstituteShared(base.Reconstitute):
                 return
             if not context or context[0] in ignore_keys:
                 return
+
             dirname = os.path.normpath(os.path.dirname(fname))
             local_dir = os.path.join(new_workdir, "external",
                                      str(len(output)))
@@ -107,12 +108,13 @@ class ReconstituteShared(base.Reconstitute):
         if not tmpdir:
             return (workdir, {}, args)
 
-        callback = self._remap_copy_file(parallel)
         new_workdir = os.path.join(tmpdir, "bcbio-work-%s" % uuid.uuid1())
         utils.safe_makedir(new_workdir)
 
         remap_dict = self._remap_dict(workdir, new_workdir, args)
+        callback = self._remap_copy_file(parallel)
         new_args = docker_remap.walk_files(args, callback, remap_dict)
+
         return (new_workdir, remap_dict, new_args)
 
     def _shared_finalizer(self, workdir, remap_dict, parallel):
@@ -144,7 +146,8 @@ class ReconstituteShared(base.Reconstitute):
         for processing.
         """
         workdir, remap_dict, new_args = self._create_workdir(
-            pack["workdir"], args, parallel, pack["tmpdir"])
+            pack.workdir, args, parallel, pack.tmpdir)
+
         callback = self._shared_finalizer(workdir, remap_dict, parallel)
         return (workdir, new_args, callback)
 

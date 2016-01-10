@@ -24,7 +24,7 @@
 
     - name: Wait for instances to reboot
       when: os_upgrade_apt.changed or os_upgrade_yum.changed and "{{upgrade_host_os_and_reboot}} | bool"
-      local_action: wait_for host={{ansible_ssh_host}} port=22 state=started
+      local_action: wait_for host={{ansible_ssh_host}} port={{ansible_ssh_port}} state=started
 
 - name: Install bcbio_vm
   hosts: frontend*

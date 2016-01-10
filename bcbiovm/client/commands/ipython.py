@@ -6,12 +6,15 @@ import yaml
 from bcbio.distributed import clargs
 from bcbio.pipeline import main
 
+from bcbiovm import log as logging
 from bcbiovm.client import base
 from bcbiovm.common import constant
 from bcbiovm.container.docker import common as docker_common
 from bcbiovm.container.docker import mounts as docker_mounts
 from bcbiovm.ipython import batchprep
 from bcbiovm.provider import factory as provider_factory
+
+LOG = logging.get_logger(__name__)
 
 
 class IPython(base.Command):
@@ -32,17 +35,6 @@ class IPython(base.Command):
             "sample_config",
             help="YAML file with details about samples to process.")
         parser.add_argument(
-            "--fcdir",
-            help="A directory of Illumina output or fastq files to process",
-            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
-        parser.add_argument(
-            "--systemconfig",
-            help=("Global YAML configuration file specifying system details. "
-                  "Defaults to installed bcbio_system.yaml."))
-        parser.add_argument(
-            "-n", "--numcores", type=int, default=1,
-            help="Total cores to use for processing")
-        parser.add_argument(
             "scheduler", help="Scheduler to use.",
             choices=["lsf", "sge", "torque", "slurm", "pbspro"])
         parser.add_argument(
@@ -53,6 +45,17 @@ class IPython(base.Command):
                   "Can be specified multiple times.\n"
                   "Supports SGE and SLURM parameters."),
             default=[], action="append")
+        parser.add_argument(
+            "--fcdir",
+            help="A directory of Illumina output or fastq files to process",
+            type=lambda path: (os.path.abspath(os.path.expanduser(path))))
+        parser.add_argument(
+            "--systemconfig",
+            help=("Global YAML configuration file specifying system details. "
+                  "Defaults to installed bcbio_system.yaml."))
+        parser.add_argument(
+            "-n", "--numcores", type=int, default=1,
+            help="Total cores to use for processing")
         parser.add_argument(
             "--timeout", default=15, type=int,
             help=("Number of minutes before cluster startup times out."
@@ -78,30 +81,35 @@ class IPython(base.Command):
         # Check if the datadir exists if it is required.
         self.defaults.check_datadir("Could not run IPython parallel "
                                     "analysis.")
+        # Add all the missing arguments related to docker image.
+        self.install.image_defaults()
 
     def work(self):
         """Run the command with the received information."""
         work_dir = os.getcwd()
-        parallel = clargs.to_parallel(self.args, "bcbiovm.container.docker")
-        parallel["wrapper"] = "runfn"
-
-        with open(self.args.sample_config) as in_handle:
-            ready_config, _ = docker_mounts.normalize_config(
-                yaml.load(in_handle), self.args.fcdir)
-
         ready_config_file = os.path.join(
             work_dir, "%s-ready%s" %
             (os.path.splitext(os.path.basename(self.args.sample_config))))
 
+        parallel = clargs.to_parallel(self.args, "bcbiovm.container.docker")
+        parallel["wrapper"] = "runfn"
+
+        LOG.debug("Loading the config: %s", self.args.sample_config)
+        with open(self.args.sample_config) as in_handle:
+            ready_config, _ = docker_mounts.normalize_config(
+                yaml.load(in_handle), self.args.fcdir)
+
+        LOG.debug("Writing the %s file.", ready_config_file)
         with open(ready_config_file, "w") as out_handle:
             yaml.safe_dump(ready_config, out_handle, default_flow_style=False,
                            allow_unicode=False)
 
         systemconfig = docker_common.local_system_config(
-            self.args.systemconfig, self.args.datadir, work_dir)
-        ship_conf = provider_factory.get_ship_config("shared")
+            config=self.args.systemconfig, work_dir=work_dir,
+            datadir=self.args.datadir)
 
-        parallel["wrapper_self.args"] = [
+        ship_conf = provider_factory.get_ship_config("shared")
+        parallel["wrapper_args"] = [
             constant.DOCKER,
             {
                 "sample_config": ready_config_file,
@@ -201,3 +209,12 @@ class IPythonPrep(base.Command):
     def work(self):
         """Run the command with the received information."""
         return batchprep.submit_script(self.args)
+
+    def task_done(self, result):
+        """What to execute after successfully finished processing a task."""
+        commands = {"slurm": "sbatch", "sge": "qsub",
+                    "lsf": "bsub", "torque": "qsub",
+                    "pbspro": "qsub"}
+
+        LOG.info("Start analysis with: %(command)s %(outfile)s",
+                 {"command": commands[self.args.scheduler], "outfile": result})
