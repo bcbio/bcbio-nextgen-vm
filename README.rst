@@ -20,7 +20,9 @@ on cloud platforms or isolated inside of lightweight containers. This enables:
 This currently supports running on `Amazon Web Services (AWS)
 <http://aws.amazon.com/>`_ and locally with lightweight `docker`_ containers.
 The bcbio documentation contains details on using `bcbio-vm to run analyses on AWS
-<https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_.
+<https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_. We
+also have in progress work on migrating bcbio's pipeline descriptions to use the
+`Common Workflow Language (CWL) <https://github.com/chapmanb/bcbio-nextgen/tree/master/cwl>`_.
 
 We support using bcbio-vm for both AWS and local docker usage on Linux
 systems. On Mac OSX, only AWS usage currently works. Local docker support for
@@ -38,7 +40,7 @@ Installation
 
     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bcbio bcbio-nextgen-vm
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
   If you're using bcbio-vm to run on AWS this is all you need to get started. If
@@ -66,7 +68,7 @@ Installation
     sudo chgrp docker /usr/local/bin/bcbio_vm.py
     sudo chmod g+s /usr/local/bin/bcbio_vm.py
 
-- Install bcbio-nextgen. This will get the latest `bcbio docker image`_
+- Install a dockerized bcbio-nextgen. This will get the latest `bcbio docker image`_
   with software and tools, as well as downloading genome data::
 
     bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools \
@@ -200,7 +202,7 @@ Docker hub builds the `bcbio docker image`_. We automatically trigger this build
 to avoid overloading Docker hub services with a long rebuild on every change to
 the bcbio repository.
 
-Preparing pre-build genomes
+Preparing pre-built genomes
 ===========================
 
 bcbio_vm downloads pre-built reference genomes when running analyses, to avoid
