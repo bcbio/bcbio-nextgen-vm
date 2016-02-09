@@ -74,8 +74,7 @@ sudo mkdir /usr/local/share/bcbio-vm
 sudo chown $USER /usr/local/share/bcbio-vm
 wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
 bash Miniconda-latest-Linux-x86_64.sh -b -p /usr/local/share/bcbio-vm/anaconda
-/usr/local/share/bcbio-vm/anaconda/bin/conda install --yes \
-    -c https://conda.binstar.org/bcbio bcbio-nextgen-vm
+/usr/local/share/bcbio-vm/anaconda/bin/conda install -y -c bioconda bcbio-nextgen-vm
 sudo ln -s /usr/local/share/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 sudo bcbio_vm.py install --tools
 

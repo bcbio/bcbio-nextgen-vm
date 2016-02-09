@@ -43,7 +43,7 @@
         creates: "{{anaconda_dir}}/bin/conda"
 
     - name: Install bcbio_vm
-      shell: "{{anaconda_dir}}/bin/conda install --yes -c https://conda.binstar.org/bcbio bcbio-nextgen-vm"
+      shell: "{{anaconda_dir}}/bin/conda install --y -c bioconda bcbio-nextgen-vm"
 
     - name: bcbio_vm.py -- setgid docker
       file:
