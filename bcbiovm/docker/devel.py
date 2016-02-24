@@ -44,6 +44,10 @@ def add_biodata_args(parser):
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
                         choices=SUPPORTED_INDEXES)
+    parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
+                        action="append", default=[],
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp",
+                                 "battenberg", "kraken"])
     return parser
 
 def setup_cmd(subparsers):

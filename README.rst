@@ -211,6 +211,6 @@ pre-built tarballs for a specific genome, start and bootstrap a single bcbio
 machine using the elasticluster interface. On the machine start a screen session
 then run::
 
-   bcbio_vm.py devel biodata --genomes GRCh37 --aligners bwa --aligners bowtie2
+   bcbio_vm.py devel biodata --genomes GRCh37 --aligners bwa --aligners bowtie2 --datatarget vep
 
 This requires permissions to write to the ``biodata`` bucket.

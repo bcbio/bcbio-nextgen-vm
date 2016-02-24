@@ -53,6 +53,8 @@ def _get_cl(args):
             clargs.extend(["--genomes", g])
         for a in args.aligners:
             clargs.extend(["--aligners", a])
+        for t in args.datatarget:
+            clargs.extend(["--datatarget", t])
     return clargs
 
 def upgrade_bcbio_vm():
