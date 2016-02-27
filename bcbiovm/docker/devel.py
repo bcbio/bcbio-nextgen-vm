@@ -59,6 +59,11 @@ def setup_cmd(subparsers):
                          default=install.DEFAULT_IMAGE)
     iparser.set_defaults(func=_run_setup_install)
 
+    iparser = psub.add_parser("upgrade_tools", help="Upgrade tool installation inside current docker container")
+    iparser.add_argument("-i", "--image", help="Image name to write updates to",
+                         default=install.DEFAULT_IMAGE)
+    iparser.set_defaults(func=_run_upgrade_tools)
+
     sparser = psub.add_parser("system", help="Update bcbio system file with a given core and memory/core target")
     sparser.add_argument("cores", help="Target cores to use for multi-core processes")
     sparser.add_argument("memory", help="Target memory per core, in Mb (1000 = 1Gb)")
@@ -83,22 +88,30 @@ def setup_cmd(subparsers):
 
 # ## Install code to docker image
 
-def _run_setup_install(args):
-    """Install python code from a bcbio-nextgen development tree inside of docker.
-    """
-    bmounts = ["-v", "%s:%s" % (os.getcwd(), "/tmp/bcbio-nextgen")]
+def _run_cmd_commit(cmd, bmounts, args):
     cmd = ["docker", "run", "-i", "-d", "--net=host"] + bmounts + [args.image] + \
-          ["bash", "-l", "-c",
-           ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio && "
-            "cd /tmp/bcbio-nextgen && "
-            "/usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install")]
+          ["bash", "-l", "-c", cmd]
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     cid = process.communicate()[0].strip()
     do.run(["docker", "attach", "--no-stdin", cid], "Running in docker container: %s" % cid,
            log_stdout=True)
     subprocess.check_call(["docker", "commit", cid, args.image])
     subprocess.check_call(["docker", "rm", cid], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+def _run_setup_install(args):
+    """Install python code from a bcbio-nextgen development tree inside of docker.
+    """
+    bmounts = ["-v", "%s:%s" % (os.getcwd(), "/tmp/bcbio-nextgen")]
+    cmd = ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio && "
+           "cd /tmp/bcbio-nextgen && "
+           "/usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install")
+    _run_cmd_commit(cmd, bmounts, args)
     print("Updated bcbio-nextgen install in docker container: %s" % args.image)
+
+def _run_upgrade_tools(args):
+    cmd = "bcbio_nextgen.py upgrade --tools"
+    _run_cmd_commit(cmd, [], args)
+    print("Updated bcbio-nextgen tools in docker container: %s" % args.image)
 
 # ## Update bcbio_system.yaml
 
@@ -200,6 +213,8 @@ def _run_biodata_upload(args):
         cl = ["upgrade", "--genomes", gbuild]
         for a in args.aligners:
             cl += ["--aligners", a]
+        for t in args.datatarget:
+            cl += ["--datatarget", t]
         dmounts = mounts.prepare_system(args.datadir, DOCKER["biodata_dir"])
         manage.run_bcbio_cmd(args.image, dmounts, cl)
         print("Uploading %s" % gbuild)
@@ -209,15 +224,17 @@ def _run_biodata_upload(args):
         with utils.chdir(basedir):
             all_dirs = sorted(os.listdir(gbuild))
             _upload_biodata(gbuild, "seq", all_dirs)
-            for aligner in args.aligners:
+            for aligner in args.aligners + ["rtg"]:
                 _upload_biodata(gbuild, genome.REMAP_NAMES.get(aligner, aligner), all_dirs)
 
 def _upload_biodata(gbuild, target, all_dirs):
     """Upload biodata for a specific genome build and target to S3.
     """
     if target == "seq":
-        want_dirs = set(["rnaseq", "seq", "variation", "vep", "snpeff"])
-        target_dirs = [x for x in all_dirs if (x.startswith("rnaseq-") or x in want_dirs)]
+        want_dirs = set(["coverage", "editing", "prioritization", "rnaseq",
+                         "seq", "snpeff", "srnaseq", "validation",
+                         "variation", "vep"])
+        target_dirs = [x for x in all_dirs if x in want_dirs]
     else:
         target_dirs = [x for x in all_dirs if x == target]
     target_dirs = [os.path.join(gbuild, x) for x in target_dirs]
