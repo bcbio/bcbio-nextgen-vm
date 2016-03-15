@@ -22,6 +22,7 @@ warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplot
 from bcbio.cwl import main as cwl_main
 from bcbio.distributed import clargs
 from bcbio.workflow import template
+from bcbiovm.arvados import retriever as arvados_retriever
 from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
@@ -143,6 +144,7 @@ def _cwl_cmd(subparsers):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
+    parser.set_defaults(integrations={"arvados": arvados_retriever})
     parser.set_defaults(func=cwl_main.run)
 
 def _add_ipython_args(parser):
@@ -178,8 +180,10 @@ def _template_cmd(subparsers):
     parser = subparsers.add_parser("template",
                                    help="Create a bcbio sample.yaml file from a standard template and inputs")
     parser = template.setup_args(parser)
+    parser = _std_config_args(parser)
     parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
                         action='store_true', default=False)
+    parser.set_defaults(integrations={"arvados": arvados_retriever})
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
