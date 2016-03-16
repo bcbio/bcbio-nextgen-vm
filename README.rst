@@ -36,15 +36,24 @@ We welcome feedback and problem reports.
 Installation
 ------------
 
-- Install bcbio-nextgen-vm using `conda`_ with an isolated Miniconda Python::
+- Install bcbio-vm using `conda`_ with an isolated Miniconda Python and link to
+  a location on your PATH:
 
     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+    ln -s ~/install/bcbio-vm/anaconda/bin/arvados-cwl-runner /usr/local/bin/arvados-cwl-runner
+    ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool
+    ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
-  If you're using bcbio-vm to run on AWS this is all you need to get started. If
-  you'd like to run locally with docker, keep following the instructions.
+  If you're using bcbio-vm from your local machine to run on a `pre-built
+  remote AWS instance <https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_,
+  or on an `Arvados cloud instance
+  <https://github.com/chapmanb/bcbio-nextgen/tree/master/cwl#running-bcbio-cwl-on-arvados>`_
+  this is all you need to get started. If you'd like to run locally or on a
+  non-cloud instance with docker, keep following the instructions.
+
 
 - `Install docker`_ on your system. You will need root permissions.
 
@@ -198,7 +207,7 @@ Edit the code as needed, then update your local install with::
 Creating docker image
 =====================
 
-Docker hub builds the `bcbio docker image`_. We automatically trigger this build
+Docker hub builds the `bcbio docker image`_. We manually trigger this build
 to avoid overloading Docker hub services with a long rebuild on every change to
 the bcbio repository.
 
