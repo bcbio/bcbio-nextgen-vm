@@ -37,23 +37,23 @@ Installation
 ------------
 
 - Install bcbio-vm using `conda`_ with an isolated Miniconda Python and link to
-  a location on your PATH:
+  a location on your PATH::
 
-    wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-    bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
-    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
-    ln -s ~/install/bcbio-vm/anaconda/bin/arvados-cwl-runner /usr/local/bin/arvados-cwl-runner
-    ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool
-    ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
+     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
+     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+     ln -s ~/install/bcbio-vm/anaconda/bin/arvados-cwl-runner /usr/local/bin/arvados-cwl-runner
+     ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool
+     ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
   If you're using bcbio-vm from your local machine to run on a `pre-built
   remote AWS instance <https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html>`_,
   or on an `Arvados cloud instance
   <https://github.com/chapmanb/bcbio-nextgen/tree/master/cwl#running-bcbio-cwl-on-arvados>`_
   this is all you need to get started. If you'd like to run locally or on a
-  non-cloud instance with docker, keep following the instructions.
-
+  server with Docker, keep following the instructions to install the third party
+  tools and data.
 
 - `Install docker`_ on your system. You will need root permissions.
 
