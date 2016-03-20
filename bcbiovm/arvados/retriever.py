@@ -2,6 +2,7 @@
 
 Requires arvados-python-sdk.
 """
+import operator
 import os
 import pprint
 
@@ -20,14 +21,17 @@ def _get_api_client(config=None):
     import arvados
     return arvados.api("v1")
 
-def collection_files(uuid, config=None):
+def collection_files(uuid, config=None, add_uuid=False):
     """Retrieve files in the input collection.
     """
     import arvados
     api_client = _get_api_client(config)
     cr = arvados.CollectionReader(uuid, api_client=api_client)
     cr.normalize()
-    return ["%s/%s" % (x.stream_name(), x.name) for x in cr.all_files()]
+    out = ["%s/%s" % (x.stream_name(), x.name) for x in cr.all_files()]
+    if add_uuid:
+        out = ["keep:%s" % os.path.normpath(os.path.join(uuid, x)) for x in out]
+    return out
 
 def open_remote(file_ref, config=None):
     """Retrieve an open handle to a file in an Arvados Keep collection.
@@ -40,39 +44,54 @@ def open_remote(file_ref, config=None):
 
 # ## Fill in files from input collections
 
+def _get_input_ids(config):
+    """Retrieve input IDs for collections, normalizing to a list.
+    """
+    input_id = config.get("input")
+    if not input_id:
+        return []
+    elif isinstance(input_id, basestring):
+        return [input_id]
+    else:
+        assert isinstance(input_id, (list, tuple)), input_id
+        return input_id
+
 def get_files(target_files, config):
     """Retrieve files associated with the potential inputs.
     """
     out = []
-    if "input" in config:
-        for keep_file in collection_files(config["input"], config):
+    for input_id in _get_input_ids(config):
+        for keep_file in collection_files(input_id, config):
             if os.path.basename(keep_file) in target_files:
-                out.append("keep:" + os.path.normpath(os.path.join(config["input"], keep_file)))
+                out.append("keep:" + os.path.normpath(os.path.join(input_id, keep_file)))
     return out
 
 def add_remotes(items, config):
     """Add remote Keep files to data objects, finding files not present locally.
     """
-    if "input" in config:
-        keep_files = collection_files(config["input"], config)
-        return _fill_remote(items, keep_files, config)
+    for k, v in items[0].get("arvados", {}).iteritems():
+        config[k] = v
+    keep_files = reduce(operator.add, [collection_files(x, config, add_uuid=True)
+                                       for x in _get_input_ids(config)])
+    if keep_files:
+        return _fill_remote(items, keep_files)
     else:
         return items
 
-def _fill_remote(cur, keep_files, config):
+def _fill_remote(cur, keep_files):
     """Add references to remote Keep files if present and not local.
     """
     if isinstance(cur, (list, tuple)):
-        return [_fill_remote(x, keep_files, config) for x in cur]
+        return [_fill_remote(x, keep_files) for x in cur]
     elif isinstance(cur, dict):
         out = {}
         for k, v in cur.items():
-            out[k] = _fill_remote(v, keep_files, config)
+            out[k] = _fill_remote(v, keep_files)
         return out
     elif isinstance(cur, basestring) and os.path.splitext(cur)[-1] and not os.path.exists(cur):
         for test_keep in keep_files:
             if test_keep.endswith(cur):
-                return "keep:" + os.path.normpath(os.path.join(config["input"], test_keep))
+                return test_keep
         return cur
     else:
         return cur
