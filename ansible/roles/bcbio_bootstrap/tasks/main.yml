@@ -146,6 +146,15 @@
       args:
         executable: /bin/bash
 
+    - name: Add bcbio_system configuration file
+      shell: >
+        mkdir {{data_dir}}/galaxy &&
+        wget -O {{data_dir}}/galaxy/bcbio_system.yaml --no-check-certificate
+        https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml
+      args:
+        creates: "{{data_dir}}/galaxy/bcbio_system.yaml"
+        executable: /bin/bash
+
     - command: "tail -100 /tmp/bcbio.log"
       register: bcbio_vm_debug
 
