@@ -64,7 +64,8 @@ def upgrade_bcbio_vm():
     if not os.path.exists(conda_bin):
         print("Cannot update bcbio-nextgen-vm; not installed with conda")
     else:
-        subprocess.check_call([conda_bin, "install", "--y", "-c", "bioconda", "bcbio-nextgen-vm"])
+        subprocess.check_call([conda_bin, "install", "--y", "-c", "bioconda", "bcbio-nextgen-vm"
+                               "bcbio-nextgen", "cwltool", "arvados-cwl-runner"])
 
 def pull(args, dockerconf):
     """Pull down latest docker image.
