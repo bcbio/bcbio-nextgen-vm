@@ -42,6 +42,16 @@ def open_remote(file_ref, config=None):
     cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
     return cr.open(coll_ref)
 
+def file_size(file_ref, config=None):
+    """Retrieve file size in keep, in Mb
+    """
+    import arvados
+    api_client = _get_api_client(config)
+    coll_uuid, coll_ref = file_ref.replace("keep:", "").split("/", 1)
+    cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
+    file = cr[coll_ref]
+    return file.size() / (1024.0 * 1024.0)
+
 # ## Fill in files from input collections
 
 def _get_input_ids(config):
