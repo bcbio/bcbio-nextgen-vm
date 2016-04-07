@@ -1,15 +1,14 @@
 """Utilities to help with developing using bcbio inside of docker.
 """
+import argparse
+import collections
 import copy
 import datetime
 import glob
-import math
 import os
 import shutil
 import subprocess
-import sys
 
-import boto
 import numpy
 import yaml
 
@@ -62,6 +61,8 @@ def setup_cmd(subparsers):
     iparser = psub.add_parser("upgrade_tools", help="Upgrade tool installation inside current docker container")
     iparser.add_argument("-i", "--image", help="Image name to write updates to",
                          default=install.DEFAULT_IMAGE)
+    iparser.add_argument("--toolplus", help="Specify additional tool categories to install",
+                         action="append", default=[], type=_check_toolplus)
     iparser.set_defaults(func=_run_upgrade_tools)
 
     sparser = psub.add_parser("system", help="Update bcbio system file with a given core and memory/core target")
@@ -85,6 +86,20 @@ def setup_cmd(subparsers):
     parser.add_argument("-q", "--quiet", dest="verbose", action="store_false", default=True,
                         help="Quiet output when running Ansible playbooks")
     dbparser.set_defaults(func=_run_docker_build)
+
+def _check_toolplus(x):
+    """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
+    """
+    Tool = collections.namedtuple("Tool", ["name", "fname"])
+    if "=" in x and len(x.split("=")) == 2:
+        name, fname = x.split("=")
+        fname = os.path.normpath(os.path.realpath(fname))
+        if not os.path.exists(fname):
+            raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
+                                             % (name, fname))
+        return Tool(name, fname)
+    else:
+        raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
 
 # ## Install code to docker image
 
@@ -110,7 +125,11 @@ def _run_setup_install(args):
 
 def _run_upgrade_tools(args):
     cmd = "bcbio_nextgen.py upgrade --tools"
-    _run_cmd_commit(cmd, [], args)
+    mounts = []
+    for tool in args.toolplus:
+        mounts.extend(["-v", "%s:%s" % (tool.fname, tool.fname)])
+        cmd += " --toolplus %s=%s" % (tool.name, tool.fname)
+    _run_cmd_commit(cmd, mounts, args)
     print("Updated bcbio-nextgen tools in docker container: %s" % args.image)
 
 # ## Update bcbio_system.yaml
