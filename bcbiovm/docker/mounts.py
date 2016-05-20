@@ -87,8 +87,8 @@ def _get_directories(xs, ignore):
                 out.extend(_get_directories(v, ignore))
             elif v and isinstance(v, six.string_types) and os.path.exists(v) and os.path.isabs(v):
                 out.append(os.path.dirname(v))
-            elif v and isinstance(v, (list, tuple)) and os.path.exists(v[0]) and os.path.isabs(v[0]):
-                out.extend(os.path.dirname(x) for x in v)
+            elif v and isinstance(v, (list, tuple)) and v[0] and os.path.exists(v[0]) and os.path.isabs(v[0]):
+                out.extend(os.path.dirname(x) for x in v if x)
     out = [x for x in out if x]
     return out
 
