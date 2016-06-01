@@ -1,4 +1,4 @@
-#!/usr/bin/env python -E
+#!/usr/bin/env python -Es
 """Run and install bcbio-nextgen, using code and tools isolated in a docker container.
 
 See the bcbio documentation https://bcbio-nextgen.readthedocs.org for more details
