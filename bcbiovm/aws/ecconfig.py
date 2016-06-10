@@ -5,10 +5,11 @@ from __future__ import print_function
 import ConfigParser
 import datetime
 import shutil
+import sys
 
 import toolz as tz
 
-from bcbiovm.aws import common
+from bcbiovm.aws import common, bootstrap
 
 def setup_cmd(awsparser):
     parser_sub_c = awsparser.add_parser("config", help="Define configuration details for running a cluster")
@@ -21,6 +22,13 @@ def setup_cmd(awsparser):
 def _ask(vals, helpstr, ks):
     default = tz.get_in(ks, vals)
     return raw_input("%s [%s]: " % (helpstr, default)) or default
+
+def _check_machine(machine_type):
+    if machine_type not in bootstrap.AWS_INFO:
+        print("%s is not a supported AWS machine types:\n %s" %
+              (machine_type, sorted(bootstrap.AWS_INFO.keys())))
+        print("Configuration not saved")
+        sys.exit(1)
 
 def run_edit(args):
     parser = ConfigParser.RawConfigParser()
@@ -35,12 +43,14 @@ def run_edit(args):
     if int(compute_nodes) == 0:
         setup_provider = "ansible"
         frontend_flavor = _ask(vals, "Machine type for single frontend worker node", ["frontend", "flavor"])
+        _check_machine(frontend_flavor)
         compute_flavor = None
     # cluster
     else:
         setup_provider = "ansible-slurm"
         frontend_flavor = "c3.large"
         compute_flavor = _ask(vals, "Machine type for compute nodes", ["cluster", "flavor"])
+        _check_machine(compute_flavor)
     # 30 IOPS/Gb, maximum 4000 IOPS http://aws.amazon.com/ebs/details/
     iops = min(int(nfs_size) * 30, 4000)
     parser.set("cluster/%s/frontend" % args.cluster, "flavor", frontend_flavor)

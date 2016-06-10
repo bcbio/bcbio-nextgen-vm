@@ -19,6 +19,7 @@ AWS_INFO = {
     "c3.2xlarge": [8, 1750],
     "c3.4xlarge": [16, 1750],
     "c3.8xlarge": [32, 1750],
+    "c4.large": [2, 1750],
     "c4.xlarge": [4, 1750],
     "c4.2xlarge": [8, 1750],
     "c4.4xlarge": [16, 1750],
@@ -28,6 +29,16 @@ AWS_INFO = {
     "r3.2xlarge": [8, 7000],
     "r3.4xlarge": [16, 7000],
     "r3.8xlarge": [32, 7000],
+    "t2.nano": [1, 500],
+    "t2.micro": [1, 1000],
+    "t2.small": [1, 2000],
+    "t2.medium": [2, 2000],
+    "t2.large": [2, 4000],
+    "m4.large": [2, 4000],
+    "m4.xlarge": [4, 4000],
+    "m4.2xlarge": [8, 4000],
+    "m4.4xlarge": [16, 4000],
+    "m4.10xlarge": [40, 4000],
 }
 
 def bootstrap(args):
