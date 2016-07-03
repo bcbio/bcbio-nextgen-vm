@@ -20,6 +20,7 @@ import warnings
 warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
 from bcbio.cwl import main as cwl_main
+from bcbio.cwl import tool as cwl_tool
 from bcbio.distributed import clargs
 from bcbio.workflow import template
 from bcbiovm.arvados import retriever as arvados_retriever
@@ -146,6 +147,13 @@ def _cwl_cmd(subparsers):
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser.set_defaults(integrations={"arvados": arvados_retriever})
     parser.set_defaults(func=cwl_main.run)
+
+def _cwlrun_cmd(subparsers):
+    parser = subparsers.add_parser("cwlrun", help="Run common workflow language with a specified tool")
+    parser.add_argument("tool", help="CWL tool to run", choices=["cwltool", "arvados", "toil"])
+    parser.add_argument("directory", help="Directory with bcbio generated CWL")
+    parser.add_argument("toolargs", help="Arguments to pass to CWL tool", nargs="*")
+    parser.set_defaults(func=cwl_tool.run)
 
 def _add_ipython_args(parser):
     parser = _std_run_args(parser)
@@ -289,6 +297,7 @@ if __name__ == "__main__":
     _run_ipythonprep_cmd(subparsers)
     _template_cmd(subparsers)
     _cwl_cmd(subparsers)
+    _cwlrun_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
     _graph_cmd(subparsers)
