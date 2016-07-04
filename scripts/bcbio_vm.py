@@ -153,6 +153,8 @@ def _cwlrun_cmd(subparsers):
     parser.add_argument("tool", help="CWL tool to run", choices=["cwltool", "arvados", "toil"])
     parser.add_argument("directory", help="Directory with bcbio generated CWL")
     parser.add_argument("toolargs", help="Arguments to pass to CWL tool", nargs="*")
+    parser.add_argument('--no-container', help="Use local installation of bcbio instead of Docker container",
+                        action='store_true', default=False)
     parser.set_defaults(func=cwl_tool.run)
 
 def _add_ipython_args(parser):
