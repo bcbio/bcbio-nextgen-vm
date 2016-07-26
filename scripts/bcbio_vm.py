@@ -132,6 +132,8 @@ def _std_run_args(parser):
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser.add_argument("--fcdir", help="A directory of Illumina output or fastq files to process",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
+    parser.add_argument("--image", help="Docker image name to use, could point to compatible pre-installed image.",
+                        default=None)
     parser = _std_config_args(parser)
     return parser
 

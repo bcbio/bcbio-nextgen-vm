@@ -65,6 +65,13 @@ def setup_cmd(subparsers):
                          action="append", default=[], type=_check_toolplus)
     iparser.set_defaults(func=_run_upgrade_tools)
 
+    rparser = psub.add_parser("register", help="Register a file (like GATK jar) with bioconda script")
+    rparser.add_argument("-i", "--image", help="Image name to write updates to",
+                         default=install.DEFAULT_IMAGE)
+    rparser.add_argument("name", help="Program to register", choices=["gatk"])
+    rparser.add_argument("file_name", help="File to pass to register command")
+    rparser.set_defaults(func=_run_register)
+
     sparser = psub.add_parser("system", help="Update bcbio system file with a given core and memory/core target")
     sparser.add_argument("cores", help="Target cores to use for multi-core processes")
     sparser.add_argument("memory", help="Target memory per core, in Mb (1000 = 1Gb)")
@@ -131,6 +138,13 @@ def _run_upgrade_tools(args):
         cmd += " --toolplus %s=%s" % (tool.name, tool.fname)
     _run_cmd_commit(cmd, mounts, args)
     print("Updated bcbio-nextgen tools in docker container: %s" % args.image)
+
+def _run_register(args):
+    fname = os.path.abspath(args.file_name)
+    cmd = "%s-register %s --noversioncheck" % (args.name, fname)
+    mounts = ["-v", "%s:%s" % (fname, fname)]
+    _run_cmd_commit(cmd, mounts, args)
+    print("Registered %s with %s" % (args.name, fname))
 
 # ## Update bcbio_system.yaml
 
