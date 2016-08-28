@@ -125,6 +125,7 @@ def _run_setup_install(args):
     """
     bmounts = ["-v", "%s:%s" % (os.getcwd(), "/tmp/bcbio-nextgen")]
     cmd = ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio && "
+           "rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*.egg-info && "
            "cd /tmp/bcbio-nextgen && "
            "/usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install")
     _run_cmd_commit(cmd, bmounts, args)
