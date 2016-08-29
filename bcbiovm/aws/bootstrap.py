@@ -4,7 +4,6 @@ import os
 
 import toolz as tz
 
-from bcbio.distributed import ipython
 from bcbiovm.aws import common
 
 # ## Bootstrap a new instance
@@ -83,12 +82,25 @@ def _bootstrap_bcbio(args, ansible_base):
         else:
             machine = tz.get_in(["nodes", "frontend", "flavor"], cluster_config)
         cores, mem = AWS_INFO[machine]
-        cores = ipython.per_machine_target_cores(cores, compute_nodes)
+        cores = per_machine_target_cores(cores, compute_nodes)
         return {"target_cores": cores, "target_memory": mem,
                 "upgrade_host_os_and_reboot": not args.no_reboot}
 
     common.run_ansible_pb(
         inventory_path, playbook_path, args, _extra_vars)
+
+def per_machine_target_cores(cores, num_jobs):
+    """Select target cores on larger machines to leave room for batch script and controller.
+
+    On resource constrained environments, we want to pack all bcbio submissions onto a specific
+    number of machines. This gives up some cores to enable sharing cores with the controller
+    and batch script on larger machines.
+    """
+    if cores > 30:
+        cores = cores - 2
+    elif cores > 15 and num_jobs < 10:
+        cores = cores - 1
+    return cores
 
 def _bootstrap_nfs(args, ansible_base):
     """Mount encrypted NFS volume on master node and expose across worker nodes.
