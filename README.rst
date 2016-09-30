@@ -204,6 +204,14 @@ Edit the code as needed, then update your local install with::
 
     bcbio_vm.py devel setup_install
 
+You can update the tools in your local container with::
+
+    bcbio_vm.py devel upgrade_tools
+
+and register a GATK jar inside the container with::
+
+    bcbio_vm.py devel register gatk /path/to/GenomeAnalysisTK.tar.bz2
+
 Creating docker image
 =====================
 
