@@ -158,7 +158,8 @@ def get_resources(genome_build, fasta_ref, data):
                     else:
                         del resources[k1][k2]
     data["genome_resources"] = resources
-    return _add_configured_indices(base_dir, cfiles, data)
+    data = _add_configured_indices(base_dir, cfiles, data)
+    return _add_genome_context(base_dir, cfiles, data)
 
 def _add_configured_indices(base_dir, cfiles, data):
     """Add additional resource indices defined in genome_resources: snpeff
@@ -172,4 +173,13 @@ def _add_configured_indices(base_dir, cfiles, data):
             assert len(base_files) == 1, base_files
             del snpeff_files[snpeff_files.index(base_files[0])]
             data["reference"]["snpeff"] = {"base": base_files[0], "indexes": snpeff_files}
+    return data
+
+def _add_genome_context(base_dir, cfiles, data):
+    """Add associated genome context files, if present.
+    """
+    index_dir = os.path.normpath(os.path.join(os.path.dirname(base_dir), "coverage", "problem_regions"))
+    context_files = [x for x in cfiles if x.startswith(index_dir) and x.endswith(".gz")]
+    if len(context_files) > 0:
+        data["reference"]["genome_context"] = context_files
     return data
