@@ -24,7 +24,7 @@ from bcbio.cwl import tool as cwl_tool
 from bcbio.distributed import clargs
 from bcbio.workflow import template
 from bcbiovm.arvados import retriever as arvados_retriever
-from bcbiovm.aws import cluster, common, ecconfig, iam, icel, vpc, info
+from bcbiovm.aws import ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info
 from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -257,6 +257,7 @@ def _aws_cmd(subparsers):
     cluster.setup_cmd(awssub)
     ecconfig.setup_cmd(awssub)
     info.setup_cmd(awssub)
+    ansible_inputs.setup_cmd(awssub)
     _aws_iam_cmd(awssub)
     _aws_vpc_cmd(awssub)
     icel.setup_cmd(awssub)

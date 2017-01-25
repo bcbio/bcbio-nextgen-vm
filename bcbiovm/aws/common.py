@@ -5,6 +5,7 @@ import os
 import sys
 
 # ansible.utils must be imported before ansible.callbacks.
+import ansible
 import ansible.utils
 import ansible.callbacks
 import ansible.playbook
@@ -117,7 +118,8 @@ def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
     if args.verbose:
         callbacks = ansible.callbacks.PlaybookCallbacks()
         runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
-        ansible.utils.VERBOSITY = args.verbose - 1
+        if ansible.utils:
+            ansible_utils.VERBOSITY = args.verbose - 1
 
     if hasattr(args, "cluster") and hasattr(args, "econfig"):
         cluster_config = ecluster_config(args.econfig, args.cluster)

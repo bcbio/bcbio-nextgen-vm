@@ -33,9 +33,9 @@ The IAM user you create will need to have access permissions for:
 """
 def bootstrap(args):
     conn = boto.connect_iam()
-    config = _create_keypair(args.econfig)
+    config = create_keypair(args.econfig)
     config.update(_bcbio_iam_user(conn, args))
-    config.update(_bcbio_s3_instance_profile(conn, args))
+    config.update(bcbio_s3_instance_profile(conn, args))
     econfig = _write_elasticluster_config(config, args.econfig)
     print("\nWrote elasticluster config file at: %s" % econfig)
     if args.nocreate:
@@ -60,11 +60,14 @@ def _write_elasticluster_config(config, out_file):
                     out_handle.write(line)
     return out_file
 
-def _create_keypair(econfig_file):
+def create_keypair(econfig_file=None):
     """Create a bcbio keypair and import to ec2. Gives us access to keypair locally and at AWS.
     """
     keyname = "bcbio"
-    keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
+    if econfig_file:
+        keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
+    else:
+        keypair_dir = os.path.join(os.getcwd(), "aws_keypairs")
     if not os.path.exists(keypair_dir):
         os.makedirs(keypair_dir)
     private_key = os.path.join(os.path.join(keypair_dir, "bcbio"))
@@ -146,10 +149,10 @@ S3_POLICY = """{
 }
 """
 
-def _bcbio_s3_instance_profile(conn, args):
+def bcbio_s3_instance_profile(conn, args):
     """Create an IAM instance profile with temporary S3 access to be applied to launched machines.
     """
-    if args.nocreate:
+    if hasattr(args, "nocreate") and args.nocreate:
         return {"instance_profile": ""}
     name = "bcbio_full_s3_access"
     try:
