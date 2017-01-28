@@ -60,28 +60,32 @@ def _write_elasticluster_config(config, out_file):
                     out_handle.write(line)
     return out_file
 
-def create_keypair(econfig_file=None):
+def create_keypair(econfig_file=None, region=None, keyname="bcbio"):
     """Create a bcbio keypair and import to ec2. Gives us access to keypair locally and at AWS.
     """
-    keyname = "bcbio"
     if econfig_file:
         keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
     else:
         keypair_dir = os.path.join(os.getcwd(), "aws_keypairs")
     if not os.path.exists(keypair_dir):
         os.makedirs(keypair_dir)
-    private_key = os.path.join(os.path.join(keypair_dir, "bcbio"))
+    private_key = os.path.join(os.path.join(keypair_dir, keyname))
     new_key = not os.path.exists(private_key)
     if new_key:
         cmd = ["ssh-keygen", "-t", "rsa", "-N", "", "-f", private_key, "-C", "bcbio_aws_keypair"]
         subprocess.check_call(cmd)
     public_key = private_key + ".pub"
-    ec2 = boto.connect_ec2()
+    if region:
+        ec2 = boto.ec2.connect_to_region(region)
+    else:
+        ec2 = boto.connect_ec2()
     key = ec2.get_key_pair(keyname)
     if key and new_key:
+        print("Non matching key %s found in AWS, removing." % keyname)
         ec2.delete_key_pair(keyname)
         key = None
     if not key:
+        print("Key %s not found in AWS, importing created key" % keyname)
         with open(public_key) as in_handle:
             ec2.import_key_pair(keyname, in_handle.read())
     return {"user_key_name": keyname, "user_key_private": private_key,
@@ -154,14 +158,17 @@ def bcbio_s3_instance_profile(conn, args):
     """
     if hasattr(args, "nocreate") and args.nocreate:
         return {"instance_profile": ""}
-    name = "bcbio_full_s3_access"
+    base_name = args.cluster if hasattr(args, "cluster") and args.cluster else "bcbio"
+    name = "%s_full_s3_access" % (base_name)
     try:
         ip = conn.get_instance_profile(name)
     except boto.exception.BotoServerError:
+        print("Instance profile %s doesn't exist, creating" % name)
         ip = conn.create_instance_profile(name)
     try:
         conn.get_role(name)
     except boto.exception.BotoServerError:
+        print("Role %s doesn't exist, creating" % name)
         conn.create_role(name)
         conn.put_role_policy(name, name, S3_POLICY)
     if not tz.get_in(["get_instance_profile_response", "get_instance_profile_result", "instance_profile", "roles"],

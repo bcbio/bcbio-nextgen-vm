@@ -40,7 +40,7 @@ def create_resources(args):
         bak_file = out_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         shutil.move(out_file, bak_file)
     keypair_info = _setup_keypair(args)
-    vpc_info = vpc.setup_vpc(args)
+    vpc_info = vpc.setup_vpc(args, _zone_to_region(args.zone))
     out = [("instance_type", "t2.small"),
            ("spot_price", "null"),
            ("volume", "vol-CHANGEME"),
@@ -75,11 +75,11 @@ def _lookup_image_by_region(region):
     return available[0][1]
 
 def _create_iam_role(args):
-    conn = boto.connect_iam()
+    conn = boto.iam.connect_to_region(_zone_to_region(args.zone))
     return iam.bcbio_s3_instance_profile(conn, args)["instance_profile"]
 
 def _setup_keypair(args):
     if not args.keypair:
-        return {"user_key_name": "KEYPAIR"}
+        return {"user_key_name": args.cluster}
     else:
-        return iam.create_keypair()
+        return iam.create_keypair(region=_zone_to_region(args.zone), keyname=args.cluster)

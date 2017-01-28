@@ -31,7 +31,7 @@ def _setup_placment_group(args, vpc_info):
     else:
         print("Placement group %s already exists. Skipping" % pgname)
 
-def setup_vpc(args):
+def setup_vpc(args, region=None):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
     if not re.search(cidr_regex, args.network):
         raise ValueError(
@@ -50,7 +50,9 @@ def setup_vpc(args):
             aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
             aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
     else:
-        conn = boto.connect_vpc()
+        assert region is not None, "Require region for setting up VPC from scratch"
+        ec2_conn = boto.ec2.connect_to_region(region)
+        conn = boto.connect_vpc(region=ec2_conn.region)
 
     out = {"vpc": args.cluster,
            "security_group": "%s_cluster_sg" % args.cluster}
