@@ -1,6 +1,9 @@
 """Integration with Arvados Keep for file assessment. using the API.
 
 Requires arvados-python-sdk.
+
+TODO: migrate to use general support functions in s3retriever, extracted
+from this baseline implementation.
 """
 import operator
 import os
@@ -51,6 +54,9 @@ def file_size(file_ref, config=None):
     cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
     file = cr[coll_ref]
     return file.size() / (1024.0 * 1024.0)
+
+def clean_file(f):
+    return f
 
 # ## Fill in files from input collections
 
