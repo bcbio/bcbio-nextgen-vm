@@ -1,18 +1,17 @@
 """Integration with Arvados Keep for file assessment. using the API.
 
 Requires arvados-python-sdk.
-
-TODO: migrate to use general support functions in s3retriever, extracted
-from this baseline implementation.
 """
-import operator
 import os
-import pprint
 
 import toolz as tz
-import yaml
 
-# ## General functionality
+from bcbiovm.shared import retriever as sret
+
+# ## Arvados specific functionality
+
+KEY = "keep"
+CONFIG_KEY = "arvados"
 
 def _get_api_client(config=None):
     if not config: config = {}
@@ -24,7 +23,24 @@ def _get_api_client(config=None):
     import arvados
     return arvados.api("v1")
 
-def collection_files(uuid, config=None, add_uuid=False):
+def _get_input_ids(config):
+    """Retrieve input IDs for collections, normalizing to a list.
+    """
+    ref_uuid = config.get("reference")
+    out = [ref_uuid] if ref_uuid else []
+    input_id = config.get("input")
+    if not input_id:
+        return out
+    elif isinstance(input_id, basestring):
+        return out + [input_id]
+    else:
+        assert isinstance(input_id, (list, tuple)), input_id
+        return out + input_id
+
+def _is_remote(f):
+    return f.startswith("%s:" % KEY)
+
+def _collection_files(uuid, config=None, add_uuid=False):
     """Retrieve files in the input collection.
     """
     import arvados
@@ -33,24 +49,58 @@ def collection_files(uuid, config=None, add_uuid=False):
     cr.normalize()
     out = ["%s/%s" % (x.stream_name(), x.name) for x in cr.all_files()]
     if add_uuid:
-        out = ["keep:%s" % os.path.normpath(os.path.join(uuid, x)) for x in out]
+        out = ["%s:%s" % (KEY, os.path.normpath(os.path.join(uuid, x))) for x in out]
     return out
 
-def open_remote(file_ref, config=None):
+def _get_remote_files(config, add_uuid=False):
+    """Retrieve remote file references.
+    """
+    out = []
+    for input_id in _get_input_ids(config):
+        out += _collection_files(input_id, config, add_uuid)
+    return out
+
+def _get_uuid_file(file_ref):
+    return file_ref.replace("%s:" % KEY, "").split("/", 1)
+
+def _open_remote(file_ref, config=None):
     """Retrieve an open handle to a file in an Arvados Keep collection.
     """
     import arvados
     api_client = _get_api_client(config)
-    coll_uuid, coll_ref = file_ref.replace("keep:", "").split("/", 1)
+    coll_uuid, coll_ref = _get_uuid_file(file_ref)
     cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
     return cr.open(coll_ref)
+
+def _find_file(config, startswith=False):
+    keep_files = _get_remote_files(config, add_uuid=True)
+    def get_file(f):
+        for keep_full in keep_files:
+            keep_uuid, keep_file = _get_uuid_file(keep_full)
+            if keep_file == f:
+                return keep_full
+            elif startswith and keep_file.startswith(f):
+                return "%s:%s/%s" % (KEY, keep_uuid, f)
+    return get_file
+
+def _list(config):
+    keep_files = _get_remote_files(config, add_uuid=True)
+    def do(d):
+        out = []
+        for keep_full in keep_files:
+            if keep_full.startswith(d):
+                out.append(keep_full)
+        return out
+    return do
+
+# ## API: General functionality
 
 def file_size(file_ref, config=None):
     """Retrieve file size in keep, in Mb
     """
     import arvados
     api_client = _get_api_client(config)
-    coll_uuid, coll_ref = file_ref.replace("keep:", "").split("/", 1)
+    coll_uuid, coll_ref = _get_uuid_file(file_ref)
     cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
     file = cr[coll_ref]
     return file.size() / (1024.0 * 1024.0)
@@ -58,134 +108,37 @@ def file_size(file_ref, config=None):
 def clean_file(f):
     return f
 
-# ## Fill in files from input collections
-
-def _get_input_ids(config):
-    """Retrieve input IDs for collections, normalizing to a list.
-    """
-    input_id = config.get("input")
-    if not input_id:
-        return []
-    elif isinstance(input_id, basestring):
-        return [input_id]
-    else:
-        assert isinstance(input_id, (list, tuple)), input_id
-        return input_id
+# ## API: Fill in files from S3 buckets
 
 def get_files(target_files, config):
     """Retrieve files associated with the potential inputs.
     """
     out = []
-    for input_id in _get_input_ids(config):
-        for keep_file in collection_files(input_id, config):
-            if os.path.basename(keep_file) in target_files:
-                out.append("keep:" + os.path.normpath(os.path.join(input_id, keep_file)))
+    find_fn = _find_file(config)
+    for fname in target_files.keys():
+        remote_fname = find_fn(fname)
+        if remote_fname:
+            out.append(remote_fname)
     return out
 
 def add_remotes(items, config):
-    """Add remote Keep files to data objects, finding files not present locally.
+    """Add remote files to data, retrieving any files not present locally.
     """
-    for k, v in items[0].get("arvados", {}).iteritems():
-        config[k] = v
-    keep_files = reduce(operator.add, [collection_files(x, config, add_uuid=True)
-                                       for x in _get_input_ids(config)])
-    if keep_files:
-        return _fill_remote(items, keep_files)
-    else:
-        return items
+    find_fn = _find_file(config)
+    return sret.fill_remote(items, find_fn, _is_remote)
 
-def _fill_remote(cur, keep_files):
-    """Add references to remote Keep files if present and not local.
-    """
-    if isinstance(cur, (list, tuple)):
-        return [_fill_remote(x, keep_files) for x in cur]
-    elif isinstance(cur, dict):
-        out = {}
-        for k, v in cur.items():
-            out[k] = _fill_remote(v, keep_files)
-        return out
-    elif isinstance(cur, basestring) and os.path.splitext(cur)[-1] and not os.path.exists(cur):
-        for test_keep in keep_files:
-            if test_keep.endswith(cur):
-                return test_keep
-        return cur
-    else:
-        return cur
-
-# ## Retrieve files from reference collections
+# ## API: Retrieve files from reference collections
 
 def get_refs(genome_build, aligner, config):
     """Retrieve reference genome data from a standard bcbio directory structure.
     """
-    ref_collection = tz.get_in(["arvados", "reference"], config)
-    if not ref_collection:
-        raise ValueError("Could not find reference collection in bcbio_system YAML for arvados.")
-    cfiles = collection_files(ref_collection, config["arvados"])
-    ref_prefix = None
-    for prefix in ["./%s", "./genomes/%s"]:
-        cur_prefix = prefix % genome_build
-        if any(x.startswith(cur_prefix) for x in cfiles):
-            ref_prefix = cur_prefix
-            break
-    assert ref_prefix, "Did not find genome files for %s:\n%s" % (genome_build, pprint.pformat(cfiles))
-    out = {}
-    base_targets = ("/%s.fa" % genome_build, "/mainIndex")
-    for dirname in ["seq", "rtg", aligner]:
-        key = {"seq": "fasta"}.get(dirname, dirname)
-        cur_files = [x for x in cfiles if x.startswith("%s/%s/" % (ref_prefix, dirname))]
-        cur_files = ["keep:%s" % os.path.normpath(os.path.join(ref_collection, x)) for x in cur_files]
-        base_files = [x for x in cur_files if x.endswith(base_targets)]
-        if len(base_files) > 0:
-            assert len(base_files) == 1, base_files
-            base_file = base_files[0]
-            del cur_files[cur_files.index(base_file)]
-            out[key] = {"base": base_file, "indexes": cur_files}
-        else:
-            out[key] = {"indexes": cur_files}
-    return out
+    find_fn = _find_file(config[CONFIG_KEY], startswith=True)
+    ref_prefix = sret.find_ref_prefix(genome_build, find_fn)
+    return sret.standard_genome_refs(genome_build, aligner, ref_prefix, _list(config[CONFIG_KEY]))
 
 def get_resources(genome_build, fasta_ref, data):
     """Add genome resources defined in configuration file to data object.
     """
-    aconfig = tz.get_in(["config", "arvados"], data)
-    resources_file = "%s-resources.yaml" % (os.path.splitext(fasta_ref)[0])
-    base_dir = os.path.dirname(resources_file)
-    with open_remote(resources_file, aconfig) as in_handle:
-        resources = yaml.safe_load(in_handle)
-    cfiles = [os.path.normpath(os.path.join("keep:%s" % aconfig["reference"], x))
-              for x in collection_files(aconfig["reference"], aconfig)]
-    for k1, v1 in resources.items():
-        if isinstance(v1, dict):
-            for k2, v2 in v1.items():
-                if isinstance(v2, basestring) and v2.startswith("../") and os.path.splitext(v2)[-1]:
-                    test_v2 = os.path.normpath(os.path.join(base_dir, v2))
-                    if test_v2 in cfiles:
-                        resources[k1][k2] = test_v2
-                    else:
-                        del resources[k1][k2]
-    data["genome_resources"] = resources
-    data = _add_configured_indices(base_dir, cfiles, data)
-    return _add_genome_context(base_dir, cfiles, data)
-
-def _add_configured_indices(base_dir, cfiles, data):
-    """Add additional resource indices defined in genome_resources: snpeff
-    """
-    snpeff_db = tz.get_in(["genome_resources", "aliases", "snpeff"], data)
-    if snpeff_db:
-        index_dir = os.path.normpath(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db))
-        snpeff_files = [x for x in cfiles if x.startswith(index_dir)]
-        if len(snpeff_files) > 0:
-            base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
-            assert len(base_files) == 1, base_files
-            del snpeff_files[snpeff_files.index(base_files[0])]
-            data["reference"]["snpeff"] = {"base": base_files[0], "indexes": snpeff_files}
-    return data
-
-def _add_genome_context(base_dir, cfiles, data):
-    """Add associated genome context files, if present.
-    """
-    index_dir = os.path.normpath(os.path.join(os.path.dirname(base_dir), "coverage", "problem_regions"))
-    context_files = [x for x in cfiles if x.startswith(index_dir) and x.endswith(".gz")]
-    if len(context_files) > 0:
-        data["reference"]["genome_context"] = context_files
-    return data
+    config = tz.get_in(["config", CONFIG_KEY], data)
+    return sret.get_resources(genome_build, fasta_ref, config,
+                              data, _open_remote, _list(config))
