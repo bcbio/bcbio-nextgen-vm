@@ -24,6 +24,7 @@ from bcbio.cwl import tool as cwl_tool
 from bcbio.distributed import clargs
 from bcbio.workflow import template
 from bcbiovm.arvados import retriever as arvados_retriever
+from bcbiovm.sbgenomics import retriever as sb_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info,
                          s3retriever)
 from bcbiovm.clusterk import main as clusterk_main
@@ -148,7 +149,7 @@ def _cwl_cmd(subparsers):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
-    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever})
+    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever})
     parser.set_defaults(func=cwl_main.run)
 
 def _cwlrun_cmd(subparsers):
@@ -196,7 +197,7 @@ def _template_cmd(subparsers):
     parser = _std_config_args(parser)
     parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
                         action='store_true', default=False)
-    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever})
+    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever})
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):

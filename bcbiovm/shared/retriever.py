@@ -5,10 +5,13 @@ import yaml
 
 import toolz as tz
 
-def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn):
+def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_fn=None,
+                  normalize_fn=None):
     """Add genome resources defined in configuration file to data object.
     """
     resources_file = "%s-resources.yaml" % (os.path.splitext(fasta_ref)[0])
+    if find_fn:
+        resources_file = find_fn(resources_file)
     base_dir = os.path.dirname(resources_file)
     with open_fn(resources_file) as in_handle:
         resources = yaml.safe_load(in_handle)
@@ -17,21 +20,24 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn):
         if isinstance(v1, dict):
             for k2, v2 in v1.items():
                 if isinstance(v2, basestring) and v2.startswith("../"):
-                    test_v2 = _normpath_remote(os.path.join(base_dir, v2))
-                    if test_v2 in cfiles:
+                    test_v2 = _normpath_remote(os.path.join(base_dir, v2), normalize_fn=normalize_fn)
+                    if find_fn and find_fn(test_v2) is not None:
+                        resources[k1][k2] = find_fn(test_v2)
+                    elif test_v2 in cfiles:
                         resources[k1][k2] = test_v2
                     else:
                         del resources[k1][k2]
     data["genome_resources"] = resources
-    data = _add_configured_indices(base_dir, cfiles, data)
-    return _add_genome_context(base_dir, cfiles, data)
+    data = _add_configured_indices(base_dir, cfiles, data, normalize_fn)
+    return _add_genome_context(base_dir, cfiles, data, normalize_fn)
 
-def _add_configured_indices(base_dir, cfiles, data):
+def _add_configured_indices(base_dir, cfiles, data, norm_fn=None):
     """Add additional resource indices defined in genome_resources: snpeff
     """
     snpeff_db = tz.get_in(["genome_resources", "aliases", "snpeff"], data)
     if snpeff_db:
-        index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db))
+        index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db),
+                                     normalize_fn=norm_fn)
         snpeff_files = [x for x in cfiles if x.startswith(index_dir)]
         if len(snpeff_files) > 0:
             base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
@@ -40,19 +46,22 @@ def _add_configured_indices(base_dir, cfiles, data):
             data["reference"]["snpeff"] = {"base": base_files[0], "indexes": snpeff_files}
     return data
 
-def _add_genome_context(base_dir, cfiles, data):
+def _add_genome_context(base_dir, cfiles, data, norm_fn=None):
     """Add associated genome context files, if present.
     """
-    index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "coverage", "problem_regions"))
+    index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "coverage", "problem_regions"),
+                                 normalize_fn=norm_fn)
     context_files = [x for x in cfiles if x.startswith(index_dir) and x.endswith(".gz")]
     if len(context_files) > 0:
         data["reference"]["genome_context"] = context_files
     return data
 
-def _normpath_remote(orig):
+def _normpath_remote(orig, normalize_fn=None):
     """Normalize a path, avoiding removing initial s3:// style keys
     """
-    if orig.find("://") > 0:
+    if normalize_fn:
+        return os.path.normpath(normalize_fn(orig))
+    elif orig.find("://") > 0:
         key, curpath = orig.split(":/")
         return key + ":/" + os.path.normpath(curpath)
     else:
