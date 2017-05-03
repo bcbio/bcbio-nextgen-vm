@@ -119,7 +119,7 @@ def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
         callbacks = ansible.callbacks.PlaybookCallbacks()
         runner_cb = ansible.callbacks.PlaybookRunnerCallbacks(stats)
         if ansible.utils:
-            ansible_utils.VERBOSITY = args.verbose - 1
+            ansible.utils.VERBOSITY = args.verbose - 1
 
     if hasattr(args, "cluster") and hasattr(args, "econfig"):
         cluster_config = ecluster_config(args.econfig, args.cluster)
