@@ -39,9 +39,9 @@ Installation
 - Install bcbio-vm using `conda`_ with an isolated Miniconda Python and link to
   a location on your PATH::
 
-     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
      bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
+     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
      ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
      ln -s ~/install/bcbio-vm/anaconda/bin/arvados-cwl-runner /usr/local/bin/arvados-cwl-runner
      ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool

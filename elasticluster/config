@@ -1,4 +1,4 @@
-[cloud/amazon-us-east-1]
+[cloud/amazon-aws]
 provider=ec2_boto
 ec2_url=https://ec2.us-east-1.amazonaws.com
 ec2_access_key=
@@ -30,7 +30,7 @@ global_var_slurm_selecttype=select/cons_res
 global_var_slurm_selecttypeparameters=CR_Core_Memory
 
 [cluster/bcbio]
-cloud=amazon-us-east-1
+cloud=amazon-aws
 login=ubuntu
 ssh_to=frontend
 ssh_hostkeys_from_console_output=True
@@ -45,7 +45,7 @@ setup_provider=ansible-slurm
 frontend_nodes=1
 compute_nodes=2
 flavor=c3.xlarge
-location = East US
+location=only_for_azure
 
 [cluster/bcbio/frontend]
 flavor=c3.large

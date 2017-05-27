@@ -67,7 +67,7 @@ def upgrade_bcbio_vm():
         subprocess.check_call([conda_bin, "install", "-y", "--update-deps",
                                "-c", "conda-forge", "-c", "bioconda",
                                "bcbio-nextgen-vm", "bcbio-nextgen", "cwltool", "arvados-cwl-runner",
-                               "arvados-python-client", "toil", "nodejs", "cwl2wdl"])
+                               "arvados-python-client", "toil", "nodejs", "cwl2wdl", "rabix-bunny"])
 
 def pull(args, dockerconf):
     """Pull down latest docker image.

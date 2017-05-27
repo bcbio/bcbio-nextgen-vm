@@ -11,14 +11,16 @@ from bcbiovm.aws import common
 
 
 def bootstrap(args):
-    vpc_info = setup_vpc(args)
+    vpc_info = setup_vpc(args, args.region)
     _setup_placment_group(args, vpc_info)
 
 def _setup_placment_group(args, vpc_info):
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
+    ec2_conn = boto.ec2.connect_to_region(args.region)
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
-        aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
+        aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'],
+        region=ec2_conn.region)
 
     pgname = "{}_cluster_pg".format(args.cluster)
     pgs = conn.get_all_placement_groups()
@@ -31,7 +33,7 @@ def _setup_placment_group(args, vpc_info):
     else:
         print("Placement group %s already exists. Skipping" % pgname)
 
-def setup_vpc(args, region=None):
+def setup_vpc(args, region):
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
     if not re.search(cidr_regex, args.network):
         raise ValueError(
@@ -44,14 +46,14 @@ def setup_vpc(args, region=None):
         sys.exit(1)
     compute_subnet = '{}/24'.format(net)
 
+    ec2_conn = boto.ec2.connect_to_region(region)
     if hasattr(args, "econfig"):
         cluster_config = common.ecluster_config(args.econfig, args.cluster)
         conn = boto.connect_vpc(
             aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
-            aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
+            aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'],
+            region=ec2_conn.region)
     else:
-        assert region is not None, "Require region for setting up VPC from scratch"
-        ec2_conn = boto.ec2.connect_to_region(region)
         conn = boto.connect_vpc(region=ec2_conn.region)
 
     out = {"vpc": args.cluster,

@@ -32,10 +32,13 @@ The IAM user you create will need to have access permissions for:
   - CloudFormation for launching a Lutre ICEL instance -- cloudformation:*
 """
 def bootstrap(args):
-    conn = boto.connect_iam()
-    config = create_keypair(args.econfig)
+    conn = boto.iam.connect_to_region(args.region)
+    config = create_keypair(args.econfig, region=args.region)
     config.update(_bcbio_iam_user(conn, args))
     config.update(bcbio_s3_instance_profile(conn, args))
+    ec2_conn = boto.ec2.connect_to_region(args.region)
+    config["ec2_region"] = ec2_conn.region.name
+    config["ec2_url"] = ec2_conn.region.endpoint
     econfig = _write_elasticluster_config(config, args.econfig)
     print("\nWrote elasticluster config file at: %s" % econfig)
     if args.nocreate:

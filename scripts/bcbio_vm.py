@@ -268,6 +268,8 @@ def _aws_iam_cmd(awsparser):
     parser = awsparser.add_parser("iam", help="Create IAM user and policies")
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
                         default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("--region", help="EC2 region to create IAM user in (defaults to us-east-1)",
+                        default="us-east-1")
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Recreate current IAM user access keys")
     parser.add_argument("--nocreate", action="store_true", default=False,
@@ -281,6 +283,8 @@ def _aws_vpc_cmd(awsparser):
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--econfig", help="Elasticluster bcbio configuration file",
                         default=common.DEFAULT_EC_CONFIG)
+    parser.add_argument("--region", help="EC2 region to create VPC in (defaults to us-east-1)",
+                        default="us-east-1")
     parser.add_argument("--recreate", action="store_true", default=False,
                         help="Remove and recreate the VPC, destroying all "
                              "AWS resources contained in it")
