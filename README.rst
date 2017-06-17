@@ -40,11 +40,9 @@ Installation
   a location on your PATH::
 
      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+     bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
      ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
      ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
-     ln -s ~/install/bcbio-vm/anaconda/bin/arvados-cwl-runner /usr/local/bin/arvados-cwl-runner
-     ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool
      ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
   If you're using bcbio-vm from your local machine to run on a `pre-built

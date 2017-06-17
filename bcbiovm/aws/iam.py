@@ -38,7 +38,7 @@ def bootstrap(args):
     config.update(bcbio_s3_instance_profile(conn, args))
     ec2_conn = boto.ec2.connect_to_region(args.region)
     config["ec2_region"] = ec2_conn.region.name
-    config["ec2_url"] = ec2_conn.region.endpoint
+    config["ec2_url"] = "https://" + ec2_conn.region.endpoint
     econfig = _write_elasticluster_config(config, args.econfig)
     print("\nWrote elasticluster config file at: %s" % econfig)
     if args.nocreate:
