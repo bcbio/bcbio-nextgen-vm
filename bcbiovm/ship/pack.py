@@ -3,8 +3,6 @@
 import os
 import subprocess
 
-import boto
-from boto.exception import S3ResponseError
 import toolz as tz
 
 from bcbio import utils
@@ -55,6 +53,7 @@ def send_output(config, out_file):
 def to_s3(args, config):
     """Ship required processing files to S3 for running on non-shared filesystem Amazon instances.
     """
+    import boto
     dir_to_s3 = _prep_s3_directories(args, config["buckets"])
     conn = boto.connect_s3()
     args = _remove_empty(remap.walk_files(args, _remap_and_ship(conn), dir_to_s3, pass_dirs=True))
@@ -81,6 +80,7 @@ def _put_s3(fname, keyname, bucket):
                            "-m", "x-amz-server-side-encryption:AES256"])
 
 def _get_s3_bucket(conn, bucket_name):
+    from boto.exception import S3ResponseError
     try:
         bucket = conn.get_bucket(bucket_name)
     except S3ResponseError, e:

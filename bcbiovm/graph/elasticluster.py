@@ -6,11 +6,9 @@ import os
 import re
 import subprocess
 
-import elasticluster
 import paramiko
 
 from bcbiovm.aws.common import ecluster_config
-from bcbiovm.aws import icel
 from bcbio.graph import graph as bcbio_graph
 
 
@@ -101,6 +99,7 @@ def _mgt_addr_for_scratch_on(cluster, ssh):
 
 
 def _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose):
+    from bcbiovm.aws import icel
     mgt_addr = _mgt_addr_for_scratch_on(cluster, ssh)
     if not mgt_addr:
         return

@@ -9,8 +9,6 @@ import ansible
 import ansible.utils
 import ansible.callbacks
 import ansible.playbook
-from elasticluster.conf import Configurator
-import elasticluster.main
 
 
 DEFAULT_EC_CONFIG = os.path.expanduser(
@@ -70,6 +68,7 @@ def wrap_elasticluster(args):
       clients which provide better throughput on reads/writes:
       http://nfs.sourceforge.net/nfs-howto/ar01s05.html (section 5.9 for tradeoffs)
     """
+    import elasticluster.main
     if "-s" not in args and "--storage" not in args:
         # clean up old storage directory if starting a new cluster
         # old pickle files will cause consistent errors when restarting
@@ -95,6 +94,7 @@ def get_storage_dir(econfig_file):
 
 def ecluster_config(econfig_file, name=None):
     """Load the Elasticluster configuration."""
+    from elasticluster.conf import Configurator
     config = Configurator.fromConfig(econfig_file, get_storage_dir(econfig_file))
     if not name:
         return config

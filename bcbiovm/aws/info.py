@@ -2,9 +2,6 @@
 """
 from __future__ import print_function
 
-import boto.ec2
-import boto.iam
-import boto.vpc
 import toolz as tz
 
 from bcbiovm.aws import common
@@ -39,6 +36,7 @@ def _cluster_info(config):
         print(" Cluster: %s %s machines" % (compute_c["compute_nodes"], compute_c["flavor"]))
 
 def _iam_info():
+    import boto.iam
     conn = boto.iam.connection.IAMConnection()
 
     users = conn.get_all_users()
@@ -57,6 +55,7 @@ def _iam_info():
 
 
 def _sg_info(cluster_config):
+    import boto.ec2
     conn = boto.ec2.connect_to_region(cluster_config['cloud']['ec2_region'])
 
     security_groups = conn.get_all_security_groups()
@@ -75,6 +74,7 @@ def _sg_info(cluster_config):
 
 
 def _vpc_info(cluster_config):
+    import boto.vpc
     conn = boto.vpc.VPCConnection()
 
     vpcs = conn.get_all_vpcs()
@@ -91,6 +91,8 @@ def _vpc_info(cluster_config):
 
 
 def _instance_info(cluster_config):
+    import boto.ec2
+    import boto.vpc
     conn = boto.vpc.VPCConnection()
     vpcs = conn.get_all_vpcs()
 

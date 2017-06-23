@@ -14,10 +14,6 @@ import struct
 import sys
 import time
 
-import boto.cloudformation
-import boto.ec2
-import boto.s3
-import elasticluster
 import requests
 
 from bcbiovm.aws import common
@@ -122,6 +118,7 @@ def setup_cmd(awsparser):
 
 
 def create(args):
+    import elasticluster
     if args.network:
         cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
         if not re.search(cidr_regex, args.network):
@@ -230,6 +227,7 @@ def _template_param(tree, param):
 
 
 def _upload_icel_cf_template(param, bucket_name, aws_config):
+    import boto.s3
     url = ICEL_TEMPLATES[aws_config['ec2_region']]
     source_template = requests.get(url)
     tree = json.loads(source_template.text)
@@ -291,6 +289,7 @@ def stop(args):
 def _delete_stack(stack_name, cluster_config):
     """Delete a Lustre CloudFormation stack.
     """
+    import boto.cloudformation
     cf_conn = boto.cloudformation.connect_to_region(
         cluster_config['cloud']['ec2_region'],
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
@@ -317,6 +316,8 @@ def _delete_stack(stack_name, cluster_config):
 #       ParameterKey=SSHFrom,ParameterValue=0.0.0.0/0
 def _create_stack(stack_name, template_url, lustre_net, cluster,
                   cluster_config, recreate):
+    import boto
+    import boto.cloudformation
     conn = boto.connect_vpc(
         aws_access_key_id=cluster_config['cloud']['ec2_access_key'],
         aws_secret_access_key=cluster_config['cloud']['ec2_secret_key'])
@@ -377,6 +378,7 @@ def _create_stack(stack_name, template_url, lustre_net, cluster,
 
 
 def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
+    import boto.cloudformation
     conn = boto.cloudformation.connect_to_region(
         aws_config['ec2_region'],
         aws_access_key_id=aws_config['ec2_access_key'],
@@ -418,6 +420,7 @@ def _wait_for_stack(stack_name, desired_state, wait_for, aws_config):
 
 
 def _get_stack_param(stack_name, param_name, aws_config):
+    import boto.cloudformation
     conn = boto.cloudformation.connect_to_region(
         aws_config['ec2_region'],
         aws_access_key_id=aws_config['ec2_access_key'],
@@ -434,6 +437,7 @@ def _get_stack_param(stack_name, param_name, aws_config):
 
 def get_stack_name(node_addr, aws_config):
     """Get the name of the CloudFormation stack a node belongs to."""
+    import boto.ec2
     conn = boto.ec2.connect_to_region(
         aws_config['ec2_region'],
         aws_access_key_id=aws_config['ec2_access_key'],
@@ -454,6 +458,7 @@ def get_stack_name(node_addr, aws_config):
 
 def get_instances(stack_name, aws_config):
     """Get the IP addresses of all instances in a CloudFormation stack."""
+    import boto.ec2
     conn = boto.ec2.connect_to_region(
         aws_config['ec2_region'],
         aws_access_key_id=aws_config['ec2_access_key'],
@@ -481,6 +486,7 @@ def get_instances(stack_name, aws_config):
 
 
 def _get_mgt_ip_addr(stack_name, aws_config):
+    import boto.ec2
     conn = boto.ec2.connect_to_region(
         aws_config['ec2_region'],
         aws_access_key_id=aws_config['ec2_access_key'],

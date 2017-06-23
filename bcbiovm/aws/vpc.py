@@ -5,8 +5,6 @@ from __future__ import print_function
 import re
 import sys
 
-import boto.ec2
-
 from bcbiovm.aws import common
 
 
@@ -15,6 +13,8 @@ def bootstrap(args):
     _setup_placment_group(args, vpc_info)
 
 def _setup_placment_group(args, vpc_info):
+    import boto
+    import boto.ec2
     cluster_config = common.ecluster_config(args.econfig, args.cluster)
     ec2_conn = boto.ec2.connect_to_region(args.region)
     conn = boto.connect_vpc(
@@ -34,6 +34,8 @@ def _setup_placment_group(args, vpc_info):
         print("Placement group %s already exists. Skipping" % pgname)
 
 def setup_vpc(args, region):
+    import boto
+    import boto.ec2
     cidr_regex = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$'
     if not re.search(cidr_regex, args.network):
         raise ValueError(

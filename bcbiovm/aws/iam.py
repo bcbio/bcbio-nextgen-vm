@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 
-import boto
 import toolz as tz
 
 NOIAM_MSG = """
@@ -32,6 +31,7 @@ The IAM user you create will need to have access permissions for:
   - CloudFormation for launching a Lutre ICEL instance -- cloudformation:*
 """
 def bootstrap(args):
+    import boto
     conn = boto.iam.connect_to_region(args.region)
     config = create_keypair(args.econfig, region=args.region)
     config.update(_bcbio_iam_user(conn, args))
@@ -66,6 +66,7 @@ def _write_elasticluster_config(config, out_file):
 def create_keypair(econfig_file=None, region=None, keyname="bcbio"):
     """Create a bcbio keypair and import to ec2. Gives us access to keypair locally and at AWS.
     """
+    import boto
     if econfig_file:
         keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
     else:
@@ -109,6 +110,7 @@ IAM_POLICY = """{
 def _bcbio_iam_user(conn, args):
     """Create a bcbio IAM user account with full access permissions.
     """
+    import boto
     name = "bcbio"
     access_key_name = "full_admin_access"
     if args.nocreate:
@@ -159,6 +161,7 @@ S3_POLICY = """{
 def bcbio_s3_instance_profile(conn, args):
     """Create an IAM instance profile with temporary S3 access to be applied to launched machines.
     """
+    import boto
     if hasattr(args, "nocreate") and args.nocreate:
         return {"instance_profile": ""}
     base_name = args.cluster if hasattr(args, "cluster") and args.cluster else "bcbio"
