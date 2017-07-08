@@ -74,7 +74,7 @@ def _lookup_image_by_region(region):
     return available[0][1]
 
 def _create_iam_role(args):
-    import boto
+    import boto.iam
     conn = boto.iam.connect_to_region(_zone_to_region(args.zone))
     return iam.bcbio_s3_instance_profile(conn, args)["instance_profile"]
 

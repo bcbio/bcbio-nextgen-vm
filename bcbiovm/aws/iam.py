@@ -31,7 +31,8 @@ The IAM user you create will need to have access permissions for:
   - CloudFormation for launching a Lutre ICEL instance -- cloudformation:*
 """
 def bootstrap(args):
-    import boto
+    import boto.iam
+    import boto.ec2
     conn = boto.iam.connect_to_region(args.region)
     config = create_keypair(args.econfig, region=args.region)
     config.update(_bcbio_iam_user(conn, args))
@@ -67,6 +68,7 @@ def create_keypair(econfig_file=None, region=None, keyname="bcbio"):
     """Create a bcbio keypair and import to ec2. Gives us access to keypair locally and at AWS.
     """
     import boto
+    import boto.ec2
     if econfig_file:
         keypair_dir = os.path.dirname(econfig_file).replace("elasticluster", "aws_keypairs")
     else:
