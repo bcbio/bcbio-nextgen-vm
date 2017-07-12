@@ -31,6 +31,7 @@ from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep
+from bcbiovm.shared import localref
 from bcbiovm.ship import pack
 
 def cmd_install(args):
@@ -149,7 +150,8 @@ def _cwl_cmd(subparsers):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
-    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever})
+    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
+                                      "local": localref})
     parser.set_defaults(func=cwl_main.run)
 
 def _cwlrun_cmd(subparsers):
@@ -197,7 +199,8 @@ def _template_cmd(subparsers):
     parser = _std_config_args(parser)
     parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
                         action='store_true', default=False)
-    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever})
+    parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
+                                      "local": localref})
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
