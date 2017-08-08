@@ -72,8 +72,8 @@ def standard_genome_refs(genome_build, aligner, ref_prefix, list_fn):
     """
     out = {}
     base_targets = ("/%s.fa" % genome_build, "/mainIndex")
-    for dirname in ["seq", "rtg", aligner]:
-        key = {"seq": "fasta"}.get(dirname, dirname)
+    for dirname in ["seq", "rtg", "ucsc", aligner]:
+        key = {"seq": "fasta", "ucsc": "twobit"}.get(dirname, dirname)
         cur_files = list_fn(os.path.join(ref_prefix, dirname))
         base_files = [x for x in cur_files if x.endswith(base_targets)]
         if len(base_files) > 0:
@@ -81,6 +81,8 @@ def standard_genome_refs(genome_build, aligner, ref_prefix, list_fn):
             base_file = base_files[0]
             del cur_files[cur_files.index(base_file)]
             out[key] = {"base": base_file, "indexes": cur_files}
+        elif len(cur_files) == 1:
+            out[key] = cur_files[0]
         else:
             out[key] = {"indexes": cur_files}
     return out
