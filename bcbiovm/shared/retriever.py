@@ -36,14 +36,20 @@ def _add_configured_indices(base_dir, cfiles, data, norm_fn=None):
     """
     snpeff_db = tz.get_in(["genome_resources", "aliases", "snpeff"], data)
     if snpeff_db:
-        index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db),
-                                     normalize_fn=norm_fn)
-        snpeff_files = [x for x in cfiles if x.startswith(index_dir)]
-        if len(snpeff_files) > 0:
-            base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
-            assert len(base_files) == 1, base_files
-            del snpeff_files[snpeff_files.index(base_files[0])]
-            data["reference"]["snpeff"] = {"base": base_files[0], "indexes": snpeff_files}
+        tarball = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff--%s-wf.tar.gz" % snpeff_db),
+                                   normalize_fn=norm_fn)
+        snpeff_files = [x for x in cfiles if x == tarball]
+        if len(snpeff_files) == 1:
+            data["reference"]["snpeff"] = {snpeff_db: snpeff_files[0]}
+        else:
+            index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db),
+                                         normalize_fn=norm_fn)
+            snpeff_files = [x for x in cfiles if x.startswith(index_dir)]
+            if len(snpeff_files) > 0:
+                base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
+                assert len(base_files) == 1, base_files
+                del snpeff_files[snpeff_files.index(base_files[0])]
+                data["reference"]["snpeff"] = {"base": base_files[0], "indexes": snpeff_files}
     return data
 
 def _add_genome_context(base_dir, cfiles, data, norm_fn=None):
@@ -74,17 +80,26 @@ def standard_genome_refs(genome_build, aligner, ref_prefix, list_fn):
     base_targets = ("/%s.fa" % genome_build, "/mainIndex")
     for dirname in ["seq", "rtg", "ucsc", aligner]:
         key = {"seq": "fasta", "ucsc": "twobit"}.get(dirname, dirname)
-        cur_files = list_fn(os.path.join(ref_prefix, dirname))
-        base_files = [x for x in cur_files if x.endswith(base_targets)]
-        if len(base_files) > 0:
-            assert len(base_files) == 1, base_files
-            base_file = base_files[0]
-            del cur_files[cur_files.index(base_file)]
-            out[key] = {"base": base_file, "indexes": cur_files}
-        elif len(cur_files) == 1:
-            out[key] = cur_files[0]
+        tarball_files = [x for x in list_fn(ref_prefix)
+                         if os.path.basename(x).startswith(dirname) and x.endswith("-wf.tar.gz")]
+        if len(tarball_files) > 0:
+            assert len(tarball_files) == 1, tarball_files
+            if dirname == aligner:
+                out[key] = {"base": tarball_files[0], "indexes": tarball_files}
+            else:
+                out[key] = tarball_files[0]
         else:
-            out[key] = {"indexes": cur_files}
+            cur_files = list_fn(os.path.join(ref_prefix, dirname))
+            base_files = [x for x in cur_files if x.endswith(base_targets)]
+            if len(base_files) > 0:
+                assert len(base_files) == 1, base_files
+                base_file = base_files[0]
+                del cur_files[cur_files.index(base_file)]
+                out[key] = {"base": base_file, "indexes": cur_files}
+            elif len(cur_files) == 1:
+                out[key] = cur_files[0]
+            else:
+                out[key] = {"indexes": cur_files}
     return out
 
 def find_ref_prefix(genome_build, find_fn):

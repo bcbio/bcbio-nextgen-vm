@@ -4,10 +4,13 @@ Avoids need for having Galaxy location files, reading reference files directly
 from standard bcbio directory structures.
 """
 import functools
+import glob
 import os
 
 import toolz as tz
 
+from bcbio import bam
+from bcbio.bam import fastq
 from bcbiovm.shared import retriever as sret
 
 KEY = "local"
@@ -16,6 +19,14 @@ def _find_ref_file(config, target_file):
     f = os.path.abspath(os.path.join(config["ref"], target_file))
     if os.path.exists(f):
         return f
+
+def _find_any_file(config, target_file):
+    """Find file in ref or inputs.
+    """
+    for d in [config["ref"]] + config.get("inputs", []):
+        f = os.path.abspath(os.path.join(d, target_file))
+        if os.path.exists(f):
+            return f
 
 def _list(dname):
     out = []
@@ -28,21 +39,27 @@ def _list(dname):
 
 def get_files(target_files, config):
     out = []
-    for fname in target_files.keys():
-        if os.path.exists(fname):
-            out.append(fname)
+    for fname_in in target_files.keys():
+        if isinstance(fname_in, (list, tuple)):
+            fnames = fname_in
         else:
-            added = False
-            for dirname in config["inputs"]:
-                f = os.path.join(dirname, fname)
-                if os.path.exists(f):
-                    out.append(f)
-                    added = True
-            assert added, "Did not find files %s in directories %s" % (fname, config["inputs"])
+            fnames = fname_in.split(";")
+        for fname in fnames:
+            if os.path.exists(fname):
+                out.append(fname)
+            else:
+                added = False
+                for dirname in config["inputs"]:
+                    for f in glob.glob(os.path.join(dirname, fname) + "*"):
+                        if bam.is_bam(f) or fastq.is_fastq(f):
+                            if os.path.exists(f):
+                                out.append(f)
+                                added = True
+                assert added, "Did not find files %s in directories %s" % (fname, config["inputs"])
     return out
 
 def add_remotes(items, config):
-    return sret.fill_remote(items, functools.partial(_find_ref_file, config), lambda x: False)
+    return sret.fill_remote(items, functools.partial(_find_any_file, config), lambda x: False)
 
 def get_refs(genome_build, aligner, config):
     ref_prefix = sret.find_ref_prefix(genome_build, functools.partial(_find_ref_file, config[KEY]))
