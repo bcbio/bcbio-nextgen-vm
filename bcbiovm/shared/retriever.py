@@ -38,7 +38,7 @@ def _add_configured_indices(base_dir, cfiles, data, norm_fn=None):
     if snpeff_db:
         tarball = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff--%s-wf.tar.gz" % snpeff_db),
                                    normalize_fn=norm_fn)
-        snpeff_files = [x for x in cfiles if x == tarball]
+        snpeff_files = [x for x in cfiles if tarball == (norm_fn(x) if norm_fn else x)]
         if len(snpeff_files) == 1:
             data["reference"]["snpeff"] = {snpeff_db: snpeff_files[0]}
         else:

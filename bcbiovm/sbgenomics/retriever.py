@@ -16,7 +16,7 @@ CONFIG_KEY = "sbgenomics"
 
 def _get_api_client():
     assert os.environ.get("CGC_API_URL") and os.environ.get("CGC_AUTH_TOKEN"), \
-        "Need to set CGC_API_URL and CGC_AUTH_TOKEN to retrieve files from Keep"
+        "Need to set CGC_API_URL and CGC_AUTH_TOKEN to retrieve files from the Seven Bridges Platform"
     import sevenbridges as sbg
     api = sbg.Api(os.environ["CGC_API_URL"], os.environ["CGC_AUTH_TOKEN"])
     return api

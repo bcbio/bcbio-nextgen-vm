@@ -24,6 +24,7 @@ from bcbio.cwl import tool as cwl_tool
 from bcbio.distributed import clargs
 from bcbio.workflow import template
 from bcbiovm.arvados import retriever as arvados_retriever
+from bcbiovm.dnanexus import retriever as dx_retriever
 from bcbiovm.sbgenomics import retriever as sb_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info,
                          s3retriever)
@@ -151,7 +152,7 @@ def _cwl_cmd(subparsers):
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
     parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
-                                      "local": localref})
+                                      "dnanexus": dx_retriever, "local": localref})
     parser.set_defaults(func=cwl_main.run)
 
 def _cwlrun_cmd(subparsers):
