@@ -4,12 +4,6 @@
 import os
 import sys
 
-# ansible.utils must be imported before ansible.callbacks.
-import ansible
-import ansible.utils
-import ansible.callbacks
-import ansible.playbook
-
 
 DEFAULT_EC_CONFIG = os.path.expanduser(
     os.path.join("~", ".bcbio", "elasticluster", "config"))
@@ -17,31 +11,34 @@ ANSIBLE_BASE = os.path.join(sys.prefix, "share", "bcbio-vm", "ansible")
 EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share/elasticluster/providers/ansible-playbooks/library")
 
 
-class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
-    """Suppress Ansible output when running playbooks."""
-    def on_no_hosts_matched(self):
-        pass
+def _get_silent_playbook():
+    import ansible.callbacks
+    class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
+        """Suppress Ansible output when running playbooks."""
+        def on_no_hosts_matched(self):
+            pass
 
-    def on_no_hosts_remaining(self):
-        pass
+        def on_no_hosts_remaining(self):
+            pass
 
-    def on_task_start(self, name, is_conditional):
-        pass
+        def on_task_start(self, name, is_conditional):
+            pass
 
-    def on_setup(self):
-        pass
+        def on_setup(self):
+            pass
 
-    def on_import_for_host(self, host, imported_file):
-        pass
+        def on_import_for_host(self, host, imported_file):
+            pass
 
-    def on_not_import_for_host(self, host, missing_file):
-        pass
+        def on_not_import_for_host(self, host, missing_file):
+            pass
 
-    def on_play_start(self, pattern):
-        pass
+        def on_play_start(self, pattern):
+            pass
 
-    def on_stats(self, stats):
-        pass
+        def on_stats(self, stats):
+            pass
+    return SilentPlaybook()
 
 
 def add_default_ec_args(parser):
@@ -112,8 +109,16 @@ def run_ansible_pb(inventory_path, playbook_path, args, calc_extra_vars=None,
     calc_extra_vars is an option function that should return extra variables
     to pass to ansible given the arguments and cluster configuration.
     """
+    # XXX Needs update to support recent versions of ansible
+    # which no longer have ansible.callbacks
+    # ansible.utils must be imported before ansible.callbacks.
+    import ansible
+    import ansible.utils
+    import ansible.callbacks
+    import ansible.playbook
+
     stats = ansible.callbacks.AggregateStats()
-    callbacks = SilentPlaybook()
+    callbacks = _get_silent_playbook()
     runner_cb = ansible.callbacks.DefaultRunnerCallbacks()
     if args.verbose:
         callbacks = ansible.callbacks.PlaybookCallbacks()
