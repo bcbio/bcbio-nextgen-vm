@@ -1,4 +1,6 @@
-"""Integration with the DNAnexus platform using the API
+"""Integration with the DNAnexus platform using the API.
+
+Looks up and fills in sample locations from inputs folders in a DNAnexus project.
 """
 import os
 
@@ -31,7 +33,7 @@ def _recursive_ls(dx_proj, folder):
     for subfolder in query["folders"]:
         out.update(_recursive_ls(dx_proj, subfolder))
     for f in query["objects"]:
-        out[os.path.join(folder, f["describe"]["name"])] = f["id"]
+        out[str(os.path.join(folder, f["describe"]["name"]))] = str(f["id"])
     return out
 
 def _project_files(project_name, folder):
@@ -105,7 +107,8 @@ def file_size(file_ref, config=None):
     return desc["size"] / (1024.0 * 1024.0)
 
 def clean_file(f):
-    return _get_id_fname(f)[0]
+    # Return full file paths instead of IDs to enable CWL secondary file lookup
+    return _get_id_fname(f)[1]
 
 # ## API: Fill in files
 
