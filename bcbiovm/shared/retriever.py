@@ -5,6 +5,8 @@ import yaml
 
 import toolz as tz
 
+from bcbio import utils
+
 def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_fn=None,
                   normalize_fn=None):
     """Add genome resources defined in configuration file to data object.
@@ -27,9 +29,26 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_
                         resources[k1][k2] = test_v2
                     else:
                         del resources[k1][k2]
-    data["genome_resources"] = resources
+    data["genome_resources"] = _ensure_annotations(resources, cfiles, data, normalize_fn)
     data = _add_configured_indices(base_dir, cfiles, data, normalize_fn)
     return _add_genome_context(base_dir, cfiles, data, normalize_fn)
+
+
+def _ensure_annotations(resources, cfiles, data, normalize_fn):
+    """Retrieve additional annotations for downstream processing.
+
+    Mirrors functionality in bcbio.pipeline.run_info.ensure_annotations
+    """
+    transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
+    if transcript_gff:
+        gene_bed = utils.splitext_plus(transcript_gff)[0] + ".bed"
+        test_gene_bed = normalize_fn(gene_bed) if normalize_fn else gene_bed
+        for fname in cfiles:
+            test_fname = normalize_fn(fname) if normalize_fn else fname
+            if test_fname == test_gene_bed:
+                resources["rnaseq"]["gene_bed"] = fname
+                break
+    return resources
 
 def _add_configured_indices(base_dir, cfiles, data, norm_fn=None):
     """Add additional resource indices defined in genome_resources: snpeff
