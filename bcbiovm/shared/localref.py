@@ -58,6 +58,9 @@ def get_files(target_files, config):
                 assert added, "Did not find files %s in directories %s" % (fname, config["inputs"])
     return out
 
+def set_cache(config):
+    return config
+
 def add_remotes(items, config):
     return sret.fill_remote(items, functools.partial(_find_any_file, config), lambda x: False)
 

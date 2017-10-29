@@ -110,6 +110,9 @@ def clean_file(f):
 
 # ## API: Fill in files from S3 buckets
 
+def set_cache(config):
+    return config
+
 def get_files(target_files, config):
     """Retrieve files associated with the potential inputs.
     """

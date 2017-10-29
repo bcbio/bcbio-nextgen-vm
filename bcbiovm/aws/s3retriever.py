@@ -33,6 +33,9 @@ def _is_remote(path):
 
 # ## API: General functionality
 
+def set_cache(config):
+    return config
+
 def file_size(file_ref, config=None):
     """Retrieve file size in Mb.
     """

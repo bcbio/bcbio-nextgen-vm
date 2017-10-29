@@ -25,15 +25,19 @@ def _is_remote(f):
     return f.startswith("%s:" % KEY)
 
 def _get_id_fname(file_ref):
-    return file_ref.split(":")[-1].split("/", 1)
+    return file_ref.split(":", 1)[-1].split("/", 1)
 
-def _recursive_ls(dx_proj, folder):
+def _recursive_ls(dx_proj, project_name, folder):
     out = {}
-    query = dx_proj.list_folder(folder=folder, describe={"fields": {'name': True}})
+    try:
+        query = dx_proj.list_folder(folder=folder, describe={"fields": {'name': True}})
+    except dxpy.exceptions.ResourceNotFound:
+        print(dx_proj, folder)
+        raise
     for subfolder in query["folders"]:
-        out.update(_recursive_ls(dx_proj, subfolder))
+        out.update(_recursive_ls(dx_proj, project_name, subfolder))
     for f in query["objects"]:
-        out[str(os.path.join(folder, f["describe"]["name"]))] = str(f["id"])
+        out[str(os.path.join(folder, f["describe"]["name"]))] = (project_name, str(f["id"]))
     return out
 
 def _project_files(project_name, folder):
@@ -49,17 +53,23 @@ def _project_files(project_name, folder):
         else:
             raise ValueError("Did not find DNAnexus project %s: %s" % (project_name, query))
     dx_proj = dxpy.get_handler(project_id)
-    return _recursive_ls(dx_proj, folder)
+    return _recursive_ls(dx_proj, project_name, folder)
 
 def _remote_folders(config):
-    return [config["ref"]] + config["inputs"]
+    if isinstance(config["ref"], dict):
+        ref_folder = (config["ref"]["project"], config["ref"]["folder"])
+    else:
+        ref_folder = (config["project"], config["ref"])
+    return [ref_folder] + [(config["project"], f) for f in config["inputs"]]
 
 def _get_remote_files(config):
     """Retrieve remote file references.
     """
+    if "cache" in config:
+        return config["cache"]
     out = {}
-    for folder in _remote_folders(config):
-        out.update(_project_files(config["project"], folder))
+    for project, folder in _remote_folders(config):
+        out.update(_project_files(project, folder))
     return out
 
 def _open_remote(file_ref):
@@ -69,19 +79,37 @@ def _open_remote(file_ref):
     return dxpy.bindings.dxfile.DXFile(_get_id_fname(file_ref)[0])
 
 def _find_file(config, startswith=False):
+    """Resolve a file in the remove files.
+
+    startswith allows queries for directories.
+    Looks for exact matches then tries to find a file recursively in a folder
+    """
     remote_files = _get_remote_files(config)
     if startswith:
         remote_folders = {}
-        for fname in remote_files.keys():
-            remote_folders[os.path.dirname(fname)] = None
+        for fname, (pid, _) in remote_files.items():
+            remote_folders[os.path.dirname(fname)] = (pid, None)
         remote_files = remote_folders
     def get_file(f):
         if _is_remote(f):
             f = _get_id_fname(f)[-1]
-        for folder in _remote_folders(config):
-            folder_f = os.path.join(folder, f)
-            if folder_f in remote_files:
-                return "%s:%s/%s" % (KEY, remote_files[folder_f], folder_f)
+        # handle both bare lookups and project-prefixed
+        if f.find(":") > 0:
+            fproject, f = f.split(":")
+        else:
+            fproject = None
+        # check for exact matches
+        for project, folder in _remote_folders(config):
+            if fproject is None or fproject == project:
+                folder_f = os.path.join(folder, f)
+                if folder_f in remote_files:
+                    pid, fid = remote_files[folder_f]
+                    return "%s:%s/%s:%s" % (KEY, fid, pid, folder_f)
+        # find any files nested in sub folders
+        for project, folder in _remote_folders(config):
+            for rfname, (pid, rid) in remote_files.items():
+                if rfname.startswith(folder + "/") and rfname.endswith("/" + f):
+                    return "%s:%s/%s:%s" % (KEY, rid, pid, rfname)
     return get_file
 
 def _list(config):
@@ -89,9 +117,9 @@ def _list(config):
     def do(d):
         out = []
         dfname = _get_id_fname(d)[-1]
-        for fname, fid in remote_files.items():
-            if fname.startswith(dfname):
-                out.append("%s:%s/%s" % (KEY, fid, fname))
+        for fname, (pid, fid) in remote_files.items():
+            if ("%s:%s" % (pid, fname)).startswith(dfname):
+                out.append("%s:%s/%s:%s" % (KEY, fid, pid, fname))
         return out
     return do
 
@@ -130,6 +158,12 @@ def add_remotes(items, config):
     return sret.fill_remote(items, find_fn, _is_remote)
 
 # ## API: Retrieve files from reference collections
+
+def set_cache(config):
+    """Add a cache to the configuration to prevent multiple downloads
+    """
+    config["cache"] = _get_remote_files(config)
+    return config
 
 def get_refs(genome_build, aligner, config):
     """Retrieve reference genome data from a standard bcbio directory structure.

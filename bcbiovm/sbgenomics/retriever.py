@@ -91,6 +91,9 @@ def _list(config):
 
 # ## API: General functionality
 
+def set_cache(config):
+    return config
+
 def file_size(file_ref, config=None):
     api = _get_api_client()
     api_file = api.files.get(id=_get_id_fname(file_ref)[0])

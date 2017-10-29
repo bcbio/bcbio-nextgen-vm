@@ -201,7 +201,7 @@ def _template_cmd(subparsers):
     parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
                         action='store_true', default=False)
     parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
-                                      "local": localref})
+                                      "dnanexus": dx_retriever, "local": localref})
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
