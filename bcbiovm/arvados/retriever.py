@@ -1,6 +1,4 @@
-"""Integration with Arvados Keep for file assessment. using the API.
-
-Requires arvados-python-sdk.
+"""Integration with Arvados Keep. using the API with arvados-python-sdk.
 """
 import os
 
@@ -26,38 +24,39 @@ def _get_api_client(config=None):
 def _get_input_ids(config):
     """Retrieve input IDs for collections, normalizing to a list.
     """
-    ref_uuid = config.get("reference")
+    ref_uuid = config.get("reference") or config.get("ref")
     out = [ref_uuid] if ref_uuid else []
-    input_id = config.get("input")
+    input_id = config.get("input") or config.get("inputs")
     if not input_id:
         return out
     elif isinstance(input_id, basestring):
-        return out + [input_id]
+        return sorted(list(set(out + [input_id])))
     else:
         assert isinstance(input_id, (list, tuple)), input_id
-        return out + input_id
+        return sorted(list(set(out + input_id)))
 
 def _is_remote(f):
     return f.startswith("%s:" % KEY)
 
-def _collection_files(uuid, config=None, add_uuid=False):
+def _collection_files(uuid, config):
     """Retrieve files in the input collection.
     """
     import arvados
     api_client = _get_api_client(config)
     cr = arvados.CollectionReader(uuid, api_client=api_client)
     cr.normalize()
-    out = ["%s/%s" % (x.stream_name(), x.name) for x in cr.all_files()]
-    if add_uuid:
-        out = ["%s:%s" % (KEY, os.path.normpath(os.path.join(uuid, x))) for x in out]
+    out = [str("%s:%s/%s" % (KEY, os.path.normpath(os.path.join(uuid, x.stream_name())), x.name))
+           for x in cr.all_files()]
     return out
 
-def _get_remote_files(config, add_uuid=False):
+def _get_remote_files(config):
     """Retrieve remote file references.
     """
+    if "cache" in config:
+        return config["cache"]
     out = []
     for input_id in _get_input_ids(config):
-        out += _collection_files(input_id, config, add_uuid)
+        out += _collection_files(input_id, config)
     return out
 
 def _get_uuid_file(file_ref):
@@ -73,18 +72,30 @@ def _open_remote(file_ref, config=None):
     return cr.open(coll_ref)
 
 def _find_file(config, startswith=False):
-    keep_files = _get_remote_files(config, add_uuid=True)
+    """Flexibly search for files in an Arvados collection.
+
+    startswith -- searching for directories
+    """
+    keep_files = _get_remote_files(config)
     def get_file(f):
+        # exact matches
         for keep_full in keep_files:
             keep_uuid, keep_file = _get_uuid_file(keep_full)
             if keep_file == f:
                 return keep_full
             elif startswith and keep_file.startswith(f):
                 return "%s:%s/%s" % (KEY, keep_uuid, f)
+        # partial matches, including directories (using startswith)
+        for keep_full in keep_files:
+            keep_uuid, keep_file = _get_uuid_file(keep_full)
+            if startswith:
+                keep_file = os.path.dirname(keep_file)
+            if keep_file.endswith("/%s" % f):
+                return "%s:%s/%s" % (KEY, keep_uuid, keep_file)
     return get_file
 
 def _list(config):
-    keep_files = _get_remote_files(config, add_uuid=True)
+    keep_files = _get_remote_files(config)
     def do(d):
         out = []
         for keep_full in keep_files:
@@ -102,15 +113,18 @@ def file_size(file_ref, config=None):
     api_client = _get_api_client(config)
     coll_uuid, coll_ref = _get_uuid_file(file_ref)
     cr = arvados.CollectionReader(coll_uuid, api_client=api_client)
-    file = cr[coll_ref]
+    file = cr.find(coll_ref)
     return file.size() / (1024.0 * 1024.0)
 
 def clean_file(f):
     return f
 
-# ## API: Fill in files from S3 buckets
+# ## API
 
 def set_cache(config):
+    """Add cache of files to avoid multiple API lookups.
+    """
+    config["cache"] = _get_remote_files(config)
     return config
 
 def get_files(target_files, config):
@@ -118,10 +132,15 @@ def get_files(target_files, config):
     """
     out = []
     find_fn = _find_file(config)
-    for fname in target_files.keys():
-        remote_fname = find_fn(fname)
-        if remote_fname:
-            out.append(remote_fname)
+    for fname_in in target_files.keys():
+        if isinstance(fname_in, (list, tuple)):
+            fnames = fname_in
+        else:
+            fnames = fname_in.split(";")
+        for fname in fnames:
+            remote_fname = find_fn(fname)
+            if remote_fname:
+                out.append(remote_fname)
     return out
 
 def add_remotes(items, config):
