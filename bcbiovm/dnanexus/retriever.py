@@ -134,6 +134,14 @@ def file_size(file_ref, config=None):
     desc = dx_file.describe(fields={"size": True})
     return desc["size"] / (1024.0 * 1024.0)
 
+def file_exists(file_ref, config):
+    """Check for existence of a remote file, returning path if present
+    """
+    find_fn = _find_file(config)
+    if _is_remote(file_ref):
+        _, file_ref = _get_id_fname(file_ref)
+    return find_fn(file_ref)
+
 def clean_file(f):
     # Return full file paths instead of IDs to enable CWL secondary file lookup
     return _get_id_fname(f)[1]

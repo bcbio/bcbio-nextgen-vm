@@ -116,6 +116,14 @@ def file_size(file_ref, config=None):
     file = cr.find(coll_ref)
     return file.size() / (1024.0 * 1024.0)
 
+def file_exists(file_ref, config):
+    """Check for existence of a remote file, returning path if present
+    """
+    find_fn = _find_file(config)
+    if _is_remote(file_ref):
+        _, file_ref = _get_uuid_file(file_ref)
+    return find_fn(file_ref)
+
 def clean_file(f):
     return f
 

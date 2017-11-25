@@ -45,6 +45,16 @@ def file_size(file_ref, config=None):
     key = bucket.lookup(remote.key)
     return key.size / (1024.0 * 1024.0)
 
+def file_exists(file_ref, config):
+    """Check for existence of a remote file, returning path if present
+    """
+    conn = objectstore.connect(file_ref)
+    remote = objectstore.parse_remote(file_ref)
+    bucket = conn.get_bucket(remote.bucket)
+    key = bucket.lookup(remote.key)
+    if key:
+        return file_ref
+
 def clean_file(f):
     """Remove AWS @-based region specification from file.
 

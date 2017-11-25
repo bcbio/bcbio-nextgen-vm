@@ -99,6 +99,14 @@ def file_size(file_ref, config=None):
     api_file = api.files.get(id=_get_id_fname(file_ref)[0])
     return api_file.size
 
+def file_exists(file_ref, config):
+    """Check for existence of a remote file, returning path if present
+    """
+    find_fn = _find_file(config)
+    if _is_remote(file_ref):
+        _, file_ref = _get_id_fname(file_ref)
+    return find_fn(file_ref)
+
 def clean_file(f):
     """Return only the SBG ID for referencing in the JSON.
     """
