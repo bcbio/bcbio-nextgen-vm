@@ -45,7 +45,8 @@ def _collection_files(uuid, config):
     api_client = _get_api_client(config)
     cr = arvados.CollectionReader(uuid, api_client=api_client)
     cr.normalize()
-    out = [str("%s:%s/%s" % (KEY, os.path.normpath(os.path.join(uuid, x.stream_name())), x.name))
+    pdh = cr.portable_data_hash()
+    out = [str("%s:%s/%s" % (KEY, os.path.normpath(os.path.join(pdh, x.stream_name())), x.name))
            for x in cr.all_files()]
     return out
 
