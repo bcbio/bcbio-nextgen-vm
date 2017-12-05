@@ -153,10 +153,15 @@ def get_files(target_files, config):
     """
     out = []
     find_fn = _find_file(config)
-    for fname in target_files.keys():
-        remote_fname = find_fn(fname)
-        if remote_fname:
-            out.append(remote_fname)
+    for fname_in in target_files.keys():
+        if isinstance(fname_in, (list, tuple)):
+            fnames = fname_in
+        else:
+            fnames = fname_in.split(";")
+        for fname in fnames:
+            remote_fname = find_fn(fname)
+            if remote_fname:
+                out.append(remote_fname)
     return out
 
 def add_remotes(items, config):
