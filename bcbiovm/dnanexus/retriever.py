@@ -47,7 +47,7 @@ def _project_files(project_name, folder):
     if project_name.startswith("project-"):
         project_id = project_name
     else:
-        query = dxpy.api.system_find_projects({"name": project_name})
+        query = dxpy.api.system_find_projects({"name": project_name, "level": "VIEW"})
         if len(query["results"]) == 1:
             project_id = query["results"][0]["id"]
         else:
