@@ -151,6 +151,9 @@ def _cwl_cmd(subparsers):
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
+    parser.add_argument('--add-container-tag',
+                        help="Add a container revision tag to CWL ('quay_lookup` retrieves lates from quay.io)",
+                        default=None)
     parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
                                       "dnanexus": dx_retriever, "local": localref})
     parser.set_defaults(func=cwl_main.run)
