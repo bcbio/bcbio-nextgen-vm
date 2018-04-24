@@ -166,6 +166,16 @@ def _cwlrun_cmd(subparsers):
     parser.add_argument("toolargs", help="Arguments to pass to CWL tool", nargs="*")
     parser.add_argument('--no-container', help="Use local installation of bcbio instead of Docker container",
                         action='store_true', default=False)
+    parser.add_argument("-s", "--scheduler",
+                        choices=["lsf", "sge", "torque", "slurm", "pbspro"],
+                        help="Scheduler to use, for an HPC system")
+    parser.add_argument("-q", "--queue",
+                        help=("Scheduler queue to run jobs on, for an HPC system"))
+    parser.add_argument("-r", "--resources",
+                        help=("Cluster specific resources specifications. "
+                              "Can be specified multiple times.\n"
+                              "Supports SGE, Torque, LSF and SLURM "
+                              "parameters."), default=[], action="append")
     parser.set_defaults(func=cwl_tool.run)
 
 def _add_ipython_args(parser):
