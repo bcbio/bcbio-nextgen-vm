@@ -167,7 +167,7 @@ def _cwlrun_cmd(subparsers):
     parser.add_argument('--no-container', help="Use local installation of bcbio instead of Docker container",
                         action='store_true', default=False)
     parser.add_argument("-s", "--scheduler",
-                        choices=["lsf", "sge", "torque", "slurm", "pbspro"],
+                        choices=["lsf", "sge", "torque", "slurm", "pbspro", "htcondor"],
                         help="Scheduler to use, for an HPC system")
     parser.add_argument("-q", "--queue",
                         help=("Scheduler queue to run jobs on, for an HPC system"))
