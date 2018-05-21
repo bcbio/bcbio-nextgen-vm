@@ -176,6 +176,7 @@ def _cwlrun_cmd(subparsers):
                               "Can be specified multiple times.\n"
                               "Supports SGE, Torque, LSF and SLURM "
                               "parameters."), default=[], action="append")
+    parser.add_argument("--runconfig", help=("Custom configuration HOCON file for Cromwell."))
     parser.set_defaults(func=cwl_tool.run)
 
 def _add_ipython_args(parser):
