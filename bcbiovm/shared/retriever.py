@@ -63,6 +63,8 @@ def _add_configured_indices(base_dir, cfiles, data, norm_fn=None):
         else:
             index_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "snpeff", snpeff_db),
                                          normalize_fn=norm_fn)
+            if not index_dir.endswith("/"):
+                index_dir += "/"
             snpeff_files = [x for x in cfiles if x.startswith(index_dir)]
             if len(snpeff_files) > 0:
                 base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
@@ -78,7 +80,7 @@ def _add_genome_context(base_dir, cfiles, data, norm_fn=None):
                                  normalize_fn=norm_fn)
     context_files = [x for x in cfiles if x.startswith(index_dir) and x.endswith(".gz")]
     if len(context_files) > 0:
-        data["reference"]["genome_context"] = context_files
+        data["reference"]["genome_context"] = sorted(context_files, key=os.path.basename)
     return data
 
 def _normpath_remote(orig, normalize_fn=None):
