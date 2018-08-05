@@ -161,7 +161,7 @@ def _cwl_cmd(subparsers):
 def _cwlrun_cmd(subparsers):
     parser = subparsers.add_parser("cwlrun", help="Run common workflow language with a specified tool")
     parser.add_argument("tool", help="CWL tool to run", choices=["cwltool", "arvados", "toil", "bunny", "funnel",
-                                                                 "cromwell"])
+                                                                 "cromwell", "wes"])
     parser.add_argument("directory", help="Directory with bcbio generated CWL")
     parser.add_argument("toolargs", help="Arguments to pass to CWL tool", nargs="*")
     parser.add_argument('--no-container', help="Use local installation of bcbio instead of Docker container",
@@ -177,6 +177,8 @@ def _cwlrun_cmd(subparsers):
                               "Supports SGE, Torque, LSF and SLURM "
                               "parameters."), default=[], action="append")
     parser.add_argument("--runconfig", help=("Custom configuration HOCON file for Cromwell."))
+    parser.add_argument("--host", help=("WES host for submitting jobs"))
+    parser.add_argument("--auth", help=("WES: authentication token"))
     parser.set_defaults(func=cwl_tool.run)
 
 def _add_ipython_args(parser):
