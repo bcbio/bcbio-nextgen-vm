@@ -13,6 +13,7 @@ EC_ANSIBLE_LIBRARY = os.path.join(sys.prefix, "share/elasticluster/providers/ans
 
 def _get_silent_playbook():
     import ansible.callbacks
+
     class SilentPlaybook(ansible.callbacks.PlaybookCallbacks):
         """Suppress Ansible output when running playbooks."""
         def on_no_hosts_matched(self):

@@ -13,11 +13,9 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+import warnings
 
 import yaml
-
-import warnings
-warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
 from bcbio.cwl import main as cwl_main
 from bcbio.cwl import tool as cwl_tool
@@ -34,6 +32,8 @@ from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep
 from bcbiovm.shared import localref
 from bcbiovm.ship import pack
+
+warnings.simplefilter("ignore", UserWarning, 1155)  # Stop warnings from matplotlib.use()
 
 def cmd_install(args):
     args = defaults.update_check_args(args, "bcbio-nextgen not upgraded.",
