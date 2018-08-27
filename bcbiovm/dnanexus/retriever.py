@@ -2,6 +2,7 @@
 
 Looks up and fills in sample locations from inputs folders in a DNAnexus project.
 """
+import fnmatch
 import os
 
 import toolz as tz
@@ -57,7 +58,7 @@ def _project_files(project_name, folder):
 
 def _remote_folders(config):
     if isinstance(config["ref"], dict):
-        ref_folder = (config["ref"]["project"], config["ref"]["folder"])
+        ref_folder = (config["ref"].get("project") or config["project"], config["ref"]["folder"])
     else:
         ref_folder = (config["project"], config["ref"])
     return [ref_folder] + [(config["project"], f) for f in config["inputs"]]
@@ -90,6 +91,14 @@ def _find_file(config, startswith=False):
         for fname, (pid, _) in remote_files.items():
             remote_folders[os.path.dirname(fname)] = (pid, None)
         remote_files = remote_folders
+
+    def glob_match(f1, f2):
+        """Check for wildcard glob style matches.
+        """
+        if f1.find("*") >= 0:
+            if fnmatch.fnmatch(f2, "*/%s" % f1):
+                return True
+
     def get_file(f):
         if _is_remote(f):
             f = _get_id_fname(f)[-1]
@@ -105,15 +114,21 @@ def _find_file(config, startswith=False):
                 if folder_f in remote_files:
                     pid, fid = remote_files[folder_f]
                     return "%s:%s/%s:%s" % (KEY, fid, pid, folder_f)
-        # find any files nested in sub folders
+        # find any files nested in sub folders or as globs
+        out = []
         for project, folder in _remote_folders(config):
             for rfname, (pid, rid) in remote_files.items():
-                if rfname.startswith(folder + "/") and rfname.endswith("/" + f):
-                    return "%s:%s/%s:%s" % (KEY, rid, pid, rfname)
+                if rfname.startswith(folder + "/") and (rfname.endswith("/" + f) or glob_match(f, rfname)):
+                    out.append("%s:%s/%s:%s" % (KEY, rid, pid, rfname))
+        if len(out) == 1:
+            return out[0]
+        elif len(out) > 1:
+            return out
     return get_file
 
 def _list(config):
     remote_files = _get_remote_files(config)
+
     def do(d):
         out = []
         dfname = _get_id_fname(d)[-1]
@@ -161,7 +176,10 @@ def get_files(target_files, config):
         for fname in fnames:
             remote_fname = find_fn(fname)
             if remote_fname:
-                out.append(remote_fname)
+                if isinstance(remote_fname, (list, tuple)):
+                    out.extend(remote_fname)
+                else:
+                    out.append(remote_fname)
     return out
 
 def add_remotes(items, config):
