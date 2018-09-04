@@ -176,6 +176,10 @@ def _cwlrun_cmd(subparsers):
                               "Can be specified multiple times.\n"
                               "Supports SGE, Torque, LSF and SLURM "
                               "parameters."), default=[], action="append")
+    parser.add_argument("-j", "--joblimit", type=int, default=0,
+                        help=("Maximum number of simultaneous jobs (not cores) submitted. "
+                              "Only supported for Cromwell runner. "
+                              "Defaults to 1 for local runner, unlimited otherwise."))
     parser.add_argument("--runconfig", help=("Custom configuration HOCON file for Cromwell."))
     parser.add_argument("--host", help=("WES host for submitting jobs"))
     parser.add_argument("--auth", help=("WES: authentication token"))
