@@ -50,7 +50,7 @@ def add_biodata_args(parser):
     return parser
 
 def setup_cmd(subparsers):
-    parser = subparsers.add_parser("devel", help="Utilities to help with develping using bcbion inside of docker")
+    parser = subparsers.add_parser("devel", help="Utilities to help with developing using bcbio inside of containers")
     psub = parser.add_subparsers(title="[devel commands]")
 
     iparser = psub.add_parser("setup_install", help="Run a python setup.py install inside of the current directory")

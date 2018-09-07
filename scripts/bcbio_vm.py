@@ -147,7 +147,7 @@ def _run_cmd(subparsers):
     parser_r.set_defaults(func=cmd_run)
 
 def _cwl_cmd(subparsers):
-    parser = subparsers.add_parser("cwl", help="Prepare a common workflow language (CWL) input")
+    parser = subparsers.add_parser("cwl", help="Generate Common Workflow Language (CWL) from configuration inputs")
     parser.add_argument("--systemconfig", help="Global YAML configuration file specifying system details. "
                         "Defaults to installed bcbio_system.yaml.")
     parser.add_argument("sample_config", help="YAML file with details about samples to process.")
@@ -159,7 +159,7 @@ def _cwl_cmd(subparsers):
     parser.set_defaults(func=cwl_main.run)
 
 def _cwlrun_cmd(subparsers):
-    parser = subparsers.add_parser("cwlrun", help="Run common workflow language with a specified tool")
+    parser = subparsers.add_parser("cwlrun", help="Run Common Workflow Language (CWL) inputs with a specified tool")
     parser.add_argument("tool", help="CWL tool to run", choices=["cwltool", "arvados", "toil", "bunny", "funnel",
                                                                  "cromwell", "wes"])
     parser.add_argument("directory", help="Directory with bcbio generated CWL")
@@ -326,21 +326,21 @@ if __name__ == "__main__":
     parser.add_argument("--datadir", help="Directory with genome data and associated files.",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     subparsers = parser.add_subparsers(title="[sub-commands]")
-    _run_cmd(subparsers)
-    _install_cmd(subparsers, name="install")
-    _install_cmd(subparsers, name="upgrade")
-    _run_ipython_cmd(subparsers)
-    _run_ipythonprep_cmd(subparsers)
     _template_cmd(subparsers)
     _cwl_cmd(subparsers)
     _cwlrun_cmd(subparsers)
-    _aws_cmd(subparsers)
-    _elasticluster_cmd(subparsers)
-    _graph_cmd(subparsers)
-    _run_clusterk_cmd(subparsers)
+    _install_cmd(subparsers, name="install")
+    _install_cmd(subparsers, name="upgrade")
+    _run_cmd(subparsers)
+    _run_ipython_cmd(subparsers)
+    _run_ipythonprep_cmd(subparsers)
+    #_run_clusterk_cmd(subparsers)
     # _server_cmd(subparsers)
     _runfn_cmd(subparsers)
     devel.setup_cmd(subparsers)
+    _aws_cmd(subparsers)
+    _elasticluster_cmd(subparsers)
+    _graph_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
         parser.print_help()
