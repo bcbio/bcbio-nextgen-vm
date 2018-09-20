@@ -31,8 +31,18 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_
                         del resources[k1][k2]
     data["genome_resources"] = _ensure_annotations(resources, cfiles, data, normalize_fn)
     data = _add_configured_indices(base_dir, cfiles, data, normalize_fn)
+    data = _add_data_versions(base_dir, cfiles, data, normalize_fn)
     return _add_genome_context(base_dir, cfiles, data, normalize_fn)
 
+def _add_data_versions(base_dir, cfiles, data, norm_fn=None):
+    """Add versions file with data names mapped to current version.
+    """
+    search_name = _normpath_remote(os.path.join(os.path.dirname(base_dir), "versions.csv"),
+                                   normalize_fn=norm_fn)
+    version_files = [x for x in cfiles if search_name == (norm_fn(x) if norm_fn else x)]
+    version_file = version_files[0] if version_files else None
+    data["reference"]["versions"] = version_file
+    return data
 
 def _ensure_annotations(resources, cfiles, data, normalize_fn):
     """Retrieve additional annotations for downstream processing.
