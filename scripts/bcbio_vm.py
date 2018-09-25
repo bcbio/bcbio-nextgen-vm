@@ -24,6 +24,7 @@ from bcbio.workflow import template
 from bcbiovm.arvados import retriever as arvados_retriever
 from bcbiovm.dnanexus import retriever as dx_retriever
 from bcbiovm.sbgenomics import retriever as sb_retriever
+from bcbiovm.gcp import retriever as gs_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info,
                          s3retriever)
 from bcbiovm.clusterk import main as clusterk_main
@@ -155,7 +156,7 @@ def _cwl_cmd(subparsers):
                         help="Add a container revision tag to CWL ('quay_lookup` retrieves lates from quay.io)",
                         default=None)
     parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
-                                      "dnanexus": dx_retriever, "local": localref})
+                                      "dnanexus": dx_retriever, "gs": gs_retriever, "local": localref})
     parser.set_defaults(func=cwl_main.run)
 
 def _cwlrun_cmd(subparsers):
@@ -222,7 +223,7 @@ def _template_cmd(subparsers):
     parser.add_argument('--relpaths', help="Convert inputs into relative paths to the work directory",
                         action='store_true', default=False)
     parser.set_defaults(integrations={"arvados": arvados_retriever, "s3": s3retriever, "sbgenomics": sb_retriever,
-                                      "dnanexus": dx_retriever, "local": localref})
+                                      "dnanexus": dx_retriever, "gs": gs_retriever, "local": localref})
     parser.set_defaults(func=template.setup)
 
 def _runfn_cmd(subparsers):
