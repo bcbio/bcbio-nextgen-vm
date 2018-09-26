@@ -55,7 +55,7 @@ def file_exists(file_ref, config):
     if key:
         return file_ref
 
-def clean_file(f):
+def clean_file(f, config):
     """Remove AWS @-based region specification from file.
 
     Tools such as Toil use us-east-1 bucket lookup, then pick region
@@ -64,7 +64,10 @@ def clean_file(f):
     approach, rest = f.split("://")
     bucket_region, key = rest.split("/", 1)
     bucket, region = bucket_region.split("@")
-    return "%s://%s/%s" % (approach, bucket, key)
+    if config.get("input_type") in ["http", "https"]:
+        return "https://s3.amazonaws.com/%s/%s" % (bucket, key)
+    else:
+        return "%s://%s/%s" % (approach, bucket, key)
 
 # ## API: Fill in files from S3 buckets
 

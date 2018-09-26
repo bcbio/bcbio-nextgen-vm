@@ -100,8 +100,11 @@ def file_exists(file_ref, config):
     find_fn = _find_file(config)
     return find_fn(file_ref)
 
-def clean_file(f):
-    return f
+def clean_file(f, config):
+    if config.get("input_type") in ["http", "https"]:
+        return f.replace("gs:/", "https://storage.googleapis.com")
+    else:
+        return f
 
 # ## API: Fill in files
 

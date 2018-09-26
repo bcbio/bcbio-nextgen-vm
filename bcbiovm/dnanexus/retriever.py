@@ -157,7 +157,7 @@ def file_exists(file_ref, config):
         _, file_ref = _get_id_fname(file_ref)
     return find_fn(file_ref)
 
-def clean_file(f):
+def clean_file(f, config):
     # Return full file paths instead of IDs to enable CWL secondary file lookup
     return _get_id_fname(f)[1]
 

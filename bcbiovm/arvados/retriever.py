@@ -125,7 +125,7 @@ def file_exists(file_ref, config):
         _, file_ref = _get_uuid_file(file_ref)
     return find_fn(file_ref)
 
-def clean_file(f):
+def clean_file(f, config):
     return f
 
 # ## API
