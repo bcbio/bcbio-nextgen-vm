@@ -109,7 +109,7 @@ def standard_genome_refs(genome_build, aligner, ref_prefix, list_fn):
     """
     out = {}
     base_targets = ("/%s.fa" % genome_build, "/mainIndex")
-    for dirname in [x for x in ["seq", "rtg", "ucsc", aligner] if x]:
+    for dirname in [x for x in ["seq", "rtg", aligner] if x]:
         key = {"seq": "fasta", "ucsc": "twobit"}.get(dirname, dirname)
         tarball_files = [x for x in list_fn(ref_prefix)
                          if os.path.basename(x).startswith(dirname) and x.endswith("-wf.tar.gz")]
