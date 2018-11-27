@@ -124,6 +124,7 @@ def _install_cmd(subparsers, name):
                           action="store_true", default=False)
     parser_i.add_argument("--image", help="Docker image name to use, could point to compatible pre-installed image.",
                           default=None)
+    parser_i.add_argument("--cores", help="Cores to use for parallel data prep processes", default=1, type=int)
     parser_i.set_defaults(func=cmd_install)
 
 def _std_config_args(parser):

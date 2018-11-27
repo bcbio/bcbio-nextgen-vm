@@ -36,8 +36,19 @@ def full(args, dockerconf):
             sys.exit(1)
         else:
             updates.append("biological data")
-        _check_docker_image(args)
-        manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
+        if _check_docker_image(args, raise_error=False):
+            manage.run_bcbio_cmd(args.image, dmounts, _get_cl(args))
+        else:
+            args.upgrade = False
+            args.tools = False
+            args.tooldir = False
+            args.toolplus = False
+            args.isolate = True
+            args.distribution = None
+            args.cwl = True
+            print(args)
+            from bcbio import install
+            install.upgrade_bcbio(args)
     _save_install_defaults(args)
     if updates:
         print("\nbcbio-nextgen-vm updated with latest %s" % " and ".join(updates))
@@ -66,7 +77,7 @@ def upgrade_bcbio_vm():
     else:
         subprocess.check_call([conda_bin, "install", "-y", "-c", "conda-forge", "-c", "bioconda",
                                "bcbio-nextgen-vm", "bcbio-nextgen", "cwltool", "arvados-cwl-runner",
-                               "toil", "rabix-bunny"])
+                               "toil", "cromwell"])
 
 def pull(args, dockerconf):
     """Pull down latest docker image.
@@ -126,14 +137,15 @@ def add_install_defaults(args):
     args = _add_docker_defaults(args, default_args)
     return args
 
-def _check_docker_image(args):
+def _check_docker_image(args, raise_error=True):
     """Ensure docker image exists.
     """
     for image in subprocess.check_output(["docker", "images"]).split("\n"):
         parts = image.split()
         if len(parts) > 1 and parts[0] == args.image:
-            return
-    raise ValueError("Could not find docker image %s in local repository" % args.image)
+            return True
+    if raise_error:
+        raise ValueError("Could not find docker image %s in local repository" % args.image)
 
 def docker_image_arg(args):
     if not hasattr(args, "image") or not args.image:
