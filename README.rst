@@ -84,7 +84,7 @@ Installation
 
   For more details on expected download sizes, see the `bcbio system
   requirements`_ documentation. By default, the installation will download and
-  import the default docker image as ``bcbio/bcbio``. You can
+  import the default docker image as ``quay.io/bcbio/bcbio-vc``. You can
   specify an alternative image location with ``--image your_image_name``, and
   skip the ``--tools`` argument if this image is already present and configured.
 
@@ -106,7 +106,7 @@ Installation
 
 .. _Install docker: http://docs.docker.io/en/latest/installation/#installation-list
 .. _Setup a docker group: http://docs.docker.io/en/latest/use/basics/#dockergroup
-.. _bcbio docker image: https://hub.docker.com/r/bcbio/bcbio/
+.. _bcbio docker image: https://github.com/bcbio/bcbio_docker
 .. _setgid: https://en.wikipedia.org/wiki/Setuid
 .. _conda: http://conda.pydata.org/
 .. _sanitizes input arguments: https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/bcbiovm/docker/manage.py
@@ -185,7 +185,7 @@ Docker image installation
 
 Install the current bcbio docker image into your local repository by hand with::
 
-    docker pull bcbio/bcbio
+    docker pull quay.io/bcbio/bcbio-vc
 
 The installer does this automatically, but this is useful if you want to work
 with the bcbio-nextgen docker image independently from the wrapper.

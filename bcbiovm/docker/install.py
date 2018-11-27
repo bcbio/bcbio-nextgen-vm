@@ -10,7 +10,7 @@ import yaml
 
 from bcbiovm.docker import manage, mounts
 
-DEFAULT_IMAGE = "bcbio/bcbio"
+DEFAULT_IMAGE = "quay.io/bcbio/bcbio-vc"
 
 def full(args, dockerconf):
     """Full installaction of docker image and data.
