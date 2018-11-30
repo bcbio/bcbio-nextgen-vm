@@ -32,6 +32,7 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_
     data["genome_resources"] = _ensure_annotations(resources, cfiles, data, normalize_fn)
     data = _add_configured_indices(base_dir, cfiles, data, normalize_fn)
     data = _add_data_versions(base_dir, cfiles, data, normalize_fn)
+    data = _add_viral(base_dir, cfiles, data, normalize_fn)
     return _add_genome_context(base_dir, cfiles, data, normalize_fn)
 
 def _add_data_versions(base_dir, cfiles, data, norm_fn=None):
@@ -42,6 +43,19 @@ def _add_data_versions(base_dir, cfiles, data, norm_fn=None):
     version_files = [x for x in cfiles if search_name == (norm_fn(x) if norm_fn else x)]
     version_file = version_files[0] if version_files else None
     data["reference"]["versions"] = version_file
+    return data
+
+def _add_viral(base_dir, cfiles, data, norm_fn=None):
+    """Add fasta and indices for viral QC.
+    """
+    viral_dir = _normpath_remote(os.path.join(os.path.dirname(base_dir), "viral"),
+                                 normalize_fn=norm_fn)
+    viral_files = [x for x in cfiles if x.startswith(viral_dir)]
+    if viral_files:
+        data["reference"]["viral"] = {"base": [x for x in viral_files if x.endswith(".fa")][0],
+                                      "indexes": [x for x in viral_files if not x.endswith(".fa")]}
+    else:
+        data["reference"]["viral"] = None
     return data
 
 def _ensure_annotations(resources, cfiles, data, normalize_fn):
