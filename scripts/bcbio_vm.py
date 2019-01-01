@@ -163,7 +163,7 @@ def _cwl_cmd(subparsers):
 def _cwlrun_cmd(subparsers):
     parser = subparsers.add_parser("cwlrun", help="Run Common Workflow Language (CWL) inputs with a specified tool")
     parser.add_argument("tool", help="CWL tool to run", choices=["cwltool", "arvados", "toil", "bunny", "funnel",
-                                                                 "cromwell", "wes"])
+                                                                 "cromwell", "sbg", "wes"])
     parser.add_argument("directory", help="Directory with bcbio generated CWL")
     parser.add_argument("toolargs", help="Arguments to pass to CWL tool", nargs="*")
     parser.add_argument('--no-container', help="Use local installation of bcbio instead of Docker container",

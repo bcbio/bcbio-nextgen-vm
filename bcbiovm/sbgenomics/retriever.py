@@ -15,14 +15,9 @@ KEY = "sbg"
 CONFIG_KEY = "sbgenomics"
 
 def _get_api_client(config):
-    if config and config.get("platform") == "cgc":
-        api_url, auth_token = "CGI_API_URL", "CGC_AUTH_TOKEN"
-    else:
-        api_url, auth_token = "SBG_API_URL", "SBG_AUTH_TOKEN"
-    assert os.environ.get(api_url) and os.environ.get(auth_token), \
-        "Need to set %s and %s to retrieve files from the Seven Bridges Platform" % (api_url, auth_token)
     import sevenbridges as sbg
-    api = sbg.Api(os.environ[api_url], os.environ[auth_token], advance_access=True)
+    c = sbg.Config(profile=config.get("profile", "default"))
+    api = sbg.Api(config=c, advance_access=True)
     return api
 
 def _is_remote(f):
