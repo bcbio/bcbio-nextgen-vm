@@ -3,6 +3,7 @@
 import os
 import yaml
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -21,7 +22,7 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_
     for k1, v1 in resources.items():
         if isinstance(v1, dict):
             for k2, v2 in v1.items():
-                if isinstance(v2, basestring) and v2.startswith("../"):
+                if isinstance(v2, six.string_types) and v2.startswith("../"):
                     test_v2 = _normpath_remote(os.path.join(base_dir, v2), normalize_fn=normalize_fn)
                     if find_fn and find_fn(test_v2) is not None:
                         resources[k1][k2] = find_fn(test_v2)
@@ -167,7 +168,7 @@ def fill_remote(cur, find_fn, is_remote_fn):
         for k, v in cur.items():
             out[k] = fill_remote(v, find_fn, is_remote_fn)
         return out
-    elif (isinstance(cur, basestring) and os.path.splitext(cur)[-1] and not os.path.exists(cur)
+    elif (isinstance(cur, six.string_types) and os.path.splitext(cur)[-1] and not os.path.exists(cur)
           and not is_remote_fn(cur)):
         remote_cur = find_fn(cur)
         if remote_cur:

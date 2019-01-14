@@ -2,6 +2,7 @@
 """
 import os
 
+import six
 import toolz as tz
 
 from bcbiovm.shared import retriever as sret
@@ -29,7 +30,7 @@ def _get_input_ids(config):
     input_id = config.get("input") or config.get("inputs")
     if not input_id:
         return out
-    elif isinstance(input_id, basestring):
+    elif isinstance(input_id, six.string_types):
         return sorted(list(set(out + [input_id])))
     else:
         assert isinstance(input_id, (list, tuple)), input_id

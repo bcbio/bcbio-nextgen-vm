@@ -27,7 +27,6 @@ from bcbiovm.sbgenomics import retriever as sb_retriever
 from bcbiovm.gcp import retriever as gs_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info,
                          s3retriever)
-from bcbiovm.clusterk import main as clusterk_main
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep

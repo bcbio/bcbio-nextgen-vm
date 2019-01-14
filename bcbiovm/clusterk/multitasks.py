@@ -2,5 +2,5 @@
 """
 
 def runfn(*args):
-    print args
+    print(args)
     raise NotImplementedError
