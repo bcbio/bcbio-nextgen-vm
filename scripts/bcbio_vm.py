@@ -25,7 +25,7 @@ from bcbiovm.arvados import retriever as arvados_retriever
 from bcbiovm.dnanexus import retriever as dx_retriever
 from bcbiovm.sbgenomics import retriever as sb_retriever
 from bcbiovm.gcp import retriever as gs_retriever
-from bcbiovm.aws import (ansible_inputs, cluster, common, ecconfig, iam, icel, vpc, info,
+from bcbiovm.aws import (ansible_inputs, cluster, common, iam, icel, vpc, info,
                          s3retriever)
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.graph import graph
@@ -285,7 +285,6 @@ def _aws_cmd(subparsers):
     awssub = parser_c.add_subparsers(title="[aws commands]")
 
     cluster.setup_cmd(awssub)
-    ecconfig.setup_cmd(awssub)
     info.setup_cmd(awssub)
     ansible_inputs.setup_cmd(awssub)
     _aws_iam_cmd(awssub)
