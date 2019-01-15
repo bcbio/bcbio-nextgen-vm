@@ -28,7 +28,6 @@ from bcbiovm.gcp import retriever as gs_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, iam, icel, vpc, info,
                          s3retriever)
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
-from bcbiovm.graph import graph
 from bcbiovm.ipython import batchprep
 from bcbiovm.shared import localref
 from bcbiovm.ship import pack
@@ -258,6 +257,7 @@ def _elasticluster_cmd(subparsers):
     subparsers.add_parser("elasticluster", help="Interface to standard elasticluster commands")
 
 def _graph_cmd(subparsers):
+    from bcbiovm.graph import graph
     parser = subparsers.add_parser("graph",
                                    help="Generate system graphs "
                                         "(CPU/memory/network/disk I/O "
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     devel.setup_cmd(subparsers)
     _aws_cmd(subparsers)
     _elasticluster_cmd(subparsers)
-    _graph_cmd(subparsers)
+    #_graph_cmd(subparsers)
     _config_cmd(subparsers)
     if len(sys.argv) == 1:
         parser.print_help()

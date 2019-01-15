@@ -121,39 +121,39 @@ def _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose):
 def fetch_collectl(econfig_file, cluster_name, bcbio_log, datadir, verbose=False):
     # local cluster, bypassing elasticluster
     if "local" in cluster_name:
-	import getpass
+        import getpass
         with ssh_agent():
             ssh = paramiko.client.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
 
-	    for host in bcbio_graph.get_bcbio_nodes(bcbio_log):
-		_pull_collectl_data(host, getpass.getuser(), datadir, 
-                                    bcbio_log, ssh, verbose=verbose)
+        for host in bcbio_graph.get_bcbio_nodes(bcbio_log):
+            _pull_collectl_data(host, getpass.getuser(), datadir,
+                                bcbio_log, ssh, verbose=verbose)
 
     # elasticluster
     else:
-	config = ecluster_config(econfig_file)
-	cluster = config.load_cluster(cluster_name)
+        config = ecluster_config(econfig_file)
+        cluster = config.load_cluster(cluster_name)
 
-	keys = set()
-	for type in cluster.nodes:
-	    for node in cluster.nodes[type]:
-		keys.add(node.user_key_private)
+    keys = set()
+    for type in cluster.nodes:
+        for node in cluster.nodes[type]:
+            keys.add(node.user_key_private)
 
-	with ssh_agent(keys):
-	    ssh = paramiko.client.SSHClient()
-	    ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
-	    ssh.load_host_keys(cluster.known_hosts_file)
+    with ssh_agent(keys):
+        ssh = paramiko.client.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.client.RejectPolicy())
+        ssh.load_host_keys(cluster.known_hosts_file)
 
-	    for node in cluster.get_all_nodes():
-		if not node.preferred_ip:
-		    # Instance is unavailable.
-		    continue
-		_pull_collectl_data(
-		    node.preferred_ip, node.image_user, datadir, 
-                    bcbio_log, ssh, verbose=verbose)
+        for node in cluster.get_all_nodes():
+            if not node.preferred_ip:
+                # Instance is unavailable.
+                continue
+            _pull_collectl_data(
+                node.preferred_ip, node.image_user, datadir,
+                bcbio_log, ssh, verbose=verbose)
 
-	    # FIXME: load SSH host keys from ICEL instances.
-	    ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
-	    aws_config = config.cluster_conf[cluster_name]['cloud']
-	    _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose)
+        # FIXME: load SSH host keys from ICEL instances.
+        ssh.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
+        aws_config = config.cluster_conf[cluster_name]['cloud']
+        _fetch_collectl_lustre(cluster, ssh, datadir, aws_config, verbose)

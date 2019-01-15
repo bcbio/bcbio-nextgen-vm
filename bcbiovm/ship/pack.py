@@ -83,7 +83,7 @@ def _get_s3_bucket(conn, bucket_name):
     from boto.exception import S3ResponseError
     try:
         bucket = conn.get_bucket(bucket_name)
-    except S3ResponseError, e:
+    except S3ResponseError as e:
         if e.status == 404:
             bucket = conn.create_bucket(bucket_name)
         else:
