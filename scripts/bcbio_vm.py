@@ -26,7 +26,7 @@ from bcbiovm.dnanexus import retriever as dx_retriever
 from bcbiovm.sbgenomics import retriever as sb_retriever
 from bcbiovm.gcp import retriever as gs_retriever
 from bcbiovm.aws import (ansible_inputs, cluster, common, iam, icel, vpc, info,
-                         s3retriever)
+                         s3retriever, cromwell)
 from bcbiovm.docker import defaults, devel, install, manage, mounts, run
 from bcbiovm.ipython import batchprep
 from bcbiovm.shared import localref
@@ -283,7 +283,7 @@ def _graph_cmd(subparsers):
 def _aws_cmd(subparsers):
     parser_c = subparsers.add_parser("aws", help="Automate resources for running bcbio on AWS")
     awssub = parser_c.add_subparsers(title="[aws commands]")
-
+    cromwell.setup_cmd(awssub)
     cluster.setup_cmd(awssub)
     info.setup_cmd(awssub)
     ansible_inputs.setup_cmd(awssub)
