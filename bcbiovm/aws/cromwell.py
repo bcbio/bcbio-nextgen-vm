@@ -4,6 +4,11 @@ Sets up the AWS batch environment needed to run Cromwell using CloudFormation
 templates:
 
 https://docs.opendata.aws/genomics-workflows
+
+CloudFormation suggestions:
+ - Avoid nodejs4 vs 8 errors when creating AMI
+ - Check for S3 bucket when creating AWS batch environment
+ - Delete temporary VPCs for genomics-api when finishing stack, other resources?
 """
 import boto3
 import requests
@@ -15,22 +20,26 @@ TEMPLATES = {
 def setup_cmd(awsparser):
     """Command line interface for setting up Cromwell on AWS.
     """
+
     parser = awsparser.add_parser("cromwell",
                                   help="Setup AWS batch environment for running Cromwell")
     parser.add_argument("--keypair", help="Existing keypair to use for accessing AWS instances.", default="")
     parser.add_argument("--bucket", help="S3 bucket to store Cromwell logs and execution files", required=True)
     parser.add_argument("--zone", help=("AWS availability zones to create resources in "
-                                        "(default: us-east-1a, us-east-1b)"),
-                        nargs="+", default=["us-east-1a", "us-east-1b"])
+                                        "(default: a, b in current region)"),
+                        nargs="+", default=["%s%s" % (boto3.Session().region_name, z) for z in ["a", "b"]])
     parser.set_defaults(func=create_resources)
 
 def create_resources(args):
     """Create Cromwell AWS Batch input resources.
     """
     ami_out = _create_ami(args)
-    print(ami_out)
+    print("AMI: %s" % ami_out["AMI"])
     queue_out = _create_batch_queue(ami_out["AMI"], args)
-    print(queue_out)
+    print("Region: %s" % boto3.Session().region_name)
+    print("S3 bucket: s3://%s" % queue_out["GenomicsEnvS3Bucket"])
+    print("Job Queue (Spot instances): %s" % queue_out["GenomicsEnvDefaultJobQueueArn"])
+    print("High priority Job Queue: %s" % queue_out["GenomicsEnvHighPriorityJobQueueArn"])
 
 def _create_batch_queue(ami_id, args):
     """Create a AWS Batch queue ready to run Cromwell jobs.
@@ -42,6 +51,8 @@ def _create_batch_queue(ami_id, args):
     if stacks:
         return _get_stack_outputs(stack_name)
     else:
+        _remove_stack(stack_name)
+        _check_for_batch_resource_conflicts(args)
         params = {"S3BucketName": args.bucket,
                   "KeyPairName": args.keypair,
                   "AvailabilityZone1": args.zone[0],
@@ -57,6 +68,26 @@ def _create_batch_queue(ami_id, args):
         waiter.wait(StackName=stack_input["StackName"])
         return _get_stack_outputs(stack_name)
 
+def _check_for_batch_resource_conflicts(args):
+    """Avoids issues with CloudFormation template not checking existing resources.
+
+    GenomicsEnvS3Bucket	CREATE_FAILED	bcbio-batch-cromwell-test already exists
+    """
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(args.bucket)
+    if bucket.creation_date:
+        bucket.delete()
+
+def _remove_stack(stack_name):
+    """Remove a stack if it exists and was not created correctly.
+    """
+    cf = boto3.client("cloudformation")
+    stacks = [x for x in cf.list_stacks()["StackSummaries"] if x["StackName"] == stack_name]
+    if stacks:
+        assert stacks[0]["StackStatus"] != "CREATE_COMPLETE", (stack_name, stacks[0])
+        cf.delete_stack(StackName=stack_name)
+        cf.get_waiter("stack_delete_complete").wait(StackName=stack_name)
+
 def _create_ami(args):
     """Create a custom AMI for running Cromwell tasks.
     """
@@ -67,6 +98,7 @@ def _create_ami(args):
     if stacks:
         return _get_stack_outputs(stack_name)
     else:
+        _remove_stack(stack_name)
         params = {"AMIType": "cromwell",
                   "ScratchMountPoint": "/cromwell_root"}
         if args.keypair:

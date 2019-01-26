@@ -181,8 +181,8 @@ def _cwlrun_cmd(subparsers):
                               "Only supported for Cromwell runner. "
                               "Defaults to 1 for local runner, unlimited otherwise."))
     parser.add_argument("--runconfig", help=("Custom configuration HOCON file for Cromwell."))
-    parser.add_argument("--cloud-project", help=("Remote cloud project for running jobs. Cromwell GCP support."))
-    parser.add_argument("--cloud-root", help=("Remote bucket location for run files. Cromwell GCP support."))
+    parser.add_argument("--cloud-project", help=("Remote cloud project for running jobs. Cromwell AWS/GCP support."))
+    parser.add_argument("--cloud-root", help=("Remote bucket location for run files. Cromwell AWS/GCP support."))
     parser.add_argument("--host", help=("WES: host for submitting jobs"))
     parser.add_argument("--auth", help=("WES: authentication token"))
     parser.set_defaults(func=cwl_tool.run)
