@@ -7,33 +7,45 @@ import toolz as tz
 
 from bcbio.distributed import objectstore
 from bcbiovm.shared import retriever as sret
+from bcbiovm.gcp import retriever as gcp_retriever
 
 # ## S3 specific support
 
 KEY = "s3"
 
 def _config_folders(config):
-    for folder in config["folders"]:
+    ref = [config["ref"]] if "ref" in config else []
+    for folder in config.get("folders", []) + config.get("inputs", []) + ref:
         if "/" in folder:
             bucket, rest = folder.split("/", 1)
         else:
             bucket = folder
             rest = ""
-        yield "%s://%s@%s/%s" % (KEY, bucket, config["region"], rest)
+        if config.get("region") and not _is_remote(bucket):
+            yield "%s://%s@%s/%s" % (KEY, bucket, config["region"], rest)
+        else:
+            yield folder
 
-def _find_file(config, target_file):
-    for folder in _config_folders(config):
-        cur = os.path.join(folder, target_file)
-        remote = objectstore.list(cur)
-        if remote:
-            return cur
+def _get_remote_files(config):
+    """Retrieve remote file references.
+    """
+    if "cache" in config:
+        return config["cache"]
+    out = []
+    for f in _config_folders(config):
+        out.extend(objectstore.list(f))
+    return out
 
 def _is_remote(path):
     return path.startswith("%s:/" % KEY)
 
+
+_find_file = gcp_retriever._find_file
+
 # ## API: General functionality
 
 def set_cache(config):
+    config["cache"] = _get_remote_files(config)
     return config
 
 def file_size(file_ref, config=None):
@@ -63,7 +75,10 @@ def clean_file(f, config):
     """
     approach, rest = f.split("://")
     bucket_region, key = rest.split("/", 1)
-    bucket, region = bucket_region.split("@")
+    if bucket_region.find("@") > 0:
+        bucket, region = bucket_region.split("@")
+    else:
+        bucket = bucket_region
     if config.get("input_type") in ["http", "https"]:
         return "https://s3.amazonaws.com/%s/%s" % (bucket, key)
     else:
@@ -72,30 +87,40 @@ def clean_file(f, config):
 # ## API: Fill in files from S3 buckets
 
 def get_files(target_files, config):
-    """Retrieve files associated with the template inputs.
+    """Retrieve files associated with the potential inputs.
     """
     out = []
-    for fname in target_files.keys():
-        remote_fname = _find_file(config, fname)
-        if remote_fname:
-            out.append(remote_fname)
+    find_fn = _find_file(config)
+    for fname_in in target_files.keys():
+        if isinstance(fname_in, (list, tuple)):
+            fnames = fname_in
+        else:
+            fnames = fname_in.split(";")
+        for fname in fnames:
+            remote_fname = find_fn(fname)
+            if remote_fname:
+                if isinstance(remote_fname, (list, tuple)):
+                    out.extend(remote_fname)
+                else:
+                    out.append(remote_fname)
     return out
 
 def add_remotes(items, config):
     """Add remote files to data, retrieving any files not present locally.
     """
-    return sret.fill_remote(items, functools.partial(_find_file, config), _is_remote)
+    return sret.fill_remote(items, _find_file(config), _is_remote)
 
 # ## API: Retrieve files from reference collections
 
 def get_refs(genome_build, aligner, config):
     """Retrieve reference genome data from a standard bcbio directory structure.
     """
-    ref_prefix = sret.find_ref_prefix(genome_build, functools.partial(_find_file, config[KEY]))
+    find_fn = _find_file(config[KEY], prefix=config[KEY]["ref"])
+    ref_prefix = sret.find_ref_prefix(genome_build, find_fn)
     return sret.standard_genome_refs(genome_build, aligner, ref_prefix, objectstore.list)
 
 def get_resources(genome_build, fasta_ref, data):
     """Add genome resources defined in configuration file to data object.
     """
     return sret.get_resources(genome_build, fasta_ref, tz.get_in(["config", KEY], data),
-                              data, objectstore.open, objectstore.list)
+                              data, objectstore.open_file, objectstore.list)
