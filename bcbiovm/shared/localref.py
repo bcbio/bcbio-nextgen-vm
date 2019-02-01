@@ -35,6 +35,9 @@ def _list(dname):
             out.append(os.path.join(cur_dname, f))
     return out
 
+def _is_vcf(f):
+    return f.endswith((".vcf", ".vcf.gz"))
+
 ## API
 
 def get_files(target_files, config):
@@ -51,7 +54,7 @@ def get_files(target_files, config):
                 added = False
                 for dirname in config["inputs"]:
                     for f in glob.glob(os.path.join(dirname, fname) + "*"):
-                        if bam.is_bam(f) or fastq.is_fastq(f):
+                        if bam.is_bam(f) or fastq.is_fastq(f) or _is_vcf(f):
                             if os.path.exists(f):
                                 out.append(f)
                                 added = True
@@ -62,6 +65,8 @@ def set_cache(config):
     return config
 
 def add_remotes(items, config):
+    if config.get(KEY):
+        config = config[KEY]
     return sret.fill_remote(items, functools.partial(_find_any_file, config), lambda x: False)
 
 def get_refs(genome_build, aligner, config):

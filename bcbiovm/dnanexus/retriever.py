@@ -185,6 +185,8 @@ def get_files(target_files, config):
 def add_remotes(items, config):
     """Add remote files to data, retrieving any files not present locally.
     """
+    if config.get(KEY):
+        config = config[KEY]
     find_fn = _find_file(config)
     return sret.fill_remote(items, find_fn, _is_remote)
 
