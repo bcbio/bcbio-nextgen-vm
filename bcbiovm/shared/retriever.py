@@ -19,9 +19,9 @@ def get_resources(genome_build, fasta_ref, config, data, open_fn, list_fn, find_
     with open_fn(resources_file) as in_handle:
         resources = yaml.safe_load(in_handle)
     cfiles = list_fn(os.path.dirname(base_dir))
-    for k1, v1 in resources.items():
+    for k1, v1 in list(resources.items()):
         if isinstance(v1, dict):
-            for k2, v2 in v1.items():
+            for k2, v2 in list(v1.items()):
                 if isinstance(v2, six.string_types) and v2.startswith("../"):
                     test_v2 = _normpath_remote(os.path.join(base_dir, v2), normalize_fn=normalize_fn)
                     if find_fn and find_fn(test_v2) is not None:
