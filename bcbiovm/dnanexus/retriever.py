@@ -187,6 +187,8 @@ def add_remotes(items, config):
     """
     if config.get(KEY):
         config = config[KEY]
+    elif config.get(CONFIG_KEY):
+        config = config[CONFIG_KEY]
     find_fn = _find_file(config)
     return sret.fill_remote(items, find_fn, _is_remote)
 
