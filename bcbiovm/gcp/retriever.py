@@ -3,11 +3,11 @@
 import fnmatch
 import io
 import os
-import sys
 import subprocess
 
 import toolz as tz
 
+from bcbio import utils
 from bcbiovm.shared import retriever as sret
 
 # ## Google Cloud specific functionality
@@ -18,12 +18,17 @@ def _is_remote(f):
     return f.startswith("%s:" % KEY)
 
 def _run_gsutil(args):
-    cmd = os.path.join(os.path.dirname(sys.executable), "gsutil")
+    python2_bins = [p for p in utils.get_all_conda_bins() if os.path.exists(os.path.join(p, "python2"))]
+    cmd = [os.path.join(p, "gsutil") for p in python2_bins if os.path.exists(os.path.join(p, "gsutil"))]
+    if cmd:
+        cmd = cmd[0]
+    else:
+        cmd = utils.which("gsutil")
     return subprocess.check_output([cmd] + args)
 
 def _recursive_ls(bucket):
     out = []
-    for l in _run_gsutil(["ls", "-r", bucket]).split("\n"):
+    for l in _run_gsutil(["ls", "-r", bucket]).decode().split("\n"):
         if l.strip() and not l.endswith("/:"):
             out.append(l.strip())
     return out
@@ -44,7 +49,7 @@ def _get_remote_files(config):
 def _open_remote(file_ref):
     """Retrieve an open handle to a file.
     """
-    return io.StringIO(unicode(_run_gsutil(["cat", file_ref])))
+    return io.StringIO(_run_gsutil(["cat", file_ref]).decode())
 
 def _find_file(config, prefix=None):
     """Resolve a file in the remote files.

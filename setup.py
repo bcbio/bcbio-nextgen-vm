@@ -4,7 +4,7 @@ import shutil
 import sys
 from setuptools import setup, find_packages
 
-version = "0.1.4"
+version = "0.1.5"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), "bcbiovm", "version.py")
