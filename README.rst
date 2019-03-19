@@ -39,8 +39,8 @@ Installation
 - Install bcbio-vm using `conda`_ with an isolated Miniconda Python and link to
   a location on your PATH::
 
-     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-     bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+     bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
      ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
      ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
      ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
