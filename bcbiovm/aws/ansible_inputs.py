@@ -64,7 +64,7 @@ def _lookup_image_by_region(region):
     """
     url = "http://cloud-images.ubuntu.com/locator/ec2/releasesTable"
     r = requests.get(url)
-    r_parsed = yaml.load(r.text)
+    r_parsed = yaml.safe_load(r.text)
     available = []
     for (cur_region, _, version, _, instance_type, _, ami_id, _) in r_parsed["aaData"]:
         if cur_region == region and instance_type == "hvm:ebs-ssd" and "LTS" in version:

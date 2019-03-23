@@ -18,7 +18,7 @@ def do_analysis(args, dockerconf):
     """
     work_dir = os.getcwd()
     with open(args.sample_config) as in_handle:
-        sample_config, dmounts = mounts.update_config(yaml.load(in_handle), args.fcdir)
+        sample_config, dmounts = mounts.update_config(yaml.safe_load(in_handle), args.fcdir)
     dmounts += mounts.prepare_system(args.datadir, dockerconf["biodata_dir"])
     dmounts.append("%s:%s" % (work_dir, dockerconf["work_dir"]))
     system_config, system_mounts = _read_system_config(dockerconf, args.systemconfig, args.datadir)
@@ -39,7 +39,7 @@ def do_runfn(fn_name, fn_args, cmd_args, parallel, dockerconf, ports=None):
     dmounts = []
     if cmd_args.get("sample_config"):
         with open(cmd_args["sample_config"]) as in_handle:
-            _, dmounts = mounts.update_config(yaml.load(in_handle), cmd_args["fcdir"])
+            _, dmounts = mounts.update_config(yaml.safe_load(in_handle), cmd_args["fcdir"])
     datadir, fn_args = reconstitute.prep_datadir(cmd_args["pack"], fn_args)
     if "orig_systemconfig" in cmd_args:
         orig_sconfig = _get_system_configfile(cmd_args["orig_systemconfig"], datadir)
@@ -102,7 +102,7 @@ def _get_system_config(systemconfig, datadir):
     """
     f = _get_system_configfile(systemconfig, datadir)
     with open(f) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     if "galaxy_config" not in config:
         config["galaxy_config"] = os.path.join(os.path.dirname(f), "universe_wsgi.ini")
     return config

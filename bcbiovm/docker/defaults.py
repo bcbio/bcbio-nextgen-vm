@@ -84,7 +84,7 @@ def get_defaults():
     config_file = _get_config_file()
     if config_file:
         with open(config_file) as in_handle:
-            return yaml.load(in_handle)
+            return yaml.safe_load(in_handle)
     else:
         return {}
 

@@ -11,7 +11,7 @@ def load_s3(sample_config):
     """Move a sample configuration locally, providing remote upload.
     """
     with objectstore.open(sample_config) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     r_sample_config = objectstore.parse_remote(sample_config)
     config["upload"] = {"method": "s3",
                         "dir": os.path.join(os.pardir, "final"),

@@ -95,7 +95,7 @@ def _save_install_defaults(args):
         return
     if os.path.exists(install_config) and os.path.getsize(install_config) > 0:
         with open(install_config) as in_handle:
-            cur_config = yaml.load(in_handle)
+            cur_config = yaml.safe_load(in_handle)
     else:
         cur_config = {}
     for attr in ["genomes", "aligners"]:
@@ -113,7 +113,7 @@ def _get_install_defaults(args):
     install_config = _get_config_file(args)
     if install_config and os.path.exists(install_config) and os.path.getsize(install_config) > 0:
         with open(install_config) as in_handle:
-            return yaml.load(in_handle)
+            return yaml.safe_load(in_handle)
     return {}
 
 def _add_docker_defaults(args, default_args):

@@ -50,7 +50,7 @@ def cmd_ipython(args):
     parallel = clargs.to_parallel(args, "bcbiovm.docker")
     parallel["wrapper"] = "runfn"
     with open(args.sample_config) as in_handle:
-        ready_config, _ = mounts.normalize_config(yaml.load(in_handle), args.fcdir)
+        ready_config, _ = mounts.normalize_config(yaml.safe_load(in_handle), args.fcdir)
     work_dir = os.getcwd()
     ready_config_file = os.path.join(work_dir, "%s-ready%s" %
                                      (os.path.splitext(os.path.basename(args.sample_config))))
