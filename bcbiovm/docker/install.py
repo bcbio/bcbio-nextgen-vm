@@ -140,7 +140,7 @@ def add_install_defaults(args):
 def _check_docker_image(args, raise_error=True):
     """Ensure docker image exists.
     """
-    for image in subprocess.check_output(["docker", "images"]).split("\n"):
+    for image in subprocess.check_output(["docker", "images"]).decode(errors="ignore").split("\n"):
         parts = image.split()
         if len(parts) > 1 and parts[0] == args.image:
             return True

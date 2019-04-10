@@ -114,7 +114,7 @@ def _run_cmd_commit(cmd, bmounts, args):
     cmd = ["docker", "run", "-i", "-d", "--net=host"] + bmounts + [args.image] + \
           ["bash", "-l", "-c", cmd]
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    cid = process.communicate()[0].strip()
+    cid = process.communicate()[0].decode().strip()
     do.run(["docker", "attach", "--no-stdin", cid], "Running in docker container: %s" % cid,
            log_stdout=True)
     subprocess.check_call(["docker", "commit", cid, args.image])
@@ -124,9 +124,9 @@ def _run_setup_install(args):
     """Install python code from a bcbio-nextgen development tree inside of docker.
     """
     bmounts = ["-v", "%s:%s" % (os.getcwd(), "/tmp/bcbio-nextgen")]
-    cmd = ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio && "
-           "rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*.egg-info && "
-           "rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*.dist-info && "
+    cmd = ("rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python*/site-packages/bcbio && "
+           "rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python*/site-packages/bcbio_nextgen-*.egg-info && "
+           "rm -rf /usr/local/share/bcbio-nextgen/anaconda/lib/python*/site-packages/bcbio_nextgen-*.dist-info && "
            "cd /tmp/bcbio-nextgen && "
            "/usr/local/share/bcbio-nextgen/anaconda/bin/python setup.py install")
     _run_cmd_commit(cmd, bmounts, args)

@@ -96,7 +96,7 @@ def _list(config):
 def file_size(file_ref, config=None):
     """Retrieve file size in Mb.
     """
-    size_str = _run_gsutil(["du", file_ref])
+    size_str = _run_gsutil(["du", file_ref]).decode()
     return float(size_str.split()[0]) / (1024.0 * 1024.0)
 
 def file_exists(file_ref, config):

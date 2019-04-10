@@ -37,7 +37,7 @@ def run_bcbio_cmd(image, mounts, bcbio_nextgen_args, ports=None):
     cmd += ["bcbio_nextgen.py"] + bcbio_nextgen_args
     # logger.info(" ".join(cmd))
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    cid = process.communicate()[0].strip()
+    cid = process.communicate()[0].decode().strip()
     try:
         do.run(["docker", "attach", "--no-stdin", cid], "Running in docker container: %s" % cid,
                log_stdout=True)
