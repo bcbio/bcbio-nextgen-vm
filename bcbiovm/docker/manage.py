@@ -1,6 +1,7 @@
 """Manage stopping and starting a docker container for running analysis.
 """
 from __future__ import print_function
+from functools import reduce
 import grp
 import operator
 import os
