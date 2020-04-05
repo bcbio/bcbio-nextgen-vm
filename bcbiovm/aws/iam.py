@@ -93,7 +93,12 @@ def create_keypair(econfig_file=None, region=None, keyname="bcbio"):
     if not key:
         print("Key %s not found in AWS, importing created key" % keyname)
         with open(public_key) as in_handle:
-            ec2.import_key_pair(keyname, in_handle.read())
+            body = in_handle.read()
+            try:
+                ec2.import_key_pair(keyname, body)
+            except TypeError as e:
+                body = body.encode('utf-8')
+                ec2.import_key_pair(keyname, body)
     return {"user_key_name": keyname, "user_key_private": private_key,
             "user_key_public": public_key}
 
