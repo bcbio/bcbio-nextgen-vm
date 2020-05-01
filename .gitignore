@@ -4,6 +4,7 @@ build/
 dist/
 .DS_Store
 .#*
+.idea/
 .ropeproject
 setuptools*
 venv/
