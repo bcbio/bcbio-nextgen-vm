@@ -1,3 +1,12 @@
 os: linux
 dist: bionic
 language: generic
+
+before_install:
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  - bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/bcbio-vm/anaconda
+
+install: ~/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen bcbio-nextgen-vm
+
+script:
+  - ~/bcbio-vm/anaconda/bin/pytest -p no:cacheprovider -p no:stepwise tests/test_cwl.py::test_cwl_rnaseq -v
