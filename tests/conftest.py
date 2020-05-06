@@ -10,7 +10,7 @@ import tarfile
 import pytest
 import requests
 
-TEST_DIR = os.getenv('TRAVIS_BUILD_DIR', '/tmp/bcbio')
+TEST_DIR = '/tmp/bcbio'
 
 
 @contextlib.contextmanager
