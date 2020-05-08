@@ -4,7 +4,15 @@ build/
 dist/
 .DS_Store
 .#*
+.idea/
 .ropeproject
 setuptools*
+tests/data/100326_FC6107FAAXX/
+tests/data/110106_FC70BUKAAXX/
+tests/data/110907_ERP000591/
+tests/data/genomes/
+tests/data/Harvard-inDrop/
+tests/data/reference_material/7_100326_FC6107FAAXX-grade.vcf.gz*
+tests/data/tcga_benchmark/
 venv/
 bcbiovm/version.py

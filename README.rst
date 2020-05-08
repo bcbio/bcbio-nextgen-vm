@@ -1,6 +1,9 @@
 bcbio-nextgen-vm
 ----------------
 
+.. image:: https://travis-ci.org/bcbio/bcbio-nextgen-vm.svg?branch=master
+    :target: https://travis-ci.org/bcbio/bcbio-nextgen-vm
+
 Run `bcbio-nextgen`_ genomic sequencing analysis pipelines using code and tools
 on cloud platforms or isolated inside of lightweight containers. This enables:
 
