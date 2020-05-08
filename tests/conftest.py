@@ -9,8 +9,51 @@ import tarfile
 
 import pytest
 import requests
+import yaml
 
 TEST_DIR = '/tmp/bcbio'
+
+
+def test_data_dir():
+    return os.path.join(os.path.dirname(__file__), "data")
+
+
+def data_dir():
+    return os.path.join(test_data_dir(), "automated")
+
+
+@contextlib.contextmanager
+def make_workdir():
+    work_dir = os.path.join(TEST_DIR, "test_automated_output")
+
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+
+    # workaround for hardcoded data file paths in test run config files
+    custom_test_data_dir = os.path.join(TEST_DIR, os.path.basename(test_data_dir()))
+    with contextlib.suppress(FileExistsError):
+        os.symlink(test_data_dir(), custom_test_data_dir)
+
+    orig_dir = os.getcwd()
+    try:
+        os.chdir(work_dir)
+        yield work_dir
+    finally:
+        os.chdir(orig_dir)
+
+
+def prepare_test_config(data_dir, work_dir):
+    """Prepare a bcbio_system YAML file pointing to test data"""
+    system_config_path = os.path.join(data_dir, "bcbio_system.yaml")
+    # create local config pointing to reduced genomes
+    test_config_path = os.path.join(work_dir, "bcbio_system.yaml")
+    with open(system_config_path) as input_config_file:
+        config = yaml.safe_load(input_config_file)
+        config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
+        with open(test_config_path, "w") as output_config_file:
+            yaml.dump(config, output_config_file)
+    return test_config_path
 
 
 @contextlib.contextmanager
@@ -42,7 +85,6 @@ def install_cwl_test_files():
 @pytest.fixture
 def install_test_files():
     """Download required sequence and reference files"""
-    data_dir = os.path.join(TEST_DIR, 'automated')
     DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
     download_data = [
         DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
@@ -54,7 +96,7 @@ def install_test_files():
     ]
     for dl in download_data:
         url = "https://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
-        dirname = os.path.join(data_dir, os.pardir,
+        dirname = os.path.join(data_dir(), os.pardir,
                                dl.fname.replace(".tar.gz", "") if dl.dirname is None
                                else dl.dirname)
         if os.path.exists(dirname) and dl.version is not None:

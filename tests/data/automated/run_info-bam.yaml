@@ -1,0 +1,52 @@
+fc_name: 'develtest'
+upload:
+  dir: upload
+details:
+  - description: VarOnly
+    analysis: variant2
+    vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+    genome_build: hg19
+    algorithm:
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+    metadata:
+      batch: TestBatch1
+      validate_batch: b1
+      validate_combine: b2
+      validate_sample: test-val
+  - algorithm:
+      archive: cram-lossless
+      aligner: bwa
+      trim_reads: atropos
+      adapters: [polyx]
+      recalibrate: gatk
+      variantcaller: gatk-haplotype
+      svcaller: [seq2c, gatk-cnv, delly, lumpy]
+      exclude_regions: [lcr, highdepth, polyx, altcontigs]
+      coverage_interval: genome
+      tools_on: [qualimap_full, vqsr, svplots, picard]
+      mixup_check: qsignature
+      quality_format: standard
+      nomap_split_size: 50
+      nomap_split_targets: 100
+      svprioritize: ../data/automated/variant_regions-cancer.bed
+      variant_regions: ../data/automated/variant_regions-bam.bed
+      coverage: ../data/automated/coverage_transcripts-bam.bed
+      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+      cwl_reporting: true
+    resources:
+      novoalign:
+        options: [-o, FullNW]
+      tmp:
+        dir: tmptest
+      multiqc:
+        options: ["--cl_config", "'read_count_multiplier: 1'"]
+    metadata:
+      batch: TestBatch1
+      validate_batch: b1
+      validate_combine: b2
+      validate_sample: test-val-2
+    analysis: variant2
+    description: Test1
+    genome_build: hg19
+    lane: 7
+    files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam

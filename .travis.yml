@@ -11,8 +11,13 @@ install: conda install --yes -c conda-forge -c bioconda bcbio-nextgen bcbio-next
 
 jobs:
   include:
+    # pulling Docker images in before_script to prevent timeouts during the test run due to no output within 10 minutes
+    - script: pytest -p no:cacheprovider -p no:stepwise -s -v tests/test_docker.py::test_analysis_in_docker_container
+      name: "Variant standard"
+      before_script: docker pull quay.io/bcbio/bcbio-vc
     - script: pytest -p no:cacheprovider -p no:stepwise -s -v tests/test_cwl.py::test_cwl_docker_somatic_workflow
       name: "Variant CWL"
       before_script: docker pull quay.io/bcbio/bcbio-vc
     - script: pytest -p no:cacheprovider -p no:stepwise -s -v tests/test_cwl.py::test_cwl_rnaseq
       name: "RNA-seq CWL"
+      before_script: docker pull quay.io/bcbio/bcbio-rnaseq

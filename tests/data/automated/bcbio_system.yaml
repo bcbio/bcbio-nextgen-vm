@@ -1,0 +1,26 @@
+resources:
+  # default options, used if other items below are not present
+  # avoids needing to configure/adjust for every program
+  default:
+    memory: 3G
+    cores: 2
+    jvm_opts: ["-Xms750m", "-Xmx3500m"]
+  # Can also set program specific options
+  # gatk:
+  #   jvm_opts: ["-Xms500m", "-Xmx3500m"]
+  snpeff:
+    jvm_opts: ["-Xms750m", "-Xmx3g"]
+  qualimap:
+    memory: 4g
+  express:
+    memory: 8g
+  dexseq:
+    memory: 10g
+  macs2:
+    memory: 8g
+  seqcluster:
+    memory: 8g
+
+# Location of galaxy configuration file, which has pointers to reference data
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#reference-genome-files
+galaxy_config: universe_wsgi.ini
