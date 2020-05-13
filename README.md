@@ -2,18 +2,18 @@
 
 [![Build Status](https://travis-ci.org/bcbio/bcbio-nextgen-vm.svg?branch=master)](https://travis-ci.org/bcbio/bcbio-nextgen-vm)
 
-Run [bcbio-nextgen](https://github.com/chapmanb/bcbio-nextgen) genomic sequencing analysis pipelines using code and tools on cloud platforms or isolated inside of lightweight containers. This enables:
-* Improved installation: Pre-installing all required biological code, tools and system libraries inside a container removes the difficulties associated with supporting multiple platforms. Installation only requires setting up [docker](http://www.docker.io/) and download of the latest container.
-* Pipeline isolation: Third party software used in processing is fully isolated and will not impact existing tools or software. This eliminates the need for [modules](http://modules.sourceforge.net/) or PATH manipulation to provide partial isolation.
+Run [bcbio-nextgen](https://github.com/bcbio/bcbio-nextgen) genomic sequencing analysis pipelines using code and tools on cloud platforms or isolated inside of lightweight containers. This enables:
+* Improved installation: Pre-installing all required biological code, tools and system libraries inside a container removes the difficulties associated with supporting multiple platforms. Installation only requires setting up [Docker](https://www.docker.com/) and download of the latest container.
+* Pipeline isolation: Third party software used in processing is fully isolated and will not impact existing tools or software. This eliminates the need for [Environment Modules](http://modules.sourceforge.net/) or PATH manipulation to provide partial isolation.
 * Full reproducibility: You can maintain snapshots of the code and processing environment indefinitely, providing the ability to re-run an older analysis by reverting to an archived snapshot.
 
-This currently supports running on [Amazon Web Services (AWS)](http://aws.amazon.com/) and locally with lightweight [docker](http://www.docker.io/) containers. The bcbio documentation contains details on using [bcbio-vm to run analyses on AWS](https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html). We also have in progress work on migrating bcbio's pipeline descriptions to use the [Common Workflow Language (CWL)](https://github.com/chapmanb/bcbio-nextgen/tree/master/cwl).
+This currently supports running on [Amazon Web Services (AWS)](https://aws.amazon.com/) and locally with lightweight [Docker](https://www.docker.com/) containers. The bcbio documentation contains details on using [bcbio-vm to run analyses on AWS](https://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html). We also have in progress work on migrating bcbio's pipeline descriptions to use the [Common Workflow Language (CWL)](https://github.com/bcbio/bcbio-nextgen/tree/master/bcbio/cwl).
 
 We support using bcbio-vm for both AWS and local docker usage on Linux systems. On Mac OSX, only AWS usage currently works. Local docker support for Mac OSX is a work in progress and we have more details on the current status below. We welcome feedback and problem reports.
 
 ## Installation
 
-* Install bcbio-vm using [conda](http://conda.pydata.org/) with an isolated Miniconda Python and link to a location on your PATH:
+* Install bcbio-vm using [Conda](https://docs.conda.io/en/latest/) with an isolated Miniconda Python and link to a location on your PATH:
     ```shell
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
@@ -22,16 +22,16 @@ We support using bcbio-vm for both AWS and local docker usage on Linux systems. 
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
     ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
     ```
-    If you're using bcbio-vm from your local machine to run on a [pre-built remote AWS instance](https://bcbio-nextgen.readthedocs.org/en/latest/contents/cloud.html), or on an [Arvados cloud instance](https://github.com/chapmanb/bcbio-nextgen/tree/master/cwl#running-bcbio-cwl-on-arvados) this is all you need to get started. If you'd like to run locally or on a server with Docker, keep following the instructions to install the third party tools and data.
-* [Install docker](http://docs.docker.io/en/latest/installation/#installation-list) on your system. You will need root permissions.
-* [Setup a docker group](http://docs.docker.io/en/latest/use/basics/#dockergroup) to provide the ability to run Docker without being root. Some installations, like Debian/Ubuntu packages do this automatically. You'll also want to add the trusted user who will be managing and testing docker images to this group:
+    If you're using bcbio-vm from your local machine to run on a [pre-built remote AWS instance](https://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html), or on an [Arvados cloud instance](https://bcbio-nextgen.readthedocs.io/en/latest/contents/cwl.html#running-on-arvados) this is all you need to get started. If you'd like to run locally or on a server with Docker, keep following the instructions to install the third party tools and data.
+* [Install docker](https://docs.docker.com/engine/install/) on your system. You will need root permissions.
+* [Setup a docker group](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user) to provide the ability to run Docker without being root. Some installations, like Debian/Ubuntu packages do this automatically. You'll also want to add the trusted user who will be managing and testing docker images to this group:
     ```shell
     sudo groupadd docker
     sudo service docker restart
     sudo gpasswd -a ${USERNAME} docker
     newgrp docker
     ```
-* Ensure the driver script is [setgid](https://en.wikipedia.org/wiki/Setuid) to the docker group. This allows users to run bcbio-nextgen without needing to be in the docker group or have root access. To avoid security issues, `bcbio_vm.py` [sanitizes input arguments](https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/bcbiovm/docker/manage.py) and runs the internal docker process as the calling user using a [small wrapper script](https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/scripts/createsetuser) so it will only have permissions available to that user:
+* Ensure the driver script is [setgid](https://en.wikipedia.org/wiki/Setuid) to the docker group. This allows users to run bcbio-nextgen without needing to be in the docker group or have root access. To avoid security issues, `bcbio_vm.py` [sanitizes input arguments](https://github.com/bcbio/bcbio-nextgen-vm/blob/master/bcbiovm/docker/manage.py) and runs the internal docker process as the calling user using a [small wrapper script](https://github.com/bcbio/bcbio-nextgen-vm/blob/master/scripts/createsetuser) so it will only have permissions available to that user:
     ```shell
     sudo chgrp docker /usr/local/bin/bcbio_vm.py
     sudo chmod g+s /usr/local/bin/bcbio_vm.py
@@ -41,7 +41,7 @@ We support using bcbio-vm for both AWS and local docker usage on Linux systems. 
     bcbio_vm.py --datadir=~/install/bcbio-vm/data install --data --tools \
       --genomes GRCh37 --aligners bwa
     ```
-    For more details on expected download sizes, see the [bcbio system requirements](https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#system-requirements) documentation. By default, the installation will download and import the default docker image as `quay.io/bcbio/bcbio-vc`. You can specify an alternative image location with `--image your_image_name`, and skip the `--tools` argument if this image is already present and configured.
+    For more details on expected download sizes, see the [bcbio system requirements](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#system-requirements) documentation. By default, the installation will download and import the default docker image as `quay.io/bcbio/bcbio-vc`. You can specify an alternative image location with `--image your_image_name`, and skip the `--tools` argument if this image is already present and configured.
 
     If you have an existing bcbio-nextgen installation and want to avoid re-installing existing genome data, first symlink to the current installation data:
     ```shell
