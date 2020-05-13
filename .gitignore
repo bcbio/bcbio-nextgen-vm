@@ -6,6 +6,7 @@ dist/
 .#*
 .idea/
 .ropeproject
+.vagrant/
 setuptools*
 tests/data/100326_FC6107FAAXX/
 tests/data/110106_FC70BUKAAXX/

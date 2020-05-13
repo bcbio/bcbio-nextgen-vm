@@ -92,17 +92,35 @@ Combine all commands to update everything concurrently.
 
 These notes are for building containers from scratch or developing on bcbio-nextgen.
 
-### Mac OSX docker support
+### macOS
 
-Running Docker on Mac OSX requires using a virtual machine wrapper. The [recommended approach](https://docs.docker.com/installation/mac/) is to use [boot2docker](https://github.com/boot2docker/boot2docker) which wraps docker inside VirtualBox.
-
-The current issue is mounting external directories into boot2docker. The mounts work as of [Docker 1.3](http://blog.docker.com/2014/10/docker-1-3-signed-images-process-injection-security-options-mac-shared-directories/), but do not maintain the original user ID and group ID, but rather get mounted as root. Since bcbio runs as the original user to avoid security issues, you don't have permissions to make modifications in the directories. There is an [open issue on the problem](https://github.com/boot2docker/boot2docker/issues/581) and we're currently not sure about the best approach or workaround.
-
-Also, if you experience timeouts while pulling the docker image on OSX, please try to reboot the VirtualBox VM running boot2docker and/or upgrade it via:
-```shell
-docker-machine upgrade <boot2docker_VM>
-```
-We'd be happy to accept patches/suggestions from interested Mac OSX users.
+* Install [Git](https://git-scm.com/download/mac), [VirtualBox](https://download.virtualbox.org/virtualbox/6.1.6/VirtualBox-6.1.6-137129-OSX.dmg), and [Vagrant](https://releases.hashicorp.com/vagrant/2.2.9/vagrant_2.2.9_x86_64.dmg)
+* Download bcbio-nextgen-vm and provision Vagrant VM:
+    ```shell
+    git clone git@github.com:bcbio/bcbio-nextgen-vm.git
+    cd bcbio-nextgen-vm
+    vagrant up
+    ```
+* Install bcbio-nextgen-vm:
+    ```shell
+    vagrant ssh
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/bcbio-vm/anaconda
+    conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen
+    ```
+Optional steps:
+* Inside the VM (`vagrant ssh`):
+  * Set the time zone in the VM for easier log viewing, for example:
+    ```shell
+    sudo timedatectl set-timezone America/New_York
+    ```
+* Outside the VM:
+  * To make any additional data from the host available inside the VM (for example: reference genomes, pipeline inputs, etc) set `BCBIO_DATA_DIR` environment variable on the host to a directory that contains the data, for example:
+    ```shell
+    export BCBIO_DATA_DIR=~/biodata
+    vagrant reload
+    ```
+    This directory will be mounted inside Vagrant VM under `/data` 
 
 ### Docker image installation
 
