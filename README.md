@@ -122,6 +122,14 @@ Optional steps:
     ```
     This directory will be mounted inside Vagrant VM under `/data` 
 
+### Testing
+
+To run all tests:
+```shell
+cd tests
+pytest -v
+```
+
 ### Docker image installation
 
 Install the current bcbio docker image into your local repository by hand with:
